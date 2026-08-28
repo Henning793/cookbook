@@ -2,7 +2,8 @@
 
 Enkel kokebok-app: en nettside du legger som snarvei på telefonens
 hjemskjerm, som lar deg lagre og se dine egne oppskrifter. Alle med lenken
-kan se oppskriftene; kun du kan legge til nye (via innlogging med e-post).
+kan se oppskriftene; kun du kan legge til nye (via innlogging med e-post og
+passord).
 
 Bygget med Vite + React + TypeScript, Supabase (database, innlogging,
 bildelagring) og hostet på Netlify. Fungerer som en installerbar PWA med
@@ -19,6 +20,10 @@ cache, slik at tidligere sette oppskrifter også vises uten nett.
 4. Gå til **Project settings -> API**. Du trenger to verdier derfra:
    - **Project URL**
    - **anon public key**
+5. Opprett din egen brukerkonto (appen har ikke noe registreringsskjema, siden
+   kun du skal kunne logge inn): gå til **Authentication -> Users -> Add user
+   -> Create new user**, skriv inn e-post og passord, og huk av for **Auto
+   Confirm User** slik at du slipper e-postbekreftelse.
 
 ## 2. Sett opp miljøvariabler
 
@@ -69,15 +74,15 @@ Appen åpnes da i fullskjerm uten nettleser-UI, som en vanlig app.
 
 ## 6. Logg inn for å legge til oppskrifter
 
-Trykk "Logg inn for å legge til oppskrifter", skriv inn e-posten din, og
-følg lenken du får tilsendt på e-post. Da vises skjemaet for å legge til nye
-oppskrifter. Alle andre som åpner lenken kan se oppskriftene, men bare du
-(og andre du evt. gir tilgang via Supabase) kan legge til/endre.
+Skriv inn e-post og passord for brukeren du opprettet i Supabase-dashboardet
+(se steg 5 over). Da vises skjemaet for å legge til nye oppskrifter. Alle
+andre som åpner lenken kan se oppskriftene, men bare du (og andre du evt.
+gir tilgang via Supabase) kan legge til/endre.
 
 ## Struktur
 
 - `src/lib/supabaseClient.ts` – kobling til Supabase.
-- `src/components/Login.tsx` – innlogging via e-post (magic link).
+- `src/components/Login.tsx` – innlogging via e-post og passord.
 - `src/components/AddRecipeForm.tsx` – skjema for å legge til oppskrift + bilde.
 - `src/components/RecipeList.tsx` – viser lagrede oppskrifter.
 - `supabase/schema.sql` – databasetabell, tilgangsregler og bilde-bucket.
