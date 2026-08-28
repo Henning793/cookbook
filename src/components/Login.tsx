@@ -3,7 +3,8 @@ import { supabase } from '../lib/supabaseClient'
 
 export function Login() {
   const [email, setEmail] = useState('')
-  const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
+  const [password, setPassword] = useState('')
+  const [status, setStatus] = useState<'idle' | 'sending' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState('')
 
   async function handleSubmit(e: FormEvent) {
@@ -11,28 +12,15 @@ export function Login() {
     setStatus('sending')
     setErrorMessage('')
 
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: window.location.origin,
-      },
-    })
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
 
     if (error) {
       setStatus('error')
-      setErrorMessage(error.message)
+      setErrorMessage('Feil e-post eller passord')
       return
     }
 
-    setStatus('sent')
-  }
-
-  if (status === 'sent') {
-    return (
-      <p className="login-message">
-        Sjekk e-posten din ({email}) for en innloggingslenke.
-      </p>
-    )
+    setStatus('idle')
   }
 
   return (
@@ -46,8 +34,16 @@ export function Login() {
         value={email}
         onChange={(e) => setEmail(e.target.value)}
       />
+      <label htmlFor="password">Passord</label>
+      <input
+        id="password"
+        type="password"
+        required
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+      />
       <button type="submit" disabled={status === 'sending'}>
-        {status === 'sending' ? 'Sender...' : 'Send innloggingslenke'}
+        {status === 'sending' ? 'Logger inn...' : 'Logg inn'}
       </button>
       {status === 'error' && <p className="error">{errorMessage}</p>}
     </form>
