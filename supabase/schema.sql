@@ -44,6 +44,7 @@ create policy "Alle kan lese oppskrifter"
 
 -- Man kan kun legge til oppskrifter i sin egen kokebok.
 drop policy if exists "Innloggede kan legge til oppskrifter" on recipes;
+drop policy if exists "Innloggede kan legge til i egen kokebok" on recipes;
 create policy "Innloggede kan legge til i egen kokebok"
   on recipes for insert
   to authenticated
@@ -51,12 +52,14 @@ create policy "Innloggede kan legge til i egen kokebok"
 
 -- Man kan kun endre/slette sine egne oppskrifter, ikke andres.
 drop policy if exists "Innloggede kan endre oppskrifter" on recipes;
+drop policy if exists "Innloggede kan endre egne oppskrifter" on recipes;
 create policy "Innloggede kan endre egne oppskrifter"
   on recipes for update
   to authenticated
   using (owner_id = auth.uid());
 
 drop policy if exists "Innloggede kan slette oppskrifter" on recipes;
+drop policy if exists "Innloggede kan slette egne oppskrifter" on recipes;
 create policy "Innloggede kan slette egne oppskrifter"
   on recipes for delete
   to authenticated
