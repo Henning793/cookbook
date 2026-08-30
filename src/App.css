@@ -18,13 +18,13 @@
 
 .menu-button {
   background: none;
-  border: 1px solid var(--border);
+  border: 1px solid var(--color-divider);
   border-radius: 8px;
   cursor: pointer;
   font-size: 18px;
   line-height: 1;
   padding: 6px 10px;
-  color: var(--text-h);
+  color: var(--color-text);
 }
 
 .menu-dropdown {
@@ -34,8 +34,8 @@
   z-index: 10;
   width: max(280px, 80vw);
   max-width: 360px;
-  background: var(--bg);
-  border: 1px solid var(--border);
+  background: var(--color-bg);
+  border: 1px solid var(--color-divider);
   border-radius: 12px;
   box-shadow: var(--shadow-lg);
   padding: 12px;
@@ -54,7 +54,7 @@
 .link-button {
   background: none;
   border: none;
-  color: var(--accent);
+  color: var(--color-accent);
   cursor: pointer;
   font-size: 15px;
   padding: 4px 0;
@@ -65,14 +65,14 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--color-divider);
   border-radius: 12px;
   padding: 16px;
   margin-bottom: 24px;
 }
 
 .login-message {
-  border: 1px solid var(--border);
+  border: 1px solid var(--color-divider);
   border-radius: 12px;
   padding: 16px;
   margin-bottom: 24px;
@@ -81,7 +81,7 @@
 .login-form label,
 .add-recipe-form label {
   font-size: 14px;
-  color: var(--text-h);
+  color: var(--color-text);
   margin-top: 6px;
 }
 
@@ -91,9 +91,9 @@
   font: inherit;
   padding: 8px 10px;
   border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text-h);
+  border: 1px solid var(--color-divider);
+  background: var(--color-bg);
+  color: var(--color-text);
 }
 
 .login-form button,
@@ -103,7 +103,7 @@
   padding: 10px 14px;
   border-radius: 8px;
   border: none;
-  background: var(--accent);
+  background: var(--color-accent);
   color: var(--color-bg);
   cursor: pointer;
   margin-top: 8px;
@@ -139,8 +139,8 @@
 }
 
 .form-actions button[type='button'] {
-  background: var(--code-bg);
-  color: var(--text-h);
+  background: var(--color-surface);
+  color: var(--color-text);
 }
 
 .error {
@@ -150,7 +150,7 @@
 }
 
 .status-message {
-  color: var(--text);
+  color: var(--color-neutral-700);
   padding: 24px 0;
   text-align: center;
 }
@@ -162,7 +162,7 @@
 }
 
 .recipe-card {
-  border: 1px solid var(--border);
+  border: 1px solid var(--color-divider);
   border-radius: 12px;
   overflow: hidden;
 }
@@ -189,14 +189,14 @@
 
 .recipe-title {
   font-weight: 500;
-  color: var(--text-h);
+  color: var(--color-text);
   flex: 1;
 }
 
 .owner-chip {
   font-size: 12px;
-  color: var(--text);
-  background: var(--code-bg);
+  color: var(--color-neutral-700);
+  background: var(--color-surface);
   border-radius: 999px;
   padding: 3px 10px;
   white-space: nowrap;
@@ -213,16 +213,16 @@
   font: inherit;
   font-size: 14px;
   background: none;
-  border: 1px solid var(--border);
+  border: 1px solid var(--color-divider);
   border-radius: 999px;
   padding: 5px 12px;
   cursor: pointer;
-  color: var(--text-h);
+  color: var(--color-text);
 }
 
 .owner-tab-active {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--color-accent);
+  border-color: var(--color-accent);
   color: var(--color-bg);
 }
 
@@ -272,14 +272,14 @@
 .recipe-body h3 {
   font-size: 15px;
   margin: 12px 0 4px;
-  color: var(--text-h);
+  color: var(--color-text);
 }
 
 .ingredient-list,
 .step-list {
   margin: 0;
   padding-left: 20px;
-  color: var(--text-h);
+  color: var(--color-text);
 }
 
 .ingredient-list li,
@@ -327,9 +327,9 @@
   font: inherit;
   padding: 8px 6px;
   border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text-h);
+  border: 1px solid var(--color-divider);
+  background: var(--color-bg);
+  color: var(--color-text);
 }
 
 .ingredient-custom-unit {
@@ -343,7 +343,7 @@
 }
 
 .ingredient-row-heading {
-  background: var(--code-bg);
+  background: var(--color-surface);
   border-radius: 8px;
   padding: 4px 8px;
 }
@@ -370,16 +370,16 @@
   font: inherit;
   font-size: 14px;
   background: none;
-  border: 1px solid var(--border);
+  border: 1px solid var(--color-divider);
   border-radius: 999px;
   padding: 5px 12px;
   cursor: pointer;
-  color: var(--text-h);
+  color: var(--color-text);
 }
 
 .tag-option-selected {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--color-accent);
+  border-color: var(--color-accent);
   color: var(--color-bg);
   font-weight: 600;
 }
@@ -411,8 +411,8 @@
 
 .tag-chip {
   font-size: 12px;
-  color: var(--text);
-  background: var(--code-bg);
+  color: var(--color-neutral-700);
+  background: var(--color-surface);
   border-radius: 999px;
   padding: 3px 10px;
   white-space: nowrap;
@@ -426,7 +426,7 @@
 
 .step-number {
   padding-top: 8px;
-  color: var(--text-h);
+  color: var(--color-text);
   font-weight: 500;
 }
 
@@ -446,10 +446,10 @@
 .row-move {
   flex: none;
   background: none;
-  border: 1px solid var(--border);
+  border: 1px solid var(--color-divider);
   border-radius: 8px;
   cursor: pointer;
-  color: var(--text);
+  color: var(--color-neutral-700);
   padding: 6px 10px;
 }
 
@@ -462,6 +462,6 @@
 .add-recipe-form .row-add {
   align-self: flex-start;
   background: none;
-  border: 1px dashed var(--border);
-  color: var(--accent);
+  border: 1px dashed var(--color-divider);
+  color: var(--color-accent);
 }
