@@ -138,16 +138,22 @@ export function RecipeList({ recipes, profiles, loading, currentUserId, onRecipe
                     )}
                     <h3>Ingredienser</h3>
                     <ul className="ingredient-list">
-                      {recipe.ingredients.map((ingredient, index) => (
-                        <li key={index}>
-                          {ingredient.amount != null && (
-                            <span className="ingredient-amount-display">
-                              {ingredient.amount} {ingredient.unit}
-                            </span>
-                          )}
-                          {ingredient.name}
-                        </li>
-                      ))}
+                      {recipe.ingredients.map((ingredient, index) =>
+                        ingredient.isHeading ? (
+                          <li key={index} className="ingredient-heading">
+                            {ingredient.name}
+                          </li>
+                        ) : (
+                          <li key={index}>
+                            {ingredient.amount != null && (
+                              <span className="ingredient-amount-display">
+                                {ingredient.amount} {ingredient.unit}
+                              </span>
+                            )}
+                            {ingredient.name}
+                          </li>
+                        )
+                      )}
                     </ul>
                     <h3>Fremgangsmåte</h3>
                     <ol className="step-list">
