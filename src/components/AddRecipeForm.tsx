@@ -71,7 +71,7 @@ export function AddRecipeForm({ onAdded }: Props) {
 
   return (
     <form className="add-recipe-form" onSubmit={handleSubmit}>
-      <h2>Ny oppskrift</h2>
+      <h2>Ny oppskrift i din kokebok</h2>
 
       <label htmlFor="title">Tittel</label>
       <input
