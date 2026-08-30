@@ -31,6 +31,7 @@ export function KokemodusPage() {
         wakeLockRef.current = sentinel
         setWakeLockHeld(true)
         sentinel.addEventListener('release', () => {
+          wakeLockRef.current = null
           setWakeLockHeld(false)
         })
       } catch {
