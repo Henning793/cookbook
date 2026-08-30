@@ -65,10 +65,13 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  border: 1px solid var(--color-divider);
-  border-radius: 12px;
-  padding: 16px;
   margin-bottom: 24px;
+}
+
+.add-recipe-form > h2 {
+  font-size: 30px;
+  line-height: 1.05;
+  margin: 0 0 6px;
 }
 
 .login-message {
@@ -80,20 +83,38 @@
 
 .login-form label,
 .add-recipe-form label {
-  font-size: 14px;
-  color: var(--color-text);
-  margin-top: 6px;
+  font-size: 12px;
+  color: var(--color-neutral-700);
+  margin-top: 14px;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.login-form label:first-of-type,
+.add-recipe-form label:first-of-type {
+  margin-top: 0;
 }
 
 .login-form input,
 .add-recipe-form input,
 .add-recipe-form textarea {
   font: inherit;
-  padding: 8px 10px;
-  border-radius: 8px;
+  font-size: 15px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--color-divider);
-  background: var(--color-bg);
+  background: var(--color-surface);
   color: var(--color-text);
+}
+
+.add-recipe-form #title {
+  border-radius: 999px;
+  padding: 11px 16px;
+}
+
+.add-recipe-form .step-row textarea {
+  border-radius: var(--radius-md);
+  min-height: 70px;
 }
 
 .login-form button,
@@ -144,9 +165,8 @@
 }
 
 .error {
-  /* no token for this in the design system */
-  color: #d1242f;
-  font-size: 14px;
+  color: var(--color-accent-700);
+  font-size: 13px;
 }
 
 .status-message {
@@ -326,9 +346,9 @@
   flex: none;
   font: inherit;
   padding: 8px 6px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--color-divider);
-  background: var(--color-bg);
+  background: var(--color-surface);
   color: var(--color-text);
 }
 
@@ -366,18 +386,18 @@
   gap: 6px;
 }
 
-.tag-option {
+.add-recipe-form .tag-option {
   font: inherit;
-  font-size: 14px;
+  font-size: 12px;
   background: none;
-  border: 1px solid var(--color-divider);
+  border: 1px solid var(--color-neutral-400);
   border-radius: 999px;
-  padding: 5px 12px;
+  padding: 7px 14px;
   cursor: pointer;
   color: var(--color-text);
 }
 
-.tag-option-selected {
+.add-recipe-form .tag-option-selected {
   background: var(--color-accent);
   border-color: var(--color-accent);
   color: var(--color-bg);
@@ -442,8 +462,8 @@
   flex: none;
 }
 
-.row-remove,
-.row-move {
+.add-recipe-form .row-remove,
+.add-recipe-form .row-move {
   flex: none;
   background: none;
   border: 1px solid var(--color-divider);
@@ -453,8 +473,8 @@
   padding: 6px 10px;
 }
 
-.row-remove:disabled,
-.row-move:disabled {
+.add-recipe-form .row-remove:disabled,
+.add-recipe-form .row-move:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
@@ -464,4 +484,318 @@
   background: none;
   border: 1px dashed var(--color-divider);
   color: var(--color-accent);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.image-upload-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  max-width: 100%;
+  background: var(--color-surface);
+  border-radius: 999px;
+  padding: 10px 18px 10px 10px;
+  cursor: pointer;
+  margin-top: 6px !important;
+}
+
+.image-upload-icon {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  color: var(--color-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-upload-label {
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- Nav bar (Oppskrift, Ny oppskrift) --- */
+
+.nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0 16px;
+}
+
+.nav-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.nav-link {
+  font: 600 13px var(--font-body);
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--color-accent-700);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.nav-link-muted {
+  color: var(--color-neutral-700);
+  font-weight: 400;
+}
+
+.nav-link:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* --- Oppskrift --- */
+
+.oppskrift-image {
+  height: 150px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-bottom: 20px;
+  background: var(--color-surface);
+}
+
+.oppskrift-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.pill-tag {
+  font-size: 11px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.oppskrift-title {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.oppskrift-description {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-neutral-700);
+  margin: 0 0 20px;
+}
+
+.section-kicker {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--color-accent-700);
+  margin: 0 0 10px;
+}
+
+.section-kicker-steps {
+  margin-top: 22px;
+}
+
+.oppskrift-ingredients {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.oppskrift-ingredient-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 15px;
+  padding-bottom: 9px;
+  margin-bottom: 9px;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.oppskrift-ingredient-row:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.oppskrift-ingredient-amount {
+  color: var(--color-neutral-700);
+  white-space: nowrap;
+}
+
+.oppskrift-ingredient-heading {
+  list-style: none;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--color-accent-700);
+  padding: 10px 0 4px;
+}
+
+.oppskrift-ingredient-heading:first-child {
+  padding-top: 0;
+}
+
+.oppskrift-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.oppskrift-step-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.oppskrift-step-badge {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-heading);
+  font-size: 13px;
+}
+
+.oppskrift-step-text {
+  font-size: 15px;
+  line-height: 1.55;
+  padding-top: 2px;
+}
+
+.oppskrift-footer {
+  margin-top: 28px;
+}
+
+.cta-button {
+  width: 100%;
+  border: none;
+  border-radius: 999px;
+  background: var(--color-accent);
+  color: var(--color-bg);
+  padding: 16px;
+  font-family: var(--font-heading);
+  font-size: 17px;
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+}
+
+.cta-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* --- Ny oppskrift --- */
+
+.ny-oppskrift-title {
+  font-size: 30px;
+  line-height: 1.05;
+  margin-bottom: 6px;
+}
+
+.ny-oppskrift-subline {
+  font-size: 13px;
+  color: var(--color-neutral-700);
+  margin: 0 0 18px;
+}
+
+.entry-cards {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+
+.entry-card {
+  flex: 1;
+  border: none;
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font: inherit;
+}
+
+.entry-card-accent2 {
+  background: var(--color-accent-2-100);
+  color: var(--color-accent-2-700);
+}
+
+.entry-card-accent {
+  background: var(--color-accent-100);
+  color: var(--color-accent-700);
+}
+
+.entry-card-title {
+  font-family: var(--font-heading);
+  font-size: 16px;
+}
+
+.entry-card-subtitle {
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.ny-oppskrift-form-page .form-actions {
+  order: -1;
+  justify-content: space-between;
+  margin: 0 0 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.ny-oppskrift-form-page .form-actions button[type='button'] {
+  background: none;
+  color: var(--color-neutral-700);
+  padding: 0;
+  margin-top: 0;
+  font-size: 13px;
+}
+
+.ny-oppskrift-form-page .form-actions button[type='submit'] {
+  background: none;
+  color: var(--color-accent-700);
+  padding: 0;
+  margin-top: 0;
+  font-size: 13px;
+  font-weight: 600;
 }

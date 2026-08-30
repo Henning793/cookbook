@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { Plus } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { UNITS } from '../lib/units'
 import type { IngredientItem } from '../types'
@@ -379,15 +380,25 @@ export function RecipeForm({
         </button>
       </div>
 
-      <label htmlFor="image">
-        {initial ? 'Nytt bilde (valgfritt, beholder eksisterende hvis tomt)' : 'Bilde (valgfritt)'}
+      <label className="image-upload-row" htmlFor="image">
+        <span className="image-upload-icon" aria-hidden="true">
+          <Plus size={14} strokeWidth={2.75} />
+        </span>
+        <span className="image-upload-label">
+          {imageFile
+            ? imageFile.name
+            : initial
+              ? 'Nytt bilde (valgfritt, beholder eksisterende hvis tomt)'
+              : 'Legg til bilde'}
+        </span>
+        <input
+          id="image"
+          type="file"
+          accept="image/*"
+          className="visually-hidden"
+          onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
+        />
       </label>
-      <input
-        id="image"
-        type="file"
-        accept="image/*"
-        onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
-      />
 
       {error && <p className="error">{error}</p>}
 

@@ -14,6 +14,11 @@ export interface Recipe {
   image_url: string | null
   owner_id: string
   tags: string[]
+  // Lagt til av migration_collections.sql (Task 7). Frem til den migreringen er
+  // kjørt finnes ikke kolonnene i databasen, så disse er alltid undefined.
+  description?: string
+  total_minutes?: number
+  servings?: number
 }
 
 export interface Profile {
