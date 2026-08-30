@@ -207,7 +207,44 @@
 }
 
 .recipe-body {
+  position: relative;
   padding: 0 16px 16px;
+}
+
+.edit-recipe-button {
+  position: absolute;
+  top: 0;
+  right: 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px;
+  line-height: 1;
+}
+
+.add-recipe-form .delete-recipe-button {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  color: #d1242f;
+  cursor: pointer;
+  padding: 4px 0;
+  margin-top: 4px;
+}
+
+.delete-confirm {
+  padding-top: 12px;
+}
+
+.delete-confirm-button {
+  font: inherit;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: none;
+  background: #d1242f;
+  color: white;
+  cursor: pointer;
 }
 
 .recipe-body h3 {

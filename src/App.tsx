@@ -100,7 +100,13 @@ function App() {
         <h1>Mine oppskrifter</h1>
       </header>
 
-      <RecipeList recipes={recipes} profiles={profiles} loading={loading} />
+      <RecipeList
+        recipes={recipes}
+        profiles={profiles}
+        loading={loading}
+        currentUserId={session?.user.id ?? null}
+        onRecipeChanged={loadRecipes}
+      />
     </div>
   )
 }
