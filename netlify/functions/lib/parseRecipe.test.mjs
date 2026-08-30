@@ -109,3 +109,15 @@ test('normalizeRecipe setter sammen tittel, ingredienser og steg', () => {
     steps: ['Stek kyllingen.', 'Server.'],
   })
 })
+
+test('parseIngredientLine kutter ikke bokstaver fra navn som starter med en enhetsbokstav (g)', () => {
+  assert.deepEqual(parseIngredientLine('gulrot'), { amount: null, unit: '', name: 'gulrot' })
+})
+
+test('parseIngredientLine kutter ikke bokstaver fra navn som starter med en enhetsbokstav (l)', () => {
+  assert.deepEqual(parseIngredientLine('løk'), { amount: null, unit: '', name: 'løk' })
+})
+
+test('parseIngredientLine med mengde og navn som starter med enhetsbokstav', () => {
+  assert.deepEqual(parseIngredientLine('2 gulrøtter'), { amount: 2, unit: '', name: 'gulrøtter' })
+})

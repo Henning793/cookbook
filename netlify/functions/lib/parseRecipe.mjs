@@ -1,9 +1,6 @@
 const UNIT_ALTERNATION = 'g|kg|ml|dl|l|ss|ts|stk|boks|klype'
-const INGREDIENT_LINE_PATTERN = new RegExp(
-  `^\\s*([\\d.,/]+)?\\s*(?:${UNIT_ALTERNATION})?\\s*(.+?)\\s*$`,
-  'i'
-)
-const UNIT_CAPTURE_PATTERN = new RegExp(`^\\s*[\\d.,/]*\\s*(${UNIT_ALTERNATION})\\b`, 'i')
+const AMOUNT_PATTERN = /^\s*([\d.,/]+)/
+const UNIT_PATTERN = new RegExp(`^\\s*(${UNIT_ALTERNATION})(?![a-zæøåA-ZÆØÅ])`, 'i')
 
 function parseAmount(raw) {
   if (!raw) return null
@@ -20,19 +17,26 @@ function parseAmount(raw) {
 }
 
 export function parseIngredientLine(line) {
-  const trimmed = line.trim()
-  const match = trimmed.match(INGREDIENT_LINE_PATTERN)
-  if (!match) {
-    return { amount: null, unit: '', name: trimmed }
+  let rest = line.trim()
+  let rawAmount = null
+
+  const amountMatch = rest.match(AMOUNT_PATTERN)
+  if (amountMatch) {
+    rawAmount = amountMatch[1]
+    rest = rest.slice(amountMatch[0].length)
   }
 
-  const [, rawAmount, name] = match
-  const unitMatch = trimmed.match(UNIT_CAPTURE_PATTERN)
+  let unit = ''
+  const unitMatch = rest.match(UNIT_PATTERN)
+  if (unitMatch) {
+    unit = unitMatch[1].toLowerCase()
+    rest = rest.slice(unitMatch[0].length)
+  }
 
   return {
     amount: parseAmount(rawAmount),
-    unit: unitMatch ? unitMatch[1].toLowerCase() : '',
-    name: (name || trimmed).trim(),
+    unit,
+    name: rest.trim(),
   }
 }
 
