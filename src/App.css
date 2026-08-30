@@ -378,6 +378,11 @@
   background: var(--accent);
   border-color: var(--accent);
   color: white;
+  font-weight: 600;
+}
+
+.tag-option-check {
+  font-weight: 700;
 }
 
 .tag-add-row {

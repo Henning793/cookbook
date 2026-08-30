@@ -346,16 +346,21 @@ export function RecipeForm({
 
       <label>Etiketter</label>
       <div className="tag-picker">
-        {tagOptions.map((tag) => (
-          <button
-            type="button"
-            key={tag}
-            className={selectedTags.includes(tag) ? 'tag-option tag-option-selected' : 'tag-option'}
-            onClick={() => toggleTag(tag)}
-          >
-            {tag}
-          </button>
-        ))}
+        {tagOptions.map((tag) => {
+          const selected = selectedTags.includes(tag)
+          return (
+            <button
+              type="button"
+              key={tag}
+              className={selected ? 'tag-option tag-option-selected' : 'tag-option'}
+              aria-pressed={selected}
+              onClick={() => toggleTag(tag)}
+            >
+              {selected && <span className="tag-option-check">✓ </span>}
+              {tag}
+            </button>
+          )
+        })}
       </div>
       <div className="tag-add-row">
         <input
