@@ -2,6 +2,7 @@ export interface IngredientItem {
   amount: number | null
   unit: string
   name: string
+  isHeading?: boolean
 }
 
 export interface Recipe {

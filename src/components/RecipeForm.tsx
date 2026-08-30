@@ -8,9 +8,24 @@ interface IngredientRow {
   unit: string
   customUnit: string
   name: string
+  isHeading: boolean
 }
 
-const emptyIngredientRow = (): IngredientRow => ({ amount: '', unit: UNITS[0], customUnit: '', name: '' })
+const emptyIngredientRow = (): IngredientRow => ({
+  amount: '',
+  unit: UNITS[0],
+  customUnit: '',
+  name: '',
+  isHeading: false,
+})
+
+const emptyHeadingRow = (): IngredientRow => ({
+  amount: '',
+  unit: UNITS[0],
+  customUnit: '',
+  name: '',
+  isHeading: true,
+})
 
 function moveItem<T>(items: T[], index: number, direction: -1 | 1): T[] {
   const target = index + direction
@@ -27,6 +42,7 @@ function toIngredientRow(item: IngredientItem): IngredientRow {
     unit: isKnownUnit ? item.unit : 'annet',
     customUnit: isKnownUnit ? '' : item.unit,
     name: item.name,
+    isHeading: item.isHeading ?? false,
   }
 }
 
@@ -68,6 +84,10 @@ export function RecipeForm({ heading, initial, submitLabel, savingLabel, onSubmi
 
   function addIngredientRow() {
     setIngredientRows((rows) => [...rows, emptyIngredientRow()])
+  }
+
+  function addHeadingRow() {
+    setIngredientRows((rows) => [...rows, emptyHeadingRow()])
   }
 
   function removeIngredientRow(index: number) {
@@ -119,11 +139,15 @@ export function RecipeForm({ heading, initial, submitLabel, savingLabel, onSubmi
         imageUrl = data.publicUrl
       }
 
-      const ingredients = ingredientRows.map((row) => ({
-        amount: row.amount.trim() === '' ? null : Number(row.amount),
-        unit: row.unit === 'annet' ? row.customUnit.trim() : row.unit,
-        name: row.name.trim(),
-      }))
+      const ingredients = ingredientRows.map((row) =>
+        row.isHeading
+          ? { amount: null, unit: '', name: row.name.trim(), isHeading: true }
+          : {
+              amount: row.amount.trim() === '' ? null : Number(row.amount),
+              unit: row.unit === 'annet' ? row.customUnit.trim() : row.unit,
+              name: row.name.trim(),
+            }
+      )
 
       await onSubmit({
         title,
@@ -153,42 +177,54 @@ export function RecipeForm({ heading, initial, submitLabel, savingLabel, onSubmi
       <label>Ingredienser</label>
       <div className="ingredient-rows">
         {ingredientRows.map((row, index) => (
-          <div className="ingredient-row" key={index}>
-            <input
-              className="ingredient-name"
-              required
-              placeholder="Ingrediens, f.eks. løk"
-              value={row.name}
-              onChange={(e) => updateIngredientRow(index, { name: e.target.value })}
-            />
-            <input
-              className="ingredient-amount"
-              type="number"
-              min="0"
-              step="any"
-              placeholder="Mengde"
-              value={row.amount}
-              onChange={(e) => updateIngredientRow(index, { amount: e.target.value })}
-            />
-            <select
-              className="ingredient-unit"
-              value={row.unit}
-              onChange={(e) => updateIngredientRow(index, { unit: e.target.value })}
-            >
-              {UNITS.map((unit) => (
-                <option key={unit} value={unit}>
-                  {unit}
-                </option>
-              ))}
-              <option value="annet">annet</option>
-            </select>
-            {row.unit === 'annet' && (
+          <div className={row.isHeading ? 'ingredient-row ingredient-row-heading' : 'ingredient-row'} key={index}>
+            {row.isHeading ? (
               <input
-                className="ingredient-custom-unit"
-                placeholder="Enhet"
-                value={row.customUnit}
-                onChange={(e) => updateIngredientRow(index, { customUnit: e.target.value })}
+                className="ingredient-heading-input"
+                required
+                placeholder="Overskrift, f.eks. Til marinaden"
+                value={row.name}
+                onChange={(e) => updateIngredientRow(index, { name: e.target.value })}
               />
+            ) : (
+              <>
+                <input
+                  className="ingredient-name"
+                  required
+                  placeholder="Ingrediens, f.eks. løk"
+                  value={row.name}
+                  onChange={(e) => updateIngredientRow(index, { name: e.target.value })}
+                />
+                <input
+                  className="ingredient-amount"
+                  type="number"
+                  min="0"
+                  step="any"
+                  placeholder="Mengde"
+                  value={row.amount}
+                  onChange={(e) => updateIngredientRow(index, { amount: e.target.value })}
+                />
+                <select
+                  className="ingredient-unit"
+                  value={row.unit}
+                  onChange={(e) => updateIngredientRow(index, { unit: e.target.value })}
+                >
+                  {UNITS.map((unit) => (
+                    <option key={unit} value={unit}>
+                      {unit}
+                    </option>
+                  ))}
+                  <option value="annet">annet</option>
+                </select>
+                {row.unit === 'annet' && (
+                  <input
+                    className="ingredient-custom-unit"
+                    placeholder="Enhet"
+                    value={row.customUnit}
+                    onChange={(e) => updateIngredientRow(index, { customUnit: e.target.value })}
+                  />
+                )}
+              </>
             )}
             <div className="row-actions">
               <button
@@ -222,9 +258,14 @@ export function RecipeForm({ heading, initial, submitLabel, savingLabel, onSubmi
           </div>
         ))}
       </div>
-      <button type="button" className="row-add" onClick={addIngredientRow}>
-        + Legg til ingrediens
-      </button>
+      <div className="row-add-group">
+        <button type="button" className="row-add" onClick={addIngredientRow}>
+          + Legg til ingrediens
+        </button>
+        <button type="button" className="row-add" onClick={addHeadingRow}>
+          + Legg til overskrift
+        </button>
+      </div>
 
       <label>Fremgangsmåte</label>
       <div className="step-rows">

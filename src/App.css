@@ -284,6 +284,17 @@
   margin-bottom: 4px;
 }
 
+.ingredient-heading {
+  list-style: none;
+  margin-left: -20px;
+  margin-top: 10px;
+  font-weight: 600;
+}
+
+.ingredient-heading:first-child {
+  margin-top: 0;
+}
+
 .ingredient-amount-display {
   font-weight: 500;
   margin-right: 4px;
@@ -326,6 +337,24 @@
 .ingredient-name {
   flex: 1;
   min-width: 0;
+}
+
+.ingredient-row-heading {
+  background: var(--code-bg);
+  border-radius: 8px;
+  padding: 4px 8px;
+}
+
+.ingredient-heading-input {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+}
+
+.row-add-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .step-row {
