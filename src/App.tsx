@@ -1,122 +1,29 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { Session } from '@supabase/supabase-js'
-import { supabase } from './lib/supabaseClient'
-import { TAGS } from './lib/tags'
-import type { Profile, Recipe } from './types'
-import { RecipeList } from './components/RecipeList'
-import { AddRecipeForm } from './components/AddRecipeForm'
-import { Login } from './components/Login'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { AppProvider } from './context/AppContext'
+import { HjemPage } from './pages/HjemPage'
+import { SamlingPage } from './pages/SamlingPage'
+import { OppskriftPage } from './pages/OppskriftPage'
+import { KokemodusPage } from './pages/KokemodusPage'
+import { NyOppskriftPage } from './pages/NyOppskriftPage'
+import { SokPage } from './pages/SokPage'
+import { ProfilPage } from './pages/ProfilPage'
 import './App.css'
 
 function App() {
-  const [session, setSession] = useState<Session | null>(null)
-  const [recipes, setRecipes] = useState<Recipe[]>([])
-  const [profiles, setProfiles] = useState<Profile[]>([])
-  const [loading, setLoading] = useState(true)
-  const [menuOpen, setMenuOpen] = useState(false)
-  const menuRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session))
-
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession)
-      setMenuOpen(false)
-    })
-
-    return () => listener.subscription.unsubscribe()
-  }, [])
-
-  useEffect(() => {
-    if (!menuOpen) return
-
-    function handleClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false)
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [menuOpen])
-
-  const loadRecipes = useCallback(async () => {
-    setLoading(true)
-    const { data, error } = await supabase
-      .from('recipes')
-      .select('*')
-      .order('created_at', { ascending: false })
-
-    if (!error && data) {
-      // Fallback til [] hvis databasen ikke har fått tags-kolonnen ennå
-      // (schema.sql ikke kjørt på nytt), slik at appen ikke krasjer.
-      setRecipes(data.map((recipe) => ({ ...recipe, tags: recipe.tags ?? [] })))
-    }
-    setLoading(false)
-  }, [])
-
-  useEffect(() => {
-    loadRecipes()
-
-    supabase
-      .from('profiles')
-      .select('*')
-      .then(({ data, error }) => {
-        if (!error && data) {
-          setProfiles(data)
-        }
-      })
-  }, [loadRecipes])
-
-  const handleRecipeAdded = useCallback(() => {
-    loadRecipes()
-    setMenuOpen(false)
-  }, [loadRecipes])
-
-  const availableTags = useMemo(
-    () => [...new Set([...TAGS, ...recipes.flatMap((recipe) => recipe.tags)])],
-    [recipes]
-  )
-
   return (
-    <div className="page">
-      <header className="page-header">
-        <div className="menu" ref={menuRef}>
-          <button
-            className="menu-button"
-            aria-label="Meny"
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen((open) => !open)}
-          >
-            ☰
-          </button>
-          {menuOpen && (
-            <div className="menu-dropdown">
-              {session ? (
-                <>
-                  <AddRecipeForm onAdded={handleRecipeAdded} availableTags={availableTags} />
-                  <button className="link-button" onClick={() => supabase.auth.signOut()}>
-                    Logg ut
-                  </button>
-                </>
-              ) : (
-                <Login />
-              )}
-            </div>
-          )}
-        </div>
-        <h1>Mine oppskrifter</h1>
-      </header>
-
-      <RecipeList
-        recipes={recipes}
-        profiles={profiles}
-        loading={loading}
-        currentUserId={session?.user.id ?? null}
-        availableTags={availableTags}
-        onRecipeChanged={loadRecipes}
-      />
-    </div>
+    <AppProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<HjemPage />} />
+          <Route path="/samling/:tag" element={<SamlingPage />} />
+          <Route path="/oppskrift/:id" element={<OppskriftPage />} />
+          <Route path="/oppskrift/:id/kok" element={<KokemodusPage />} />
+          <Route path="/ny" element={<NyOppskriftPage />} />
+          <Route path="/sok" element={<SokPage />} />
+          <Route path="/meg" element={<ProfilPage />} />
+        </Routes>
+      </BrowserRouter>
+    </AppProvider>
   )
 }
 
