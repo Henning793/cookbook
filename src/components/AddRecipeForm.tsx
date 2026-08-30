@@ -126,6 +126,13 @@ export function AddRecipeForm({ onAdded }: Props) {
         {ingredientRows.map((row, index) => (
           <div className="ingredient-row" key={index}>
             <input
+              className="ingredient-name"
+              required
+              placeholder="Ingrediens, f.eks. løk"
+              value={row.name}
+              onChange={(e) => updateIngredientRow(index, { name: e.target.value })}
+            />
+            <input
               className="ingredient-amount"
               type="number"
               min="0"
@@ -154,13 +161,6 @@ export function AddRecipeForm({ onAdded }: Props) {
                 onChange={(e) => updateIngredientRow(index, { customUnit: e.target.value })}
               />
             )}
-            <input
-              className="ingredient-name"
-              required
-              placeholder="Ingrediens, f.eks. løk"
-              value={row.name}
-              onChange={(e) => updateIngredientRow(index, { name: e.target.value })}
-            />
             <button
               type="button"
               className="row-remove"
