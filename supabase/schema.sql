@@ -1,4 +1,5 @@
 -- Kjør dette i Supabase Dashboard -> SQL Editor -> New query
+-- Trygt å kjøre på nytt (idempotent) selv om tabellene/policyene allerede finnes.
 
 create table if not exists recipes (
   id uuid primary key default gen_random_uuid(),
@@ -9,29 +10,57 @@ create table if not exists recipes (
   image_url text
 );
 
+-- Hvem oppskriften tilhører. NB: ikke "not null" her - se README for hvorfor
+-- (auth.uid() er NULL når SQL kjøres direkte i SQL Editor, så en NOT NULL-
+-- kolonne med denne default-verdien ville feilet på eksisterende rader).
+-- Nye oppskrifter lagt til fra appen får owner_id satt automatisk via
+-- default-verdien, siden de går via en innlogget request.
+alter table recipes add column if not exists owner_id uuid references auth.users(id) default auth.uid();
+
 alter table recipes enable row level security;
 
--- Alle (også ikke-innloggede) kan lese oppskrifter, siden de skal deles med andre.
+-- Alle (også ikke-innloggede) kan lese oppskrifter, siden de skal deles med hele familien.
+drop policy if exists "Alle kan lese oppskrifter" on recipes;
 create policy "Alle kan lese oppskrifter"
   on recipes for select
   to anon, authenticated
   using (true);
 
--- Kun innloggede brukere kan legge til oppskrifter.
-create policy "Innloggede kan legge til oppskrifter"
+-- Man kan kun legge til oppskrifter i sin egen kokebok.
+drop policy if exists "Innloggede kan legge til oppskrifter" on recipes;
+create policy "Innloggede kan legge til i egen kokebok"
   on recipes for insert
   to authenticated
-  with check (true);
+  with check (owner_id = auth.uid());
 
--- (Valgfritt) la innloggede også oppdatere/slette oppskrifter.
-create policy "Innloggede kan endre oppskrifter"
+-- Man kan kun endre/slette sine egne oppskrifter, ikke andres.
+drop policy if exists "Innloggede kan endre oppskrifter" on recipes;
+create policy "Innloggede kan endre egne oppskrifter"
   on recipes for update
   to authenticated
-  using (true);
+  using (owner_id = auth.uid());
 
-create policy "Innloggede kan slette oppskrifter"
+drop policy if exists "Innloggede kan slette oppskrifter" on recipes;
+create policy "Innloggede kan slette egne oppskrifter"
   on recipes for delete
   to authenticated
+  using (owner_id = auth.uid());
+
+-- Profiler: ett fornavn/kallenavn per familiemedlem, til visning i UI-et i
+-- stedet for e-postadressen. Fylles inn manuelt av deg via SQL Editor når du
+-- oppretter en ny bruker - se README for fremgangsmåte.
+create table if not exists profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  display_name text not null
+);
+
+alter table profiles enable row level security;
+
+-- Alle (også ikke-innloggede) kan lese profiler, siden navnene skal vises i UI-et.
+drop policy if exists "Alle kan lese profiler" on profiles;
+create policy "Alle kan lese profiler"
+  on profiles for select
+  to anon, authenticated
   using (true);
 
 -- Bucket for oppskriftsbilder. Kjør i tillegg (eller opprett bucket i UI):
@@ -40,11 +69,13 @@ insert into storage.buckets (id, name, public)
 values ('recipe-images', 'recipe-images', true)
 on conflict (id) do nothing;
 
+drop policy if exists "Alle kan se oppskriftsbilder" on storage.objects;
 create policy "Alle kan se oppskriftsbilder"
   on storage.objects for select
   to anon, authenticated
   using (bucket_id = 'recipe-images');
 
+drop policy if exists "Innloggede kan laste opp oppskriftsbilder" on storage.objects;
 create policy "Innloggede kan laste opp oppskriftsbilder"
   on storage.objects for insert
   to authenticated

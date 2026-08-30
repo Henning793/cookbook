@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from './lib/supabaseClient'
-import type { Recipe } from './types'
+import type { Profile, Recipe } from './types'
 import { RecipeList } from './components/RecipeList'
 import { AddRecipeForm } from './components/AddRecipeForm'
 import { Login } from './components/Login'
@@ -10,6 +10,7 @@ import './App.css'
 function App() {
   const [session, setSession] = useState<Session | null>(null)
   const [recipes, setRecipes] = useState<Recipe[]>([])
+  const [profiles, setProfiles] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -53,6 +54,15 @@ function App() {
 
   useEffect(() => {
     loadRecipes()
+
+    supabase
+      .from('profiles')
+      .select('*')
+      .then(({ data, error }) => {
+        if (!error && data) {
+          setProfiles(data)
+        }
+      })
   }, [loadRecipes])
 
   const handleRecipeAdded = useCallback(() => {
@@ -90,7 +100,7 @@ function App() {
         <h1>Mine oppskrifter</h1>
       </header>
 
-      <RecipeList recipes={recipes} loading={loading} />
+      <RecipeList recipes={recipes} profiles={profiles} loading={loading} />
     </div>
   )
 }

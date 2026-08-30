@@ -1,9 +1,10 @@
 # Mine oppskrifter
 
 Enkel kokebok-app: en nettside du legger som snarvei på telefonens
-hjemskjerm, som lar deg lagre og se dine egne oppskrifter. Alle med lenken
-kan se oppskriftene; kun du kan legge til nye (via innlogging med e-post og
-passord).
+hjemskjerm, som lar hele familien lagre og se oppskrifter sammen. Alle med
+lenken kan se alle oppskriftene, uansett hvem som eier dem. Hvert
+familiemedlem logger inn (e-post og passord) for å legge til oppskrifter i
+sin egen kokebok — man kan ikke legge til eller endre i noen andres.
 
 Bygget med Vite + React + TypeScript, Supabase (database, innlogging,
 bildelagring) og hostet på Netlify. Fungerer som en installerbar PWA med
@@ -15,17 +16,52 @@ cache, slik at tidligere sette oppskrifter også vises uten nett.
 2. Opprett et nytt prosjekt (velg region f.eks. "EU" for lavere ventetid fra Norge).
 3. Når prosjektet er klart: gå til **SQL Editor** i menyen til venstre, lim inn
    innholdet i [`supabase/schema.sql`](supabase/schema.sql), og trykk **Run**.
-   Dette oppretter tabellen for oppskrifter, tilgangsregler (RLS), og en
-   bucket for bilder.
+   Dette oppretter tabellene for oppskrifter og profiler, tilgangsregler
+   (RLS), og en bucket for bilder.
 4. Gå til **Project settings -> API**. Du trenger to verdier derfra:
    - **Project URL**
    - **anon public key**
-5. Opprett din egen brukerkonto (appen har ikke noe registreringsskjema, siden
-   kun du skal kunne logge inn): gå til **Authentication -> Users -> Add user
-   -> Create new user**, skriv inn e-post og passord, og huk av for **Auto
-   Confirm User** slik at du slipper e-postbekreftelse.
 
-## 2. Sett opp miljøvariabler
+## 2. Legg til familiemedlemmer
+
+Appen har ikke noe registreringsskjema — du oppretter en bruker manuelt for
+deg selv og for hvert familiemedlem som skal kunne legge til oppskrifter:
+
+1. Gå til **Authentication -> Users -> Add user -> Create new user**, skriv
+   inn e-post og passord, og huk av for **Auto Confirm User** slik at
+   personen slipper e-postbekreftelse.
+2. Kopier bruker-ID-en (UUID-en) til den nye brukeren fra brukerlisten.
+3. Gå til **SQL Editor** og gi dem et visningsnavn (det som vises på
+   oppskriftene deres i appen), f.eks.:
+
+   ```sql
+   insert into profiles (id, display_name) values ('<uuid-fra-auth-users>', 'Mamma');
+   ```
+
+Gjenta for hvert familiemedlem. Uten en rad i `profiles` vises brukerens
+oppskrifter i appen med navnet "Ukjent".
+
+### Eier-modellen
+
+- Alle (også ikke-innloggede) kan **se** alle oppskrifter, uansett hvem som
+  eier dem.
+- En innlogget bruker kan bare **legge til, endre eller slette** oppskrifter
+  i sin egen kokebok. Dette håndheves av databasens tilgangsregler (RLS) —
+  ikke bare av appens grensesnitt — så det er ikke mulig å omgå ved å prøve
+  seg fram i appen eller sende forespørsler direkte til Supabase.
+
+### Eksisterende oppskrifter fra før denne endringen
+
+`owner_id`-kolonnen på `recipes` er lagt til uten et strengt krav om at den
+må ha en verdi (`not null`), fordi eksisterende rader ikke automatisk kan få
+riktig eier tilordnet fra SQL Editor. Har du oppskrifter fra før som mangler
+`owner_id`, sett dem manuelt i SQL Editor, f.eks.:
+
+```sql
+update recipes set owner_id = '<uuid-fra-auth-users>' where title = 'Min gamle oppskrift';
+```
+
+## 3. Sett opp miljøvariabler
 
 Kopier `.env.example` til `.env` og fyll inn verdiene fra Supabase:
 
@@ -40,7 +76,7 @@ VITE_SUPABASE_ANON_KEY=din-anon-key
 
 `.env` skal ikke lastes opp til git — sjekk at den står i `.gitignore`.
 
-## 3. Kjør lokalt (valgfritt, for testing)
+## 4. Kjør lokalt (valgfritt, for testing)
 
 ```
 npm install
@@ -49,7 +85,7 @@ npm run dev
 
 Åpne linken som vises i terminalen.
 
-## 4. Deploy til Netlify
+## 5. Deploy til Netlify
 
 1. Push prosjektet til et GitHub-repo.
 2. Opprett en gratis konto på https://netlify.com og koble den til GitHub.
@@ -63,7 +99,7 @@ npm run dev
 5. Deploy. Du får en `.netlify.app`-adresse (kan endres til noe kortere under
    **Site settings -> Change site name**, eller kobles til eget domene).
 
-## 5. Legg til på hjemskjermen (quick-link)
+## 6. Legg til på hjemskjermen (quick-link)
 
 **iPhone (Safari):** åpne siden -> Del-ikonet -> "Legg til på Hjem-skjerm".
 
@@ -72,25 +108,25 @@ startskjermen" / "Installer app".
 
 Appen åpnes da i fullskjerm uten nettleser-UI, som en vanlig app.
 
-## 6. Logg inn for å legge til oppskrifter
+## 7. Logg inn for å legge til oppskrifter
 
-Skriv inn e-post og passord for brukeren du opprettet i Supabase-dashboardet
-(se steg 5 over). Da vises skjemaet for å legge til nye oppskrifter. Alle
-andre som åpner lenken kan se oppskriftene, men bare du (og andre du evt.
-gir tilgang via Supabase) kan legge til/endre.
+Trykk hamburgerikonet (☰) øverst til venstre, og skriv inn e-post og passord
+for brukeren din (se punkt 2 over). Da vises skjemaet for å legge til nye
+oppskrifter i din egen kokebok.
 
 ## Struktur
 
 - `src/lib/supabaseClient.ts` – kobling til Supabase.
 - `src/components/Login.tsx` – innlogging via e-post og passord.
 - `src/components/AddRecipeForm.tsx` – skjema for å legge til oppskrift + bilde.
-- `src/components/RecipeList.tsx` – viser lagrede oppskrifter.
-- `supabase/schema.sql` – databasetabell, tilgangsregler og bilde-bucket.
+- `src/components/RecipeList.tsx` – viser lagrede oppskrifter, med filter og
+  navnelapp per familiemedlem.
+- `supabase/schema.sql` – databasetabeller (oppskrifter og profiler),
+  tilgangsregler og bilde-bucket.
 
 ## Videre forbedringer (ikke i MVP)
 
 - Redigere/slette oppskrifter fra appen (i dag må det gjøres i Supabase-UI).
 - Søk/filtrering, kategorier, porsjonsstørrelse.
-- Flere brukere med hver sin innlogging og egne tilganger.
 - Offline-kø: lagre en ny oppskrift mens du er uten nett, og synke automatisk
   når du får nett igjen (i dag krever "legg til" at du er tilkoblet).
