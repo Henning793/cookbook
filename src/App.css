@@ -584,6 +584,12 @@
   display: block;
 }
 
+/* Design system's "washed" photo treatment (design/handoff/styles.css:73) —
+   used on the optional recipe image per README section 3.5. */
+.washed {
+  filter: saturate(0.6) contrast(0.85) brightness(1.1) opacity(0.94);
+}
+
 .tag-row {
   display: flex;
   flex-wrap: wrap;
