@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from './lib/supabaseClient'
+import { TAGS } from './lib/tags'
 import type { Profile, Recipe } from './types'
 import { RecipeList } from './components/RecipeList'
 import { AddRecipeForm } from './components/AddRecipeForm'
@@ -47,7 +48,9 @@ function App() {
       .order('created_at', { ascending: false })
 
     if (!error && data) {
-      setRecipes(data)
+      // Fallback til [] hvis databasen ikke har fått tags-kolonnen ennå
+      // (schema.sql ikke kjørt på nytt), slik at appen ikke krasjer.
+      setRecipes(data.map((recipe) => ({ ...recipe, tags: recipe.tags ?? [] })))
     }
     setLoading(false)
   }, [])
@@ -70,6 +73,11 @@ function App() {
     setMenuOpen(false)
   }, [loadRecipes])
 
+  const availableTags = useMemo(
+    () => [...new Set([...TAGS, ...recipes.flatMap((recipe) => recipe.tags)])],
+    [recipes]
+  )
+
   return (
     <div className="page">
       <header className="page-header">
@@ -86,7 +94,7 @@ function App() {
             <div className="menu-dropdown">
               {session ? (
                 <>
-                  <AddRecipeForm onAdded={handleRecipeAdded} />
+                  <AddRecipeForm onAdded={handleRecipeAdded} availableTags={availableTags} />
                   <button className="link-button" onClick={() => supabase.auth.signOut()}>
                     Logg ut
                   </button>
@@ -105,6 +113,7 @@ function App() {
         profiles={profiles}
         loading={loading}
         currentUserId={session?.user.id ?? null}
+        availableTags={availableTags}
         onRecipeChanged={loadRecipes}
       />
     </div>

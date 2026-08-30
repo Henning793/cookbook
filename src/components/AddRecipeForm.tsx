@@ -5,11 +5,12 @@ import { RecipeForm, type RecipeFormValues } from './RecipeForm'
 
 interface Props {
   onAdded: () => void
+  availableTags: string[]
 }
 
 type View = 'closed' | 'import' | 'form'
 
-export function AddRecipeForm({ onAdded }: Props) {
+export function AddRecipeForm({ onAdded, availableTags }: Props) {
   const [view, setView] = useState<View>('closed')
   const [importUrl, setImportUrl] = useState('')
   const [importing, setImporting] = useState(false)
@@ -37,7 +38,7 @@ export function AddRecipeForm({ onAdded }: Props) {
 
     try {
       const imported = await importRecipeFromUrl(importUrl)
-      setImportedValues({ ...imported, image_url: null })
+      setImportedValues({ ...imported, image_url: null, tags: [] })
       setView('form')
     } catch (err) {
       setImportError(err instanceof Error ? err.message : 'Noe gikk galt')
@@ -92,6 +93,7 @@ export function AddRecipeForm({ onAdded }: Props) {
     <RecipeForm
       heading={importedValues ? 'Se gjennom importert oppskrift' : 'Ny oppskrift i din kokebok'}
       initial={importedValues ?? undefined}
+      availableTags={availableTags}
       submitLabel="Lagre oppskrift"
       savingLabel="Lagrer..."
       onSubmit={handleSubmit}
