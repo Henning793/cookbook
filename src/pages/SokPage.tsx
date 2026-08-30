@@ -50,6 +50,11 @@ export function SokPage() {
   const navigate = useNavigate()
   const { recipes, profiles, availableTags, filters, setFilters } = useApp()
 
+  const ownersWithRecipes = useMemo(() => {
+    const ownerIds = new Set(recipes.map((recipe) => recipe.owner_id))
+    return profiles.filter((profile) => ownerIds.has(profile.id))
+  }, [recipes, profiles])
+
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -114,7 +119,7 @@ export function SokPage() {
             {tag}
           </button>
         ))}
-        {profiles.map((profile) => (
+        {ownersWithRecipes.map((profile) => (
           <button
             key={profile.id}
             type="button"
