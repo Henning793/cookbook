@@ -70,9 +70,24 @@ export function RecipeList({ recipes, profiles, loading }: Props) {
               </summary>
               <div className="recipe-body">
                 <h3>Ingredienser</h3>
-                <p className="preformatted">{recipe.ingredients}</p>
+                <ul className="ingredient-list">
+                  {recipe.ingredients.map((ingredient, index) => (
+                    <li key={index}>
+                      {ingredient.amount != null && (
+                        <span className="ingredient-amount-display">
+                          {ingredient.amount} {ingredient.unit}
+                        </span>
+                      )}
+                      {ingredient.name}
+                    </li>
+                  ))}
+                </ul>
                 <h3>Fremgangsmåte</h3>
-                <p className="preformatted">{recipe.steps}</p>
+                <ol className="step-list">
+                  {recipe.steps.map((step, index) => (
+                    <li key={index}>{step}</li>
+                  ))}
+                </ol>
               </div>
             </details>
           ))}

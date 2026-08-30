@@ -5,10 +5,26 @@ create table if not exists recipes (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz not null default now(),
   title text not null,
-  ingredients text not null,
-  steps text not null,
+  -- Liste av { amount: number | null, unit: string, name: string }.
+  ingredients jsonb not null,
+  -- Liste av tekststrenger, ett per steg i fremgangsmåten (vises numrert i appen).
+  steps jsonb not null,
   image_url text
 );
+
+-- Endrer eksisterende installasjoner fra fritekst-kolonner til strukturert
+-- jsonb. Trygt å kjøre på nytt (no-op) hvis kolonnene allerede er jsonb.
+-- NB: dette forutsetter at recipes-tabellen er tom eller at du er komfortabel
+-- med at gamle fritekst-oppskrifter mister innholdet sitt (erstattes med
+-- tomme lister) - de kan i så fall skrives inn på nytt via det nye skjemaet.
+do $$
+begin
+  if (select data_type from information_schema.columns where table_name = 'recipes' and column_name = 'ingredients') = 'text' then
+    alter table recipes
+      alter column ingredients type jsonb using '[]'::jsonb,
+      alter column steps type jsonb using '[]'::jsonb;
+  end if;
+end $$;
 
 -- Hvem oppskriften tilhører. NB: ikke "not null" her - se README for hvorfor
 -- (auth.uid() er NULL når SQL kjøres direkte i SQL Editor, så en NOT NULL-

@@ -1,9 +1,15 @@
+export interface IngredientItem {
+  amount: number | null
+  unit: string
+  name: string
+}
+
 export interface Recipe {
   id: string
   created_at: string
   title: string
-  ingredients: string
-  steps: string
+  ingredients: IngredientItem[]
+  steps: string[]
   image_url: string | null
   owner_id: string
 }
