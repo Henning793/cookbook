@@ -114,9 +114,31 @@ Trykk hamburgerikonet (☰) øverst til venstre, og skriv inn e-post og passord
 for brukeren din (se punkt 2 over). Da vises skjemaet for å legge til nye
 oppskrifter i din egen kokebok.
 
+## 8. Importer oppskrift fra URL
+
+Inne i menyen finner du "Importer fra URL" ved siden av "+ Legg til
+oppskrift". Lim inn en lenke til en oppskrift, og appen forsøker å hente ut
+tittel, ingredienser og fremgangsmåte automatisk.
+
+Dette fungerer kun på nettsider som har strukturerte oppskriftsdata
+innebygd (schema.org "Recipe" — det formatet Google bruker for
+oppskrift-forhåndsvisninger i søk). De fleste store oppskriftsider har
+dette, men ikke alle. Fungerer det ikke, gir appen en tydelig feilmelding,
+og du kan legge inn oppskriften manuelt i stedet.
+
+Importen fyller kun ut skjemaet — ingenting lagres før du selv trykker
+"Lagre oppskrift". Ingrediens-mengder og -enheter tolkes automatisk der det
+går, men sjekk gjerne gjennom før lagring siden tolkningen er
+"best effort" og ikke alltid perfekt.
+
+Ingen API-nøkkel eller ekstra kostnad er nødvendig for denne funksjonen.
+
 ## Struktur
 
 - `src/lib/supabaseClient.ts` – kobling til Supabase.
+- `src/lib/importRecipe.ts` – frontend-klient som kaller import-funksjonen.
+- `netlify/functions/` – `import-recipe.mjs` (funksjonshandler) og `lib/`
+  (URL-sikkerhet og parsing av schema.org-oppskriftsdata).
 - `src/components/Login.tsx` – innlogging via e-post og passord.
 - `src/components/AddRecipeForm.tsx` – skjema for å legge til oppskrift + bilde.
 - `src/components/RecipeList.tsx` – viser lagrede oppskrifter, med filter og
