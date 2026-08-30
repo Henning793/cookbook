@@ -1219,3 +1219,247 @@
   text-align: center;
   cursor: pointer;
 }
+
+/* --- Hjem --- */
+
+.hjem-page {
+  position: relative;
+  min-height: calc(100vh - 80px);
+}
+
+.hjem-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 4px 0;
+}
+
+.hjem-kicker {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-accent-2-700);
+  margin: 0 0 6px;
+}
+
+.hjem-title {
+  font-size: 32px;
+  line-height: 1.05;
+  letter-spacing: -0.015em;
+  margin: 0;
+}
+
+.hjem-avatar {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-heading);
+  font-size: 15px;
+}
+
+.hjem-sist-brukt {
+  position: relative;
+  overflow: hidden;
+  margin-top: 22px;
+  padding: 22px 24px;
+  border-radius: 34px;
+  background: var(--color-accent);
+  color: var(--color-bg);
+}
+
+.hjem-sist-brukt::after {
+  content: '';
+  position: absolute;
+  top: -30px;
+  right: -30px;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: rgba(245, 234, 216, 0.14);
+}
+
+.hjem-sist-brukt-kicker {
+  position: relative;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 0.85;
+  margin: 0;
+}
+
+.hjem-sist-brukt-title {
+  position: relative;
+  font-size: 26px;
+  line-height: 1.1;
+  margin: 8px 0 0;
+}
+
+.hjem-sist-brukt-meta {
+  position: relative;
+  font-size: 12px;
+  opacity: 0.85;
+  margin: 6px 0 0;
+}
+
+.hjem-sist-brukt-cta {
+  position: relative;
+  display: block;
+  margin-top: 16px;
+  border: none;
+  border-radius: 999px;
+  background: var(--color-bg);
+  color: var(--color-accent-700);
+  font-family: var(--font-heading);
+  font-size: 14px;
+  padding: 9px 18px;
+  cursor: pointer;
+}
+
+.hjem-samlinger-kicker {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--color-neutral-600);
+  margin: 22px 0 12px;
+}
+
+.hjem-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.hjem-collection-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  background: var(--color-surface);
+  border: none;
+  border-radius: 28px;
+  padding: 18px;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: var(--color-text);
+}
+
+.hjem-collection-dot {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  margin-bottom: 12px;
+}
+
+.hjem-collection-name {
+  font-family: var(--font-heading);
+  font-size: 18px;
+  line-height: 1.15;
+}
+
+.hjem-collection-count {
+  font-size: 11px;
+  color: var(--color-neutral-700);
+  margin-top: 4px;
+}
+
+.hjem-fab {
+  position: fixed;
+  right: 24px;
+  bottom: 30px;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: none;
+  background: var(--color-neutral-900);
+  color: var(--color-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-lg);
+  cursor: pointer;
+}
+
+/* --- Samling --- */
+
+.samling-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-top: 4px;
+}
+
+.samling-dot {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  margin-bottom: 14px;
+}
+
+.samling-title {
+  font-size: 32px;
+  line-height: 1.05;
+  letter-spacing: -0.015em;
+  margin: 0;
+}
+
+.samling-recipe-list {
+  margin-top: 24px;
+}
+
+.samling-recipe-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--color-divider);
+  padding: 16px 0;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: var(--color-text);
+}
+
+.samling-recipe-row:last-child {
+  border-bottom: none;
+}
+
+.samling-recipe-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.samling-recipe-title {
+  font-family: var(--font-heading);
+  font-size: 20px;
+  line-height: 1.15;
+}
+
+.samling-recipe-meta {
+  font-size: 12px;
+  color: var(--color-neutral-700);
+  margin-top: 2px;
+}
+
+.samling-footer {
+  margin-top: 28px;
+}
+
+.samling-copy-link {
+  width: 100%;
+  border: 1px solid var(--color-neutral-400);
+  border-radius: 999px;
+  background: none;
+  color: var(--color-text);
+  padding: 14px;
+  font-size: 14px;
+  text-align: center;
+  cursor: pointer;
+}
