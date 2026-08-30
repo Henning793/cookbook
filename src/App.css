@@ -8,8 +8,47 @@
 .page-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 16px;
+}
+
+.menu {
+  position: relative;
+}
+
+.menu-button {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 6px 10px;
+  color: var(--text-h);
+}
+
+.menu-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 10;
+  width: max(280px, 80vw);
+  max-width: 360px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  padding: 12px;
+}
+
+.menu-dropdown .login-form,
+.menu-dropdown .add-recipe-form,
+.menu-dropdown .add-recipe-toggle {
+  margin-bottom: 0;
+}
+
+.menu-dropdown .link-button {
+  margin-top: 8px;
 }
 
 .link-button {
