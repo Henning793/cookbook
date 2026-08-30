@@ -1,14 +1,20 @@
 import { useMemo, useState } from 'react'
+import { supabase } from '../lib/supabaseClient'
 import type { Profile, Recipe } from '../types'
+import { RecipeForm, type RecipeFormValues } from './RecipeForm'
 
 interface Props {
   recipes: Recipe[]
   profiles: Profile[]
   loading: boolean
+  currentUserId: string | null
+  onRecipeChanged: () => void
 }
 
-export function RecipeList({ recipes, profiles, loading }: Props) {
+export function RecipeList({ recipes, profiles, loading, currentUserId, onRecipeChanged }: Props) {
   const [selectedOwnerId, setSelectedOwnerId] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null)
 
   const nameByOwnerId = useMemo(() => {
     const map = new Map<string, string>()
@@ -26,6 +32,22 @@ export function RecipeList({ recipes, profiles, loading }: Props) {
   const visibleRecipes = selectedOwnerId
     ? recipes.filter((recipe) => recipe.owner_id === selectedOwnerId)
     : recipes
+
+  async function handleUpdate(recipeId: string, values: RecipeFormValues) {
+    const { error } = await supabase.from('recipes').update(values).eq('id', recipeId)
+    if (error) throw error
+    setEditingId(null)
+    onRecipeChanged()
+  }
+
+  async function handleDelete(recipeId: string) {
+    const { error } = await supabase.from('recipes').delete().eq('id', recipeId)
+    if (!error) {
+      setConfirmingDeleteId(null)
+      setEditingId(null)
+      onRecipeChanged()
+    }
+  }
 
   if (loading) {
     return <p className="status-message">Laster oppskrifter...</p>
@@ -58,7 +80,7 @@ export function RecipeList({ recipes, profiles, loading }: Props) {
       ) : (
         <div className="recipe-grid">
           {visibleRecipes.map((recipe) => (
-            <details key={recipe.id} className="recipe-card">
+            <details key={recipe.id} className="recipe-card" open={editingId === recipe.id || undefined}>
               <summary>
                 {recipe.image_url && (
                   <img src={recipe.image_url} alt={recipe.title} loading="lazy" />
@@ -69,25 +91,72 @@ export function RecipeList({ recipes, profiles, loading }: Props) {
                 </span>
               </summary>
               <div className="recipe-body">
-                <h3>Ingredienser</h3>
-                <ul className="ingredient-list">
-                  {recipe.ingredients.map((ingredient, index) => (
-                    <li key={index}>
-                      {ingredient.amount != null && (
-                        <span className="ingredient-amount-display">
-                          {ingredient.amount} {ingredient.unit}
-                        </span>
-                      )}
-                      {ingredient.name}
-                    </li>
-                  ))}
-                </ul>
-                <h3>Fremgangsmåte</h3>
-                <ol className="step-list">
-                  {recipe.steps.map((step, index) => (
-                    <li key={index}>{step}</li>
-                  ))}
-                </ol>
+                {editingId === recipe.id ? (
+                  confirmingDeleteId === recipe.id ? (
+                    <div className="delete-confirm">
+                      <p>Er du sikker på at du vil slette denne oppskriften?</p>
+                      <div className="form-actions">
+                        <button type="button" onClick={() => setConfirmingDeleteId(null)}>
+                          Avbryt
+                        </button>
+                        <button
+                          type="button"
+                          className="delete-confirm-button"
+                          onClick={() => handleDelete(recipe.id)}
+                        >
+                          Ja, slett oppskriften
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <RecipeForm
+                      heading="Rediger oppskrift"
+                      initial={{
+                        title: recipe.title,
+                        ingredients: recipe.ingredients,
+                        steps: recipe.steps,
+                        image_url: recipe.image_url,
+                      }}
+                      submitLabel="Lagre endringer"
+                      savingLabel="Lagrer..."
+                      onSubmit={(values) => handleUpdate(recipe.id, values)}
+                      onCancel={() => setEditingId(null)}
+                      onDelete={() => setConfirmingDeleteId(recipe.id)}
+                    />
+                  )
+                ) : (
+                  <>
+                    {recipe.owner_id === currentUserId && (
+                      <button
+                        type="button"
+                        className="edit-recipe-button"
+                        aria-label="Rediger oppskrift"
+                        onClick={() => setEditingId(recipe.id)}
+                      >
+                        ✏️
+                      </button>
+                    )}
+                    <h3>Ingredienser</h3>
+                    <ul className="ingredient-list">
+                      {recipe.ingredients.map((ingredient, index) => (
+                        <li key={index}>
+                          {ingredient.amount != null && (
+                            <span className="ingredient-amount-display">
+                              {ingredient.amount} {ingredient.unit}
+                            </span>
+                          )}
+                          {ingredient.name}
+                        </li>
+                      ))}
+                    </ul>
+                    <h3>Fremgangsmåte</h3>
+                    <ol className="step-list">
+                      {recipe.steps.map((step, index) => (
+                        <li key={index}>{step}</li>
+                      ))}
+                    </ol>
+                  </>
+                )}
               </div>
             </details>
           ))}
