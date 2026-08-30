@@ -8,11 +8,13 @@ interface Props {
   profiles: Profile[]
   loading: boolean
   currentUserId: string | null
+  availableTags: string[]
   onRecipeChanged: () => void
 }
 
-export function RecipeList({ recipes, profiles, loading, currentUserId, onRecipeChanged }: Props) {
+export function RecipeList({ recipes, profiles, loading, currentUserId, availableTags, onRecipeChanged }: Props) {
   const [selectedOwnerId, setSelectedOwnerId] = useState<string | null>(null)
+  const [selectedTag, setSelectedTag] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null)
 
@@ -29,9 +31,16 @@ export function RecipeList({ recipes, profiles, loading, currentUserId, onRecipe
     return profiles.filter((profile) => ownerIds.has(profile.id))
   }, [recipes, profiles])
 
-  const visibleRecipes = selectedOwnerId
-    ? recipes.filter((recipe) => recipe.owner_id === selectedOwnerId)
-    : recipes
+  const tagsWithRecipes = useMemo(() => {
+    const usedTags = new Set(recipes.flatMap((recipe) => recipe.tags))
+    return availableTags.filter((tag) => usedTags.has(tag))
+  }, [recipes, availableTags])
+
+  const visibleRecipes = recipes.filter(
+    (recipe) =>
+      (selectedOwnerId === null || recipe.owner_id === selectedOwnerId) &&
+      (selectedTag === null || recipe.tags.includes(selectedTag))
+  )
 
   async function handleUpdate(recipeId: string, values: RecipeFormValues) {
     const { error } = await supabase.from('recipes').update(values).eq('id', recipeId)
@@ -70,6 +79,26 @@ export function RecipeList({ recipes, profiles, loading, currentUserId, onRecipe
               onClick={() => setSelectedOwnerId(profile.id)}
             >
               {profile.display_name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {tagsWithRecipes.length > 0 && (
+        <div className="owner-tabs">
+          <button
+            className={selectedTag === null ? 'owner-tab owner-tab-active' : 'owner-tab'}
+            onClick={() => setSelectedTag(null)}
+          >
+            Alle etiketter
+          </button>
+          {tagsWithRecipes.map((tag) => (
+            <button
+              key={tag}
+              className={selectedTag === tag ? 'owner-tab owner-tab-active' : 'owner-tab'}
+              onClick={() => setSelectedTag(tag)}
+            >
+              {tag}
             </button>
           ))}
         </div>
@@ -116,7 +145,9 @@ export function RecipeList({ recipes, profiles, loading, currentUserId, onRecipe
                         ingredients: recipe.ingredients,
                         steps: recipe.steps,
                         image_url: recipe.image_url,
+                        tags: recipe.tags,
                       }}
+                      availableTags={availableTags}
                       submitLabel="Lagre endringer"
                       savingLabel="Lagrer..."
                       onSubmit={(values) => handleUpdate(recipe.id, values)}
@@ -135,6 +166,15 @@ export function RecipeList({ recipes, profiles, loading, currentUserId, onRecipe
                       >
                         ✏️
                       </button>
+                    )}
+                    {recipe.tags.length > 0 && (
+                      <div className="recipe-tags">
+                        {recipe.tags.map((tag) => (
+                          <span key={tag} className="tag-chip">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
                     )}
                     <h3>Ingredienser</h3>
                     <ul className="ingredient-list">

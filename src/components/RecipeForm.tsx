@@ -51,6 +51,7 @@ export interface RecipeFormValues {
   ingredients: IngredientItem[]
   steps: string[]
   image_url: string | null
+  tags: string[]
 }
 
 interface Props {
@@ -60,7 +61,9 @@ interface Props {
     ingredients: IngredientItem[]
     steps: string[]
     image_url: string | null
+    tags: string[]
   }
+  availableTags: string[]
   submitLabel: string
   savingLabel: string
   onSubmit: (values: RecipeFormValues) => Promise<void>
@@ -68,15 +71,41 @@ interface Props {
   onDelete?: () => void
 }
 
-export function RecipeForm({ heading, initial, submitLabel, savingLabel, onSubmit, onCancel, onDelete }: Props) {
+export function RecipeForm({
+  heading,
+  initial,
+  availableTags,
+  submitLabel,
+  savingLabel,
+  onSubmit,
+  onCancel,
+  onDelete,
+}: Props) {
   const [title, setTitle] = useState(initial?.title ?? '')
   const [ingredientRows, setIngredientRows] = useState<IngredientRow[]>(
     initial && initial.ingredients.length > 0 ? initial.ingredients.map(toIngredientRow) : [emptyIngredientRow()]
   )
   const [steps, setSteps] = useState<string[]>(initial && initial.steps.length > 0 ? initial.steps : [''])
+  const [selectedTags, setSelectedTags] = useState<string[]>(initial?.tags ?? [])
+  const [customTagOptions, setCustomTagOptions] = useState<string[]>([])
+  const [customTagInput, setCustomTagInput] = useState('')
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  const tagOptions = [...new Set([...availableTags, ...customTagOptions])]
+
+  function toggleTag(tag: string) {
+    setSelectedTags((tags) => (tags.includes(tag) ? tags.filter((t) => t !== tag) : [...tags, tag]))
+  }
+
+  function addCustomTag() {
+    const tag = customTagInput.trim()
+    if (!tag) return
+    setCustomTagOptions((tags) => (tags.includes(tag) ? tags : [...tags, tag]))
+    setSelectedTags((tags) => (tags.includes(tag) ? tags : [...tags, tag]))
+    setCustomTagInput('')
+  }
 
   function updateIngredientRow(index: number, patch: Partial<IngredientRow>) {
     setIngredientRows((rows) => rows.map((row, i) => (i === index ? { ...row, ...patch } : row)))
@@ -154,6 +183,7 @@ export function RecipeForm({ heading, initial, submitLabel, savingLabel, onSubmi
         ingredients,
         steps: steps.map((step) => step.trim()),
         image_url: imageUrl,
+        tags: selectedTags,
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Noe gikk galt')
@@ -313,6 +343,36 @@ export function RecipeForm({ heading, initial, submitLabel, savingLabel, onSubmi
       <button type="button" className="row-add" onClick={addStep}>
         + Legg til steg
       </button>
+
+      <label>Etiketter</label>
+      <div className="tag-picker">
+        {tagOptions.map((tag) => (
+          <button
+            type="button"
+            key={tag}
+            className={selectedTags.includes(tag) ? 'tag-option tag-option-selected' : 'tag-option'}
+            onClick={() => toggleTag(tag)}
+          >
+            {tag}
+          </button>
+        ))}
+      </div>
+      <div className="tag-add-row">
+        <input
+          placeholder="Legg til egen etikett"
+          value={customTagInput}
+          onChange={(e) => setCustomTagInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              addCustomTag()
+            }
+          }}
+        />
+        <button type="button" className="row-add" onClick={addCustomTag}>
+          + Legg til
+        </button>
+      </div>
 
       <label htmlFor="image">
         {initial ? 'Nytt bilde (valgfritt, beholder eksisterende hvis tomt)' : 'Bilde (valgfritt)'}

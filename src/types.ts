@@ -13,6 +13,7 @@ export interface Recipe {
   steps: string[]
   image_url: string | null
   owner_id: string
+  tags: string[]
 }
 
 export interface Profile {

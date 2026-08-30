@@ -33,6 +33,11 @@ end $$;
 -- default-verdien, siden de går via en innlogget request.
 alter table recipes add column if not exists owner_id uuid references auth.users(id) default auth.uid();
 
+-- Etiketter (f.eks. "Middag", "Saus", "Bakst") - en enkel liste med
+-- tekststrenger. Trygt å sette NOT NULL med en fast default her, i
+-- motsetning til owner_id over, siden '{}' ikke er avhengig av innlogging.
+alter table recipes add column if not exists tags text[] not null default '{}';
+
 alter table recipes enable row level security;
 
 -- Alle (også ikke-innloggede) kan lese oppskrifter, siden de skal deles med hele familien.
