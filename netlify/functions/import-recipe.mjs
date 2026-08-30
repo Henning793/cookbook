@@ -8,7 +8,7 @@ const MAX_REDIRECTS = 3
 function jsonResponse(status, body) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
   })
 }
 
