@@ -255,6 +255,8 @@ git commit -m "Legg til router, app-shell og delt context for det nye designet"
 - Modify: `src/pages/NyOppskriftPage.tsx` (full implementation, replacing the Task 2 stub)
 - Modify: `src/components/RecipeForm.tsx` (restyle only — no logic changes, per Global Constraints)
 - Modify: `src/App.css` (styles for both pages' markup, plus the restyled `RecipeForm`)
+- Modify: `src/components/RecipeList.tsx` (remove only the inline-edit/delete-confirm code path per Step 4 — the card-grid/filtering code stays for Task 7)
+- Delete: `src/components/AddRecipeForm.tsx` (per Step 4)
 
 **Interfaces:**
 - Consumes: `useApp()` from Task 2 (`recipes`, `session`, `reload`, `availableTags`); `RecipeForm`/`RecipeFormValues` (existing, unchanged props); `importRecipeFromUrl` (existing, unchanged); `supabase` client (existing).
