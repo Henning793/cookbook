@@ -114,6 +114,25 @@
   margin-bottom: 24px;
 }
 
+.add-recipe-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 24px;
+}
+
+.add-recipe-entry .add-recipe-toggle {
+  margin-bottom: 0;
+}
+
+.add-recipe-entry .link-button {
+  align-self: center;
+}
+
+.menu-dropdown .add-recipe-entry {
+  margin-bottom: 0;
+}
+
 .form-actions {
   display: flex;
   gap: 8px;
