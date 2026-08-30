@@ -136,7 +136,9 @@ Ingen API-nøkkel eller ekstra kostnad er nødvendig for denne funksjonen.
 ## Struktur
 
 - `src/lib/supabaseClient.ts` – kobling til Supabase.
-- `src/lib/importRecipe.ts` – parsing av oppskriftsdata fra strukturert websideinnhold.
+- `src/lib/importRecipe.ts` – frontend-klient som kaller import-funksjonen.
+- `netlify/functions/` – `import-recipe.mjs` (funksjonshandler) og `lib/`
+  (URL-sikkerhet og parsing av schema.org-oppskriftsdata).
 - `src/components/Login.tsx` – innlogging via e-post og passord.
 - `src/components/AddRecipeForm.tsx` – skjema for å legge til oppskrift + bilde.
 - `src/components/RecipeList.tsx` – viser lagrede oppskrifter, med filter og
