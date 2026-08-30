@@ -12,6 +12,14 @@ interface IngredientRow {
 
 const emptyIngredientRow = (): IngredientRow => ({ amount: '', unit: UNITS[0], customUnit: '', name: '' })
 
+function moveItem<T>(items: T[], index: number, direction: -1 | 1): T[] {
+  const target = index + direction
+  if (target < 0 || target >= items.length) return items
+  const copy = [...items]
+  ;[copy[index], copy[target]] = [copy[target], copy[index]]
+  return copy
+}
+
 function toIngredientRow(item: IngredientItem): IngredientRow {
   const isKnownUnit = (UNITS as readonly string[]).includes(item.unit)
   return {
@@ -66,6 +74,10 @@ export function RecipeForm({ heading, initial, submitLabel, savingLabel, onSubmi
     setIngredientRows((rows) => rows.filter((_, i) => i !== index))
   }
 
+  function moveIngredientRow(index: number, direction: -1 | 1) {
+    setIngredientRows((rows) => moveItem(rows, index, direction))
+  }
+
   function updateStep(index: number, value: string) {
     setSteps((current) => current.map((step, i) => (i === index ? value : step)))
   }
@@ -76,6 +88,10 @@ export function RecipeForm({ heading, initial, submitLabel, savingLabel, onSubmi
 
   function removeStep(index: number) {
     setSteps((current) => current.filter((_, i) => i !== index))
+  }
+
+  function moveStep(index: number, direction: -1 | 1) {
+    setSteps((current) => moveItem(current, index, direction))
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -174,15 +190,35 @@ export function RecipeForm({ heading, initial, submitLabel, savingLabel, onSubmi
                 onChange={(e) => updateIngredientRow(index, { customUnit: e.target.value })}
               />
             )}
-            <button
-              type="button"
-              className="row-remove"
-              aria-label="Fjern ingrediens"
-              onClick={() => removeIngredientRow(index)}
-              disabled={ingredientRows.length === 1}
-            >
-              ✕
-            </button>
+            <div className="row-actions">
+              <button
+                type="button"
+                className="row-move"
+                aria-label="Flytt ingrediens opp"
+                onClick={() => moveIngredientRow(index, -1)}
+                disabled={index === 0}
+              >
+                ↑
+              </button>
+              <button
+                type="button"
+                className="row-move"
+                aria-label="Flytt ingrediens ned"
+                onClick={() => moveIngredientRow(index, 1)}
+                disabled={index === ingredientRows.length - 1}
+              >
+                ↓
+              </button>
+              <button
+                type="button"
+                className="row-remove"
+                aria-label="Fjern ingrediens"
+                onClick={() => removeIngredientRow(index)}
+                disabled={ingredientRows.length === 1}
+              >
+                ✕
+              </button>
+            </div>
           </div>
         ))}
       </div>
@@ -201,15 +237,35 @@ export function RecipeForm({ heading, initial, submitLabel, savingLabel, onSubmi
               value={step}
               onChange={(e) => updateStep(index, e.target.value)}
             />
-            <button
-              type="button"
-              className="row-remove"
-              aria-label="Fjern steg"
-              onClick={() => removeStep(index)}
-              disabled={steps.length === 1}
-            >
-              ✕
-            </button>
+            <div className="row-actions">
+              <button
+                type="button"
+                className="row-move"
+                aria-label="Flytt steg opp"
+                onClick={() => moveStep(index, -1)}
+                disabled={index === 0}
+              >
+                ↑
+              </button>
+              <button
+                type="button"
+                className="row-move"
+                aria-label="Flytt steg ned"
+                onClick={() => moveStep(index, 1)}
+                disabled={index === steps.length - 1}
+              >
+                ↓
+              </button>
+              <button
+                type="button"
+                className="row-remove"
+                aria-label="Fjern steg"
+                onClick={() => removeStep(index)}
+                disabled={steps.length === 1}
+              >
+                ✕
+              </button>
+            </div>
           </div>
         ))}
       </div>
