@@ -37,7 +37,7 @@
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-lg);
   padding: 12px;
 }
 
@@ -104,7 +104,7 @@
   border-radius: 8px;
   border: none;
   background: var(--accent);
-  color: white;
+  color: var(--color-bg);
   cursor: pointer;
   margin-top: 8px;
 }
@@ -144,6 +144,7 @@
 }
 
 .error {
+  /* no token for this in the design system */
   color: #d1242f;
   font-size: 14px;
 }
@@ -222,7 +223,7 @@
 .owner-tab-active {
   background: var(--accent);
   border-color: var(--accent);
-  color: white;
+  color: var(--color-bg);
 }
 
 .recipe-body {
@@ -246,6 +247,7 @@
   align-self: flex-start;
   background: none;
   border: none;
+  /* no token for this in the design system */
   color: #d1242f;
   cursor: pointer;
   padding: 4px 0;
@@ -261,8 +263,9 @@
   padding: 10px 14px;
   border-radius: 8px;
   border: none;
+  /* no token for this in the design system */
   background: #d1242f;
-  color: white;
+  color: var(--color-bg);
   cursor: pointer;
 }
 
@@ -377,7 +380,7 @@
 .tag-option-selected {
   background: var(--accent);
   border-color: var(--accent);
-  color: white;
+  color: var(--color-bg);
   font-weight: 600;
 }
 
