@@ -21,6 +21,7 @@ function App() {
           <Route path="/ny" element={<NyOppskriftPage />} />
           <Route path="/sok" element={<SokPage />} />
           <Route path="/meg" element={<ProfilPage />} />
+          <Route path="*" element={<HjemPage />} />
         </Routes>
       </BrowserRouter>
     </AppProvider>

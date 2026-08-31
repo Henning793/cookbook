@@ -436,7 +436,8 @@
 }
 
 .tag-option-check {
-  font-weight: 700;
+  margin-right: 4px;
+  vertical-align: -1px;
 }
 
 .tag-add-row {
@@ -866,6 +867,9 @@
   color: var(--color-bg);
   font-size: 22px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .kokemodus-back-button:disabled {
@@ -1260,6 +1264,10 @@
   justify-content: center;
   font-family: var(--font-heading);
   font-size: 15px;
+  border: none;
+  padding: 0;
+  color: var(--color-text);
+  cursor: pointer;
 }
 
 .hjem-sist-brukt {

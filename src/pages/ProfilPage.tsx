@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { supabase } from '../lib/supabaseClient'
 import { Login } from '../components/Login'
@@ -74,7 +75,8 @@ export function ProfilPage() {
       <div className="page profil-page">
         <nav className="nav-bar">
           <button type="button" className="nav-link" onClick={() => navigate('/')}>
-            ‹ Kokeboka
+            <ChevronLeft size={14} strokeWidth={2.75} aria-hidden="true" />
+            Kokeboka
           </button>
         </nav>
 
@@ -94,7 +96,8 @@ export function ProfilPage() {
     <div className="page profil-page">
       <nav className="nav-bar">
         <button type="button" className="nav-link" onClick={() => navigate('/')}>
-          ‹ Kokeboka
+          <ChevronLeft size={14} strokeWidth={2.75} aria-hidden="true" />
+          Kokeboka
         </button>
       </nav>
 
@@ -139,7 +142,7 @@ export function ProfilPage() {
           <button type="button" className="profil-row profil-row-button" onClick={handleInstallClick}>
             <span>Legg til på hjemskjerm</span>
             <span className="profil-row-chevron" aria-hidden="true">
-              ›
+              <ChevronRight size={14} strokeWidth={2.75} />
             </span>
           </button>
         )}

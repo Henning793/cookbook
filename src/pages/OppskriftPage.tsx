@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { ChevronLeft, Pencil, Share2 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useApp } from '../context/AppContext'
 import { RecipeForm, type RecipeFormValues } from '../components/RecipeForm'
@@ -75,7 +76,8 @@ export function OppskriftPage() {
       <div className="page oppskrift-page">
         <nav className="nav-bar">
           <button type="button" className="nav-link" onClick={goBack}>
-            ‹ {backLabel}
+            <ChevronLeft size={14} strokeWidth={2.75} aria-hidden="true" />
+            {backLabel}
           </button>
         </nav>
         {confirmingDelete ? (
@@ -116,14 +118,17 @@ export function OppskriftPage() {
     <div className="page oppskrift-page">
       <nav className="nav-bar">
         <button type="button" className="nav-link" onClick={goBack}>
-          ‹ {backLabel}
+          <ChevronLeft size={14} strokeWidth={2.75} aria-hidden="true" />
+            {backLabel}
         </button>
         <div className="nav-bar-actions">
           <button type="button" className="nav-link" onClick={handleShare}>
+            <Share2 size={14} strokeWidth={2.75} aria-hidden="true" />
             {shareCopied ? 'Kopiert!' : 'Del'}
           </button>
           {canEdit && (
             <button type="button" className="nav-link" onClick={() => setEditing(true)}>
+              <Pencil size={14} strokeWidth={2.75} aria-hidden="true" />
               Endre
             </button>
           )}

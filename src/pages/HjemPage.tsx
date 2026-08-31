@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Plus } from 'lucide-react'
+import { Search, Plus, User } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 
 const DOT_COLORS = [
@@ -59,11 +59,14 @@ export function HjemPage() {
           )}
           <h1 className="hjem-title">Kokeboka</h1>
         </div>
-        {session && (
-          <div className="hjem-avatar" aria-hidden="true">
-            {initial}
-          </div>
-        )}
+        <button
+          type="button"
+          className="hjem-avatar"
+          aria-label="Profil"
+          onClick={() => navigate('/meg')}
+        >
+          {session ? initial : <User size={16} strokeWidth={2.75} aria-hidden="true" />}
+        </button>
       </div>
 
       <div className="search-field" onClick={() => navigate('/sok')}>

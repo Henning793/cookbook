@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search } from 'lucide-react'
+import { ChevronLeft, Search } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import type { Recipe } from '../types'
 
@@ -55,6 +55,11 @@ export function SokPage() {
     return profiles.filter((profile) => ownerIds.has(profile.id))
   }, [recipes, profiles])
 
+  const tagsWithRecipes = useMemo(() => {
+    const usedTags = new Set(recipes.flatMap((recipe) => recipe.tags))
+    return availableTags.filter((tag) => usedTags.has(tag))
+  }, [recipes, availableTags])
+
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -91,7 +96,8 @@ export function SokPage() {
     <div className="page sok-page">
       <nav className="nav-bar">
         <button type="button" className="nav-link" onClick={() => navigate('/')}>
-          ‹ Kokeboka
+          <ChevronLeft size={14} strokeWidth={2.75} aria-hidden="true" />
+          Kokeboka
         </button>
       </nav>
 
@@ -107,7 +113,7 @@ export function SokPage() {
       </div>
 
       <div className="sok-chips">
-        {availableTags.map((tag) => (
+        {tagsWithRecipes.map((tag) => (
           <button
             key={tag}
             type="button"

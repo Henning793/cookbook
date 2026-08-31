@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { ChevronLeft } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 
 const SWIPE_THRESHOLD = 50
@@ -180,7 +181,7 @@ export function KokemodusPage() {
           onClick={handleBack}
           aria-label="Forrige steg"
         >
-          ‹
+          <ChevronLeft size={22} strokeWidth={2.75} aria-hidden="true" />
         </button>
         <button type="button" className="kokemodus-next-button" onClick={handleNext}>
           {isLastStep ? 'Ferdig' : 'Neste steg'}

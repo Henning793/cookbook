@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { ChevronLeft, Share2 } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 
 const DOT_COLORS = [
@@ -52,9 +53,11 @@ export function SamlingPage() {
     <div className="page samling-page">
       <nav className="nav-bar">
         <button type="button" className="nav-link" onClick={() => navigate('/')}>
-          ‹ Kokeboka
+          <ChevronLeft size={14} strokeWidth={2.75} aria-hidden="true" />
+          Kokeboka
         </button>
         <button type="button" className="nav-link" onClick={copyShareLink}>
+          <Share2 size={14} strokeWidth={2.75} aria-hidden="true" />
           {shareCopied ? 'Kopiert!' : 'Del'}
         </button>
       </nav>

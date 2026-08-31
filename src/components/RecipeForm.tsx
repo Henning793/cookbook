@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Plus } from 'lucide-react'
+import { Check, Plus } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { UNITS } from '../lib/units'
 import type { IngredientItem } from '../types'
@@ -357,7 +357,9 @@ export function RecipeForm({
               aria-pressed={selected}
               onClick={() => toggleTag(tag)}
             >
-              {selected && <span className="tag-option-check">✓ </span>}
+              {selected && (
+                <Check size={12} strokeWidth={2.75} className="tag-option-check" aria-hidden="true" />
+              )}
               {tag}
             </button>
           )
