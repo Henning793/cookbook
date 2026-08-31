@@ -74,22 +74,27 @@ export function SokPage() {
   }, [query])
 
   const trimmedQuery = debouncedQuery.trim()
+  const hasQuery = trimmedQuery !== ''
+  const hasActiveFilters = filters.tag !== null || filters.ownerId !== null
+  const showResults = hasQuery || hasActiveFilters
 
-  const matches = useMemo(() => {
-    if (trimmedQuery === '') return []
+  const candidates = useMemo(() => {
+    if (!hasQuery) {
+      return recipes.map((recipe) => ({ recipe, match: null as Match | null }))
+    }
     return recipes
       .map((recipe) => ({ recipe, match: findMatch(recipe, trimmedQuery) }))
       .filter((entry): entry is { recipe: Recipe; match: Match } => entry.match !== null)
-  }, [recipes, trimmedQuery])
+  }, [recipes, trimmedQuery, hasQuery])
 
   const results = useMemo(
     () =>
-      matches.filter(
+      candidates.filter(
         ({ recipe }) =>
           (filters.ownerId === null || recipe.owner_id === filters.ownerId) &&
           (filters.tag === null || recipe.tags.includes(filters.tag))
       ),
-    [matches, filters]
+    [candidates, filters]
   )
 
   return (
@@ -147,16 +152,18 @@ export function SokPage() {
         </button>
       </div>
 
-      {trimmedQuery !== '' && (
+      {showResults && (
         <div className="sok-results">
           <p className="sok-results-count">{results.length} treff</p>
 
           {results.length === 0 ? (
-            <p className="status-message">Ingen treff på &quot;{query}&quot;</p>
+            <p className="status-message">
+              {hasQuery ? `Ingen treff på "${trimmedQuery}"` : 'Ingen oppskrifter matcher filteret'}
+            </p>
           ) : (
             <div className="sok-result-list">
               {results.map(({ recipe, match }) => {
-                const snippet = buildSnippet(match, trimmedQuery.length)
+                const snippet = match ? buildSnippet(match, trimmedQuery.length) : null
                 return (
                   <button
                     key={recipe.id}
@@ -165,11 +172,13 @@ export function SokPage() {
                     onClick={() => navigate(`/oppskrift/${recipe.id}`)}
                   >
                     <span className="sok-card-title">{recipe.title}</span>
-                    <span className="sok-snippet">
-                      {snippet.prefix}
-                      <mark>{snippet.highlight}</mark>
-                      {snippet.suffix}
-                    </span>
+                    {snippet && (
+                      <span className="sok-snippet">
+                        {snippet.prefix}
+                        <mark>{snippet.highlight}</mark>
+                        {snippet.suffix}
+                      </span>
+                    )}
                   </button>
                 )
               })}
