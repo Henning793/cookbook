@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { Check, Plus } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { UNITS } from '../lib/units'
 import type { IngredientItem } from '../types'
@@ -145,8 +146,14 @@ export function RecipeForm({
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    setSaving(true)
     setError('')
+
+    if (selectedTags.length === 0) {
+      setError('Velg minst én etikett')
+      return
+    }
+
+    setSaving(true)
 
     try {
       let imageUrl = initial?.image_url ?? null
@@ -344,7 +351,7 @@ export function RecipeForm({
         + Legg til steg
       </button>
 
-      <label>Etiketter</label>
+      <label>Etiketter (velg minst én)</label>
       <div className="tag-picker">
         {tagOptions.map((tag) => {
           const selected = selectedTags.includes(tag)
@@ -356,7 +363,9 @@ export function RecipeForm({
               aria-pressed={selected}
               onClick={() => toggleTag(tag)}
             >
-              {selected && <span className="tag-option-check">✓ </span>}
+              {selected && (
+                <Check size={12} strokeWidth={2.75} className="tag-option-check" aria-hidden="true" />
+              )}
               {tag}
             </button>
           )
@@ -379,15 +388,25 @@ export function RecipeForm({
         </button>
       </div>
 
-      <label htmlFor="image">
-        {initial ? 'Nytt bilde (valgfritt, beholder eksisterende hvis tomt)' : 'Bilde (valgfritt)'}
+      <label className="image-upload-row" htmlFor="image">
+        <span className="image-upload-icon" aria-hidden="true">
+          <Plus size={14} strokeWidth={2.75} />
+        </span>
+        <span className="image-upload-label">
+          {imageFile
+            ? imageFile.name
+            : initial
+              ? 'Nytt bilde (valgfritt, beholder eksisterende hvis tomt)'
+              : 'Legg til bilde'}
+        </span>
+        <input
+          id="image"
+          type="file"
+          accept="image/*"
+          className="visually-hidden"
+          onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
+        />
       </label>
-      <input
-        id="image"
-        type="file"
-        accept="image/*"
-        onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
-      />
 
       {error && <p className="error">{error}</p>}
 

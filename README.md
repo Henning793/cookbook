@@ -18,7 +18,13 @@ cache, slik at tidligere sette oppskrifter også vises uten nett.
    innholdet i [`supabase/schema.sql`](supabase/schema.sql), og trykk **Run**.
    Dette oppretter tabellene for oppskrifter og profiler, tilgangsregler
    (RLS), og en bucket for bilder.
-4. Gå til **Project settings -> API**. Du trenger to verdier derfra:
+4. Kjør i tillegg innholdet i
+   [`supabase/migration_recipe_header_fields.sql`](supabase/migration_recipe_header_fields.sql)
+   i samme SQL Editor. Den legger til tre valgfrie felt (`description`,
+   `total_minutes`, `servings`) som det nye designet viser på
+   oppskrift-siden når de finnes — ingen skjema i appen lar deg sette dem
+   ennå, så dette er trygt å kjøre nå og ta i bruk senere.
+5. Gå til **Project settings -> API**. Du trenger to verdier derfra:
    - **Project URL**
    - **anon public key**
 
@@ -110,15 +116,16 @@ Appen åpnes da i fullskjerm uten nettleser-UI, som en vanlig app.
 
 ## 7. Logg inn for å legge til oppskrifter
 
-Trykk hamburgerikonet (☰) øverst til venstre, og skriv inn e-post og passord
-for brukeren din (se punkt 2 over). Da vises skjemaet for å legge til nye
-oppskrifter i din egen kokebok.
+Trykk sirkelen øverst til høyre på Hjem-skjermen for å gå til profilsiden
+(`/meg`), og skriv inn e-post og passord for brukeren din (se punkt 2 over).
+Når du er logget inn dukker en "+"-knapp opp på Hjem-skjermen for å legge til
+nye oppskrifter i din egen kokebok.
 
 ## 8. Importer oppskrift fra URL
 
-Inne i menyen finner du "Importer fra URL" ved siden av "+ Legg til
-oppskrift". Lim inn en lenke til en oppskrift, og appen forsøker å hente ut
-tittel, ingredienser og fremgangsmåte automatisk.
+Trykk "+"-knappen på Hjem-skjermen for å gå til Ny oppskrift-siden, og velg
+"Importer fra URL". Lim inn en lenke til en oppskrift, og appen forsøker å
+hente ut tittel, ingredienser og fremgangsmåte automatisk.
 
 Dette fungerer kun på nettsider som har strukturerte oppskriftsdata
 innebygd (schema.org "Recipe" — det formatet Google bruker for
@@ -140,15 +147,19 @@ Ingen API-nøkkel eller ekstra kostnad er nødvendig for denne funksjonen.
 - `netlify/functions/` – `import-recipe.mjs` (funksjonshandler) og `lib/`
   (URL-sikkerhet og parsing av schema.org-oppskriftsdata).
 - `src/components/Login.tsx` – innlogging via e-post og passord.
-- `src/components/AddRecipeForm.tsx` – skjema for å legge til oppskrift + bilde.
-- `src/components/RecipeList.tsx` – viser lagrede oppskrifter, med filter og
-  navnelapp per familiemedlem.
+- `src/components/RecipeForm.tsx` – skjema for å legge til/redigere oppskrift + bilde.
+- `src/pages/` – de syv skjermene (Hjem, Samling, Oppskrift, Kokemodus,
+  Ny oppskrift, Søk, Profil), koblet sammen med `react-router-dom`.
+- `src/context/AppContext.tsx` – delt tilstand (innlogging, oppskrifter,
+  profiler, filtre) tilgjengelig for alle skjermene.
 - `supabase/schema.sql` – databasetabeller (oppskrifter og profiler),
   tilgangsregler og bilde-bucket.
+- `supabase/migration_recipe_header_fields.sql` – valgfrie ekstra felt på
+  oppskrifter (se punkt 1).
 
 ## Videre forbedringer (ikke i MVP)
 
 - Redigere/slette oppskrifter fra appen (i dag må det gjøres i Supabase-UI).
-- Søk/filtrering, kategorier, porsjonsstørrelse.
+- Kategorier utover dagens etiketter.
 - Offline-kø: lagre en ny oppskrift mens du er uten nett, og synke automatisk
   når du får nett igjen (i dag krever "legg til" at du er tilkoblet).

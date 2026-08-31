@@ -13,8 +13,8 @@ export default defineConfig({
         name: 'Mine oppskrifter',
         short_name: 'Oppskrifter',
         description: 'Min personlige kokebok',
-        theme_color: '#fff7ed',
-        background_color: '#fff7ed',
+        theme_color: '#f5ead8',
+        background_color: '#f5ead8',
         display: 'standalone',
         start_url: '/',
         icons: [
