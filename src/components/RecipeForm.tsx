@@ -146,8 +146,14 @@ export function RecipeForm({
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    setSaving(true)
     setError('')
+
+    if (selectedTags.length === 0) {
+      setError('Velg minst én etikett')
+      return
+    }
+
+    setSaving(true)
 
     try {
       let imageUrl = initial?.image_url ?? null
@@ -345,7 +351,7 @@ export function RecipeForm({
         + Legg til steg
       </button>
 
-      <label>Etiketter</label>
+      <label>Etiketter (velg minst én)</label>
       <div className="tag-picker">
         {tagOptions.map((tag) => {
           const selected = selectedTags.includes(tag)

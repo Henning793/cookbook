@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ChevronLeft, Share2 } from 'lucide-react'
 import { useApp } from '../context/AppContext'
+import { UNTAGGED_TAG, UNTAGGED_LABEL } from '../lib/tags'
 
 const DOT_COLORS = [
   'var(--color-accent-100)',
@@ -22,6 +23,8 @@ export function SamlingPage() {
   const [shareCopied, setShareCopied] = useState(false)
 
   const tag = params.tag ? decodeURIComponent(params.tag) : ''
+  const isUntagged = tag === UNTAGGED_TAG
+  const displayLabel = isUntagged ? UNTAGGED_LABEL : tag
 
   // Samme utledning som HjemPage sin collections-liste, slik at prikkfargen
   // for denne taggen alltid stemmer overens med Hjem sitt grid.
@@ -31,11 +34,16 @@ export function SamlingPage() {
   }, [recipes, availableTags])
 
   const tagIndex = tagsWithRecipes.indexOf(tag)
-  const dotColor = DOT_COLORS[(tagIndex < 0 ? 0 : tagIndex) % DOT_COLORS.length]
+  const dotColor = isUntagged
+    ? 'var(--color-neutral-400)'
+    : DOT_COLORS[(tagIndex < 0 ? 0 : tagIndex) % DOT_COLORS.length]
 
   const tagRecipes = useMemo(
-    () => recipes.filter((recipe) => recipe.tags.includes(tag)),
-    [recipes, tag]
+    () =>
+      isUntagged
+        ? recipes.filter((recipe) => recipe.tags.length === 0)
+        : recipes.filter((recipe) => recipe.tags.includes(tag)),
+    [recipes, tag, isUntagged]
   )
 
   async function copyShareLink() {
@@ -64,7 +72,7 @@ export function SamlingPage() {
 
       <div className="samling-header">
         <span className="samling-dot" style={{ background: dotColor }} aria-hidden="true" />
-        <h1 className="samling-title">{tag}</h1>
+        <h1 className="samling-title">{displayLabel}</h1>
       </div>
 
       {loading ? (
