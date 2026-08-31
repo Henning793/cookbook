@@ -8,11 +8,11 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg'],
+      includeAssets: ['favicon-32.png', 'apple-touch-icon-180.png'],
       manifest: {
-        name: 'Mine oppskrifter',
-        short_name: 'Oppskrifter',
-        description: 'Min personlige kokebok',
+        name: 'Kokeboka',
+        short_name: 'Kokeboka',
+        description: 'Oppskriftene dine, samlet.',
         theme_color: '#f5ead8',
         background_color: '#f5ead8',
         display: 'standalone',
@@ -22,14 +22,16 @@ export default defineConfig({
             src: 'icons/icon-192.png',
             sizes: '192x192',
             type: 'image/png',
+            purpose: 'any',
           },
           {
             src: 'icons/icon-512.png',
             sizes: '512x512',
             type: 'image/png',
+            purpose: 'any',
           },
           {
-            src: 'icons/icon-512.png',
+            src: 'icons/icon-maskable-512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable',
