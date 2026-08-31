@@ -77,7 +77,7 @@ export function OppskriftPage() {
         <nav className="nav-bar">
           <button type="button" className="nav-link" onClick={goBack}>
             <ChevronLeft size={14} strokeWidth={2.75} aria-hidden="true" />
-            {backLabel}
+          {backLabel}
           </button>
         </nav>
         {confirmingDelete ? (
@@ -119,7 +119,7 @@ export function OppskriftPage() {
       <nav className="nav-bar">
         <button type="button" className="nav-link" onClick={goBack}>
           <ChevronLeft size={14} strokeWidth={2.75} aria-hidden="true" />
-            {backLabel}
+          {backLabel}
         </button>
         <div className="nav-bar-actions">
           <button type="button" className="nav-link" onClick={handleShare}>
