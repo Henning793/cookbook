@@ -4,6 +4,7 @@ import { ChevronLeft, Pencil, Share2 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useApp } from '../context/AppContext'
 import { RecipeForm, type RecipeFormValues } from '../components/RecipeForm'
+import { DelTilFamilieDialog } from '../components/DelTilFamilieDialog'
 
 const TAG_TINTS = [
   { bg: 'var(--color-accent-100)', text: 'var(--color-accent-700)' },
@@ -24,6 +25,7 @@ export function OppskriftPage() {
   const [editing, setEditing] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [shareCopied, setShareCopied] = useState(false)
+  const [showFamilyShareDialog, setShowFamilyShareDialog] = useState(false)
 
   const fromTag = (location.state as { fromTag?: string } | null)?.fromTag
   const backLabel = fromTag ?? 'Kokeboka'
@@ -146,6 +148,11 @@ export function OppskriftPage() {
             {shareCopied ? 'Kopiert!' : 'Del'}
           </button>
           {canEdit && (
+            <button type="button" className="nav-link" onClick={() => setShowFamilyShareDialog(true)}>
+              Del med en familie
+            </button>
+          )}
+          {canEdit && (
             <button type="button" className="nav-link" onClick={() => setEditing(true)}>
               <Pencil size={14} strokeWidth={2.75} aria-hidden="true" />
               Endre
@@ -153,6 +160,14 @@ export function OppskriftPage() {
           )}
         </div>
       </nav>
+
+      {showFamilyShareDialog && (
+        <DelTilFamilieDialog
+          shareType="recipe"
+          recipeId={recipe.id}
+          onClose={() => setShowFamilyShareDialog(false)}
+        />
+      )}
 
       {recipe.image_url && (
         <div className="oppskrift-image washed">

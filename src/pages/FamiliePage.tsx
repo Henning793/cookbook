@@ -3,17 +3,17 @@ import { ChevronLeft } from 'lucide-react'
 import { useState } from 'react'
 import { useApp } from '../context/AppContext'
 import { removeMember, regenerateCode, leaveFamily } from '../lib/families'
-import { revokeShare } from '../lib/shares'
+import { revokeShare, respondToShare } from '../lib/shares'
+import { DelTilFamilieDialog } from '../components/DelTilFamilieDialog'
 
 export function FamiliePage() {
   const navigate = useNavigate()
-  const { family, members, myRole, profiles, session, outgoingShares, reloadFamily } = useApp()
+  const { family, members, myRole, profiles, session, incomingShares, outgoingShares, reloadFamily } =
+    useApp()
   const [codeCopied, setCodeCopied] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  // Task 11 (DelTilFamilieDialog) consumes this piece of state; this task only
-  // wires up the trigger button below.
-  const [showShareDialog, setShowShareDialog] = useState(false)
+  const [showWholeFamilyDialog, setShowWholeFamilyDialog] = useState(false)
 
   if (!family) {
     return (
@@ -90,6 +90,19 @@ export function FamiliePage() {
     }
   }
 
+  async function handleRespond(shareId: string, accept: boolean) {
+    setBusy(true)
+    setError(null)
+    try {
+      await respondToShare(shareId, accept)
+      reloadFamily()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Noe gikk feil.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <div className="page familie-page">
       <nav className="nav-bar">
@@ -135,6 +148,29 @@ export function FamiliePage() {
         ))}
       </ul>
 
+      <h2 className="section-kicker">Innkommende delinger</h2>
+      {myRole !== 'admin' ? (
+        <p className="status-message">Kun admin kan godta eller avslå delinger.</p>
+      ) : incomingShares.filter((s) => s.status === 'pending').length === 0 ? (
+        <p className="status-message">Ingen ventende forespørsler.</p>
+      ) : (
+        <ul>
+          {incomingShares
+            .filter((s) => s.status === 'pending')
+            .map((share) => (
+              <li key={share.id} className="samling-recipe-row">
+                <span>{share.share_type === 'whole_family' ? 'Hele boken' : share.share_type}</span>
+                <button type="button" onClick={() => handleRespond(share.id, true)} disabled={busy}>
+                  Godta
+                </button>
+                <button type="button" onClick={() => handleRespond(share.id, false)} disabled={busy}>
+                  Avslå
+                </button>
+              </li>
+            ))}
+        </ul>
+      )}
+
       <h2 className="section-kicker">Utgående delinger</h2>
       {outgoingShares.filter((s) => s.status === 'accepted' || s.status === 'pending').length === 0 ? (
         <p className="status-message">Ingen aktive delinger.</p>
@@ -155,14 +191,12 @@ export function FamiliePage() {
         </ul>
       )}
 
-      <div className="form-actions">
-        <button type="button" onClick={() => setShowShareDialog(true)}>
-          Del med en annen familie
-        </button>
-      </div>
-      {/* Task 11's DelTilFamilieDialog renders here, driven by showShareDialog. */}
-      {showShareDialog && (
-        <div className="familie-share-dialog-placeholder" onClick={() => setShowShareDialog(false)} />
+      <button type="button" onClick={() => setShowWholeFamilyDialog(true)}>
+        Del hele boken med en familie
+      </button>
+
+      {showWholeFamilyDialog && (
+        <DelTilFamilieDialog shareType="whole_family" onClose={() => setShowWholeFamilyDialog(false)} />
       )}
 
       <button type="button" className="delete-confirm-button" onClick={handleLeave} disabled={busy}>
