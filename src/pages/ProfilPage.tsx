@@ -14,7 +14,7 @@ const OFFLINE_CACHE_NAME = 'supabase-cache'
 
 export function ProfilPage() {
   const navigate = useNavigate()
-  const { session, recipes, profiles, availableTags } = useApp()
+  const { session, recipes, profiles, availableTags, members } = useApp()
 
   const [offlineCount, setOfflineCount] = useState(0)
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null)
@@ -121,13 +121,19 @@ export function ProfilPage() {
           <p className="profil-stat-label">Samlinger</p>
         </div>
         <div className="profil-stat">
-          <p className="profil-stat-value">{profiles.length}</p>
+          <p className="profil-stat-value">{members.length}</p>
           <p className="profil-stat-label">Medlemmer</p>
         </div>
       </div>
 
       <p className="profil-kicker">Appen</p>
       <div className="profil-group">
+        <button type="button" className="profil-row profil-row-button" onClick={() => navigate('/familie')}>
+          <span>Familie</span>
+          <span className="profil-row-chevron" aria-hidden="true">
+            <ChevronRight size={14} strokeWidth={2.75} />
+          </span>
+        </button>
         <div className="profil-row">
           <span>Behold skjermen på i kokemodus</span>
           <span className="profil-row-value profil-row-value-on">På</span>
