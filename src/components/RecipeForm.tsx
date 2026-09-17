@@ -53,6 +53,7 @@ export interface RecipeFormValues {
   steps: string[]
   image_url: string | null
   tags: string[]
+  servings: number | null
 }
 
 interface Props {
@@ -63,6 +64,7 @@ interface Props {
     steps: string[]
     image_url: string | null
     tags: string[]
+    servings: number | null
   }
   availableTags: string[]
   submitLabel: string
@@ -87,6 +89,9 @@ export function RecipeForm({
     initial && initial.ingredients.length > 0 ? initial.ingredients.map(toIngredientRow) : [emptyIngredientRow()]
   )
   const [steps, setSteps] = useState<string[]>(initial && initial.steps.length > 0 ? initial.steps : [''])
+  const [servingsInput, setServingsInput] = useState(
+    initial?.servings != null ? String(initial.servings) : ''
+  )
   const [selectedTags, setSelectedTags] = useState<string[]>(initial?.tags ?? [])
   const [customTagOptions, setCustomTagOptions] = useState<string[]>([])
   const [customTagInput, setCustomTagInput] = useState('')
@@ -153,6 +158,16 @@ export function RecipeForm({
       return
     }
 
+    let servings: number | null = null
+    if (servingsInput.trim() !== '') {
+      const parsed = Number(servingsInput.replace(',', '.'))
+      if (Number.isNaN(parsed) || parsed <= 0) {
+        setError('Antall porsjoner må være et tall større enn 0')
+        return
+      }
+      servings = Math.round(parsed * 10) / 10
+    }
+
     setSaving(true)
 
     try {
@@ -191,6 +206,7 @@ export function RecipeForm({
         steps: steps.map((step) => step.trim()),
         image_url: imageUrl,
         tags: selectedTags,
+        servings,
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Noe gikk galt')
@@ -209,6 +225,17 @@ export function RecipeForm({
         required
         value={title}
         onChange={(e) => setTitle(e.target.value)}
+      />
+
+      <label htmlFor="servings">Antall porsjoner</label>
+      <input
+        id="servings"
+        type="number"
+        min="1"
+        step="0.1"
+        placeholder="1"
+        value={servingsInput}
+        onChange={(e) => setServingsInput(e.target.value)}
       />
 
       <label>Ingredienser</label>
