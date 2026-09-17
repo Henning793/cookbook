@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -97,9 +98,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [outgoingShares, setOutgoingShares] = useState<FamilyShare[]>([])
   const [familyLoading, setFamilyLoading] = useState(true)
 
+  const familyLoadGeneration = useRef(0)
+
   const loadFamily = useCallback(async () => {
+    const generation = ++familyLoadGeneration.current
     setFamilyLoading(true)
     const membership = await getMyMembership()
+    if (generation !== familyLoadGeneration.current) return
     if (!membership) {
       setFamily(null)
       setMembers([])
@@ -116,6 +121,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       listIncomingShares(membership.family_id),
       listOutgoingShares(membership.family_id),
     ])
+    if (generation !== familyLoadGeneration.current) return
     setFamily(familyRow)
     setMembers(memberRows)
     setIncomingShares(incoming)
@@ -124,7 +130,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
-    if (session) loadFamily()
+    if (session) {
+      loadFamily()
+    } else {
+      familyLoadGeneration.current += 1
+      setFamily(null)
+      setMembers([])
+      setMyRole(null)
+      setIncomingShares([])
+      setOutgoingShares([])
+      setFamilyLoading(false)
+    }
   }, [session, loadFamily])
 
   const availableTags = useMemo(
