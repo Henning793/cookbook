@@ -24,7 +24,21 @@ cache, slik at tidligere sette oppskrifter også vises uten nett.
    `total_minutes`, `servings`) som det nye designet viser på
    oppskrift-siden når de finnes — ingen skjema i appen lar deg sette dem
    ennå, så dette er trygt å kjøre nå og ta i bruk senere.
-5. Gå til **Project settings -> API**. Du trenger to verdier derfra:
+5. Kjør i tillegg innholdet i [`supabase/migration_family_groups.sql`](supabase/migration_family_groups.sql)
+   i samme SQL Editor. Den oppretter tabeller for familiegrupper,
+   invitasjonskoder (8 tegn), roller (admin/medlem), samlinger av
+   oppskrifter, og deling mellom familier. Eksisterende brukere blir
+   automatisk lagt til i en "Default-familie" som admin.
+
+   Nye brukere lagd manuelt i Supabase Dashboard får ikke en familie til
+   de logger inn i appen. Ved første innlogging ser de en
+   onboarding-skjerm hvor de kan opprette en ny familiegruppe eller bli
+   med i en eksisterende ved å skrive inn invitasjonskoden fra et
+   familiemedlem. Invitasjonskoden brukes både for å bli medlem av
+   familien og for å dele oppskrifter eller samlinger mellom familier.
+   All familieadministrasjon — medlemmer, invitasjonskode, delinger —
+   skjer via "Familie"-lenken på profilsiden (`/familie`).
+6. Gå til **Project settings -> API**. Du trenger to verdier derfra:
    - **Project URL**
    - **anon public key**
 
