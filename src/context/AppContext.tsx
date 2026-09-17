@@ -10,7 +10,9 @@ import {
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabaseClient'
 import { TAGS } from '../lib/tags'
-import type { Profile, Recipe } from '../types'
+import { getMyMembership, getMyFamily, listMembers } from '../lib/families'
+import { listIncomingShares, listOutgoingShares } from '../lib/shares'
+import type { Family, FamilyMember, FamilyRole, FamilyShare, Profile, Recipe } from '../types'
 
 interface Filters {
   ownerId: string | null
@@ -33,6 +35,13 @@ interface AppContextValue {
   setFilters: (patch: Partial<Filters>) => void
   cookingSession: CookingSession | null
   setCookingSession: (session: CookingSession | null) => void
+  family: Family | null
+  members: FamilyMember[]
+  myRole: FamilyRole | null
+  incomingShares: FamilyShare[]
+  outgoingShares: FamilyShare[]
+  familyLoading: boolean
+  reloadFamily: () => void
 }
 
 const AppContext = createContext<AppContextValue | null>(null)
@@ -80,6 +89,43 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       })
   }, [loadRecipes])
+
+  const [family, setFamily] = useState<Family | null>(null)
+  const [members, setMembers] = useState<FamilyMember[]>([])
+  const [myRole, setMyRole] = useState<FamilyRole | null>(null)
+  const [incomingShares, setIncomingShares] = useState<FamilyShare[]>([])
+  const [outgoingShares, setOutgoingShares] = useState<FamilyShare[]>([])
+  const [familyLoading, setFamilyLoading] = useState(true)
+
+  const loadFamily = useCallback(async () => {
+    setFamilyLoading(true)
+    const membership = await getMyMembership()
+    if (!membership) {
+      setFamily(null)
+      setMembers([])
+      setMyRole(null)
+      setIncomingShares([])
+      setOutgoingShares([])
+      setFamilyLoading(false)
+      return
+    }
+    setMyRole(membership.role)
+    const [familyRow, memberRows, incoming, outgoing] = await Promise.all([
+      getMyFamily(membership.family_id),
+      listMembers(membership.family_id),
+      listIncomingShares(membership.family_id),
+      listOutgoingShares(membership.family_id),
+    ])
+    setFamily(familyRow)
+    setMembers(memberRows)
+    setIncomingShares(incoming)
+    setOutgoingShares(outgoing)
+    setFamilyLoading(false)
+  }, [])
+
+  useEffect(() => {
+    if (session) loadFamily()
+  }, [session, loadFamily])
 
   const availableTags = useMemo(
     () => [...new Set([...TAGS, ...recipes.flatMap((recipe) => recipe.tags)])],
@@ -129,6 +175,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setFilters,
     cookingSession,
     setCookingSession,
+    family,
+    members,
+    myRole,
+    incomingShares,
+    outgoingShares,
+    familyLoading,
+    reloadFamily: loadFamily,
   }
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>
