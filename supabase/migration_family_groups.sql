@@ -64,6 +64,15 @@ alter table recipes add column if not exists family_id uuid references families(
 -- Migrering av eksisterende data: samle alt i én default-familie
 -- =========================================================================
 
+-- NB: denne migreringen skal kun flytte inn brukere/oppskrifter som fantes
+-- FØR familiegrupper-funksjonen fantes. Medlems-backfillen er derfor bare
+-- trygg å kjøre ÉN gang, samtidig som selve Default-familien opprettes -
+-- ikke hver gang denne SQL-filen kjøres på nytt (f.eks. ved en senere
+-- rettelse i denne filen, som skjedde under manuell testing: en profil
+-- opprettet etter første kjøring, men uten å ha logget inn og valgt
+-- familie selv ennå, ville ellers blitt "sugd inn" i Default-familie ved
+-- neste kjøring i stedet for å møte den tiltenkte onboarding-skjermen for
+-- nye brukere).
 do $$
 declare
   v_default_family_id uuid;
@@ -74,17 +83,18 @@ begin
     insert into families (name, invite_code)
     values ('Default-familie', substr(replace(gen_random_uuid()::text, '-', ''), 1, 8))
     returning id into v_default_family_id;
+
+    -- Alle eksisterende brukere blir admin i default-familien - det finnes
+    -- ingen naturlig måte å utpeke én bestemt admin retroaktivt, og likestilt
+    -- adgang er tryggere enn å gjette. Kjøres kun her, inne i "opprett
+    -- Default-familie for første gang"-grenen - se NB-kommentaren over.
+    insert into family_members (family_id, user_id, role)
+    select v_default_family_id, p.id, 'admin'
+    from profiles p
+    where not exists (select 1 from family_members fm where fm.user_id = p.id);
+
+    update recipes set family_id = v_default_family_id where family_id is null;
   end if;
-
-  -- Alle eksisterende brukere blir admin i default-familien - det finnes
-  -- ingen naturlig måte å utpeke én bestemt admin retroaktivt, og likestilt
-  -- adgang er tryggere enn å gjette.
-  insert into family_members (family_id, user_id, role)
-  select v_default_family_id, p.id, 'admin'
-  from profiles p
-  where not exists (select 1 from family_members fm where fm.user_id = p.id);
-
-  update recipes set family_id = v_default_family_id where family_id is null;
 end $$;
 
 -- =========================================================================
@@ -381,11 +391,28 @@ create policy "Kan lese egen familie"
     )
   );
 
+-- En policy på family_members kan ikke trygt subquery'e family_members
+-- direkte i sin egen USING-klausul (funnet ved manuell testing mot en ekte
+-- database: Postgres feiler med "infinite recursion detected in policy for
+-- relation family_members", 42P17, fordi evaluering av policyen krever at
+-- policyen evalueres på nytt for underspørringen). Løsningen er en egen
+-- security definer-funksjon: den kjører som eier av databasen (superuser
+-- ved migrering), som er unntatt fra RLS, og bryter dermed rekursjonen.
+create or replace function my_family_id()
+returns uuid
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select family_id from family_members where user_id = auth.uid();
+$$;
+
 drop policy if exists "Kan lese medlemmer av egen familie" on family_members;
 create policy "Kan lese medlemmer av egen familie"
   on family_members for select
   to authenticated
-  using (family_id in (select family_id from family_members fm2 where fm2.user_id = auth.uid()));
+  using (family_id = my_family_id());
 
 -- recipes: dropp den gamle globale policyen, innfør familie-scoping +
 -- synlighet for godkjente delinger.
