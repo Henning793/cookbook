@@ -54,7 +54,7 @@ export function OppskriftPage() {
 
   useEffect(() => {
     if (recipe && sharedIn) {
-      getFamilyName(recipe.family_id).then(setOriginFamilyName)
+      getFamilyName(recipe.family_id).then(setOriginFamilyName).catch(() => setOriginFamilyName(null))
     } else {
       setOriginFamilyName(null)
     }
