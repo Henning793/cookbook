@@ -38,7 +38,7 @@ export function NyOppskriftPage() {
 
     try {
       const imported = await importRecipeFromUrl(importUrl)
-      setImportedValues({ ...imported, image_url: null, tags: [] })
+      setImportedValues({ ...imported, image_url: null, tags: [], servings: null })
       setView('form')
     } catch (err) {
       setImportError(err instanceof Error ? err.message : 'Noe gikk galt')

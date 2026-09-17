@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ChevronLeft, Pencil, Share2 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
@@ -10,6 +10,10 @@ const TAG_TINTS = [
   { bg: 'var(--color-accent-2-100)', text: 'var(--color-accent-2-700)' },
   { bg: 'var(--color-neutral-100)', text: 'var(--color-neutral-800)' },
 ]
+
+function formatNumber(value: number) {
+  return value.toLocaleString('nb-NO')
+}
 
 export function OppskriftPage() {
   const { id } = useParams<{ id: string }>()
@@ -29,6 +33,16 @@ export function OppskriftPage() {
   }
 
   const recipe = recipes.find((r) => r.id === id)
+  const baseServings = recipe?.servings ?? 1
+
+  // Live porsjonsjustering - ren komponent-state, lagres ikke noe sted og
+  // nullstilles automatisk ved sideinnlasting. Resettes også når man
+  // navigerer til en annen oppskrift uten at siden remountes.
+  const [targetServingsInput, setTargetServingsInput] = useState(String(baseServings))
+
+  useEffect(() => {
+    setTargetServingsInput(String(recipe?.servings ?? 1))
+  }, [recipe?.id])
 
   if (!recipe) {
     return (
@@ -44,6 +58,10 @@ export function OppskriftPage() {
   const totalMinutes = recipe.total_minutes ?? null
   const servings = recipe.servings ?? null
   const canEdit = recipe.owner_id === session?.user.id
+
+  const parsedTarget = Number(targetServingsInput.replace(',', '.'))
+  const scaleFactor =
+    Number.isFinite(parsedTarget) && parsedTarget > 0 ? parsedTarget / baseServings : 1
 
   async function handleUpdate(values: RecipeFormValues) {
     const { error } = await supabase.from('recipes').update(values).eq('id', recipe!.id)
@@ -101,6 +119,7 @@ export function OppskriftPage() {
               steps: recipe.steps,
               image_url: recipe.image_url,
               tags: recipe.tags,
+              servings: recipe.servings ?? null,
             }}
             availableTags={availableTags}
             submitLabel="Lagre endringer"
@@ -163,10 +182,22 @@ export function OppskriftPage() {
             className="pill-tag"
             style={{ background: 'var(--color-neutral-100)', color: 'var(--color-neutral-800)' }}
           >
-            {servings} porsjoner
+            {formatNumber(servings)} porsjoner
           </span>
         )}
       </div>
+
+      <label className="servings-adjust" htmlFor="servings-adjust">
+        Antall porsjoner
+        <input
+          id="servings-adjust"
+          type="number"
+          min="1"
+          step="0.1"
+          value={targetServingsInput}
+          onChange={(e) => setTargetServingsInput(e.target.value)}
+        />
+      </label>
 
       <h1 className="oppskrift-title">{recipe.title}</h1>
 
@@ -184,7 +215,7 @@ export function OppskriftPage() {
               <span>{ingredient.name}</span>
               {ingredient.amount != null && (
                 <span className="oppskrift-ingredient-amount">
-                  {ingredient.amount} {ingredient.unit}
+                  {formatNumber(Math.round(ingredient.amount * scaleFactor * 10) / 10)} {ingredient.unit}
                 </span>
               )}
             </li>
