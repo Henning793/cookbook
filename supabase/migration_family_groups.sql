@@ -415,14 +415,18 @@ create policy "Kan lese medlemmer av egen familie"
   using (family_id = my_family_id());
 
 -- recipes: dropp den gamle globale policyen, innfør familie-scoping +
--- synlighet for godkjente delinger.
+-- synlighet for godkjente delinger. Familie er valgfritt (se
+-- FamiliePage/Login.tsx) - en oppskrift med family_id NULL er en personlig
+-- oppskrift, kun synlig/redigerbar for sin egen owner_id, uavhengig av om
+-- eieren senere blir medlem av en familie eller ikke.
 drop policy if exists "Alle kan lese oppskrifter" on recipes;
 drop policy if exists "Familiemedlemmer kan se egne og delte oppskrifter" on recipes;
 create policy "Familiemedlemmer kan se egne og delte oppskrifter"
   on recipes for select
   to authenticated
   using (
-    family_id in (select family_id from family_members where user_id = auth.uid())
+    (family_id is null and owner_id = auth.uid())
+    or family_id in (select family_id from family_members where user_id = auth.uid())
     or id in (
       select recipe_id from family_shares
       where status = 'accepted' and share_type = 'recipe'
@@ -447,11 +451,14 @@ create policy "Innloggede kan endre egne oppskrifter"
   on recipes for update
   to authenticated
   using (
-    family_id in (select family_id from family_members where user_id = auth.uid())
-    and (
-      owner_id = auth.uid()
-      or owner_id is null
-      or owner_id not in (select user_id from family_members where family_id = recipes.family_id)
+    (family_id is null and owner_id = auth.uid())
+    or (
+      family_id in (select family_id from family_members where user_id = auth.uid())
+      and (
+        owner_id = auth.uid()
+        or owner_id is null
+        or owner_id not in (select user_id from family_members where family_id = recipes.family_id)
+      )
     )
   );
 
@@ -461,11 +468,14 @@ create policy "Innloggede kan slette egne oppskrifter"
   on recipes for delete
   to authenticated
   using (
-    family_id in (select family_id from family_members where user_id = auth.uid())
-    and (
-      owner_id = auth.uid()
-      or owner_id is null
-      or owner_id not in (select user_id from family_members where family_id = recipes.family_id)
+    (family_id is null and owner_id = auth.uid())
+    or (
+      family_id in (select family_id from family_members where user_id = auth.uid())
+      and (
+        owner_id = auth.uid()
+        or owner_id is null
+        or owner_id not in (select user_id from family_members where family_id = recipes.family_id)
+      )
     )
   );
 
@@ -541,3 +551,15 @@ create policy "Begge sider av en deling kan se den"
     from_family_id in (select family_id from family_members where user_id = auth.uid())
     or to_family_id in (select family_id from family_members where user_id = auth.uid())
   );
+
+-- =========================================================================
+-- Selvbetjent registrering: en nylig registrert bruker oppretter sin egen
+-- profil-rad selv (tidligere ble dette gjort manuelt av admin via SQL
+-- Editor for admin-opprettede brukere - se README). Familie er valgfritt:
+-- profiles/recipes krever ingen familiemedlemskap, se personlig-oppskrift-
+-- unntaket i recipes-policyene over.
+drop policy if exists "Brukere kan opprette egen profil" on profiles;
+create policy "Brukere kan opprette egen profil"
+  on profiles for insert
+  to authenticated
+  with check (id = auth.uid());

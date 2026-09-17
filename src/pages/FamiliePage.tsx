@@ -2,7 +2,14 @@ import { useNavigate } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useApp } from '../context/AppContext'
-import { removeMember, regenerateCode, leaveFamily, getFamilyName } from '../lib/families'
+import {
+  removeMember,
+  regenerateCode,
+  leaveFamily,
+  getFamilyName,
+  createFamily,
+  joinFamilyByCode,
+} from '../lib/families'
 import { revokeShare, respondToShare } from '../lib/shares'
 import { DelTilFamilieDialog } from '../components/DelTilFamilieDialog'
 import type { ShareType } from '../types'
@@ -24,6 +31,7 @@ export function FamiliePage() {
   const navigate = useNavigate()
   const {
     family,
+    familyLoading,
     members,
     myRole,
     profiles,
@@ -38,6 +46,12 @@ export function FamiliePage() {
   const [error, setError] = useState<string | null>(null)
   const [showWholeFamilyDialog, setShowWholeFamilyDialog] = useState(false)
   const [familyNames, setFamilyNames] = useState<Record<string, string>>({})
+
+  const [onboardingMode, setOnboardingMode] = useState<'create' | 'join'>('create')
+  const [newFamilyName, setNewFamilyName] = useState('')
+  const [joinCode, setJoinCode] = useState('')
+  const [onboardingBusy, setOnboardingBusy] = useState(false)
+  const [onboardingError, setOnboardingError] = useState<string | null>(null)
 
   useEffect(() => {
     const ids = new Set<string>()
@@ -62,10 +76,99 @@ export function FamiliePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [incomingShares, outgoingShares])
 
-  if (!family) {
+  async function handleCreateFamily(event: React.FormEvent) {
+    event.preventDefault()
+    setOnboardingError(null)
+    setOnboardingBusy(true)
+    try {
+      await createFamily(newFamilyName.trim())
+      reloadFamily()
+    } catch (err) {
+      setOnboardingError(err instanceof Error ? err.message : 'Noe gikk feil.')
+    } finally {
+      setOnboardingBusy(false)
+    }
+  }
+
+  async function handleJoinFamily(event: React.FormEvent) {
+    event.preventDefault()
+    setOnboardingError(null)
+    setOnboardingBusy(true)
+    try {
+      await joinFamilyByCode(joinCode.trim())
+      reloadFamily()
+    } catch (err) {
+      setOnboardingError(err instanceof Error ? err.message : 'Noe gikk feil.')
+    } finally {
+      setOnboardingBusy(false)
+    }
+  }
+
+  if (familyLoading) {
     return (
       <div className="page familie-page">
         <p className="status-message">Laster familie...</p>
+      </div>
+    )
+  }
+
+  if (!family) {
+    return (
+      <div className="page familie-page">
+        <nav className="nav-bar">
+          <button type="button" className="nav-link" onClick={() => navigate('/meg')}>
+            <ChevronLeft size={14} strokeWidth={2.75} aria-hidden="true" />
+            Meg
+          </button>
+        </nav>
+
+        <h1 className="oppskrift-title">Familie</h1>
+        <p className="oppskrift-description">
+          Du er ikke medlem av noen familie ennå. Dette er helt valgfritt — du kan legge til og
+          bruke egne oppskrifter uten å opprette eller bli med i en familie. Familie trengs først
+          når du vil dele oppskrifter med andre.
+        </p>
+
+        <div className="form-actions">
+          <button type="button" onClick={() => setOnboardingMode('create')} disabled={onboardingMode === 'create'}>
+            Opprett familie
+          </button>
+          <button type="button" onClick={() => setOnboardingMode('join')} disabled={onboardingMode === 'join'}>
+            Bli med med kode
+          </button>
+        </div>
+
+        {onboardingMode === 'create' ? (
+          <form onSubmit={handleCreateFamily}>
+            <label htmlFor="familie-navn">Familiens navn</label>
+            <input
+              id="familie-navn"
+              type="text"
+              required
+              value={newFamilyName}
+              onChange={(e) => setNewFamilyName(e.target.value)}
+            />
+            <button type="submit" className="cta-button" disabled={onboardingBusy}>
+              {onboardingBusy ? 'Oppretter...' : 'Opprett familie'}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleJoinFamily}>
+            <label htmlFor="familie-kode">Familiekode</label>
+            <input
+              id="familie-kode"
+              type="text"
+              required
+              value={joinCode}
+              onChange={(e) => setJoinCode(e.target.value)}
+            />
+            <button type="submit" className="cta-button" disabled={onboardingBusy}>
+              {onboardingBusy ? 'Blir med...' : 'Bli med i familien'}
+            </button>
+          </form>
+        )}
+
+        {onboardingError && <p className="status-message">{onboardingError}</p>}
       </div>
     )
   }

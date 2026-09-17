@@ -39,17 +39,24 @@ export function SamlingerPage() {
 
       <h1 className="oppskrift-title">Samlinger</h1>
 
-      <form onSubmit={handleCreate} className="form-actions">
-        <input
-          type="text"
-          placeholder="Ny samling"
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-        />
-        <button type="submit">Opprett</button>
-      </form>
+      {!family ? (
+        <p className="status-message">
+          Samlinger krever en familie, siden de er ment for å dele oppskrifter med andre. Bli med
+          i eller opprett en familie under "Familie" på profilsiden for å ta dem i bruk.
+        </p>
+      ) : (
+        <form onSubmit={handleCreate} className="form-actions">
+          <input
+            type="text"
+            placeholder="Ny samling"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+          />
+          <button type="submit">Opprett</button>
+        </form>
+      )}
 
-      {loading ? (
+      {!family ? null : loading ? (
         <p className="status-message">Laster samlinger...</p>
       ) : collections.length === 0 ? (
         <p className="status-message">Ingen samlinger enda.</p>

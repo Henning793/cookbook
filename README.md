@@ -1,10 +1,13 @@
 # Mine oppskrifter
 
 Enkel kokebok-app: en nettside du legger som snarvei på telefonens
-hjemskjerm, som lar hele familien lagre og se oppskrifter sammen. Alle med
-lenken kan se alle oppskriftene, uansett hvem som eier dem. Hvert
-familiemedlem logger inn (e-post og passord) for å legge til oppskrifter i
-sin egen kokebok — man kan ikke legge til eller endre i noen andres.
+hjemskjerm. Alle oppretter sin egen konto (e-post og passord) og kan legge
+til egne oppskrifter med en gang — helt uavhengig av andre. Å bli med i
+eller opprette en familiegruppe er valgfritt, og trengs først når du vil
+dele oppskrifter med noen andre: medlemmer av samme familie ser hverandres
+oppskrifter, og familier kan dele enkeltoppskrifter, samlinger eller hele
+boken med hverandre. Man kan aldri legge til, endre eller slette
+oppskrifter som tilhører noen andre.
 
 Bygget med Vite + React + TypeScript, Supabase (database, innlogging,
 bildelagring) og hostet på Netlify. Fungerer som en installerbar PWA med
@@ -42,15 +45,41 @@ cache, slik at tidligere sette oppskrifter også vises uten nett.
 6. Gå til **Project settings -> API**. Du trenger to verdier derfra:
    - **Project URL**
    - **anon public key**
+7. Sett opp CAPTCHA-beskyttelse for registrering (se punkt 2 under) og
+   skru av e-postbekreftelse (**Authentication -> Providers -> Email ->
+   Confirm email**: av) — nye brukere kan da bruke appen med en gang etter
+   registrering, uten å måtte bekrefte e-posten først.
 
-## 2. Legg til familiemedlemmer
+## 2. Registrering (selvbetjent) og CAPTCHA-oppsett
 
-Appen har ikke noe registreringsskjema — du oppretter en bruker manuelt for
-deg selv og for hvert familiemedlem som skal kunne legge til oppskrifter:
+Appen har et registreringsskjema (e-post, passord, navn) — hvem som helst
+kan opprette sin egen konto. For å hindre roboter fra å opprette
+masse-kontoer krever registreringen menneske-verifikasjon via
+[Cloudflare Turnstile](https://developers.cloudflare.com/turnstile/) (gratis):
+
+1. Gå til https://dash.cloudflare.com/?to=/:account/turnstile og opprett en
+   konto hvis du ikke har en.
+2. Opprett en ny widget: velg type **Managed**, og legg til domenet appen
+   kjører på (og `localhost` hvis du vil teste lokalt).
+3. Kopier **Site Key** og **Secret Key**.
+4. I appens `.env` (se punkt 3), legg til:
+   ```
+   VITE_TURNSTILE_SITE_KEY=din-site-key
+   ```
+5. I Supabase Dashboard: **Authentication -> Attack Protection -> Enable
+   CAPTCHA protection**, velg **Turnstile**, og lim inn **Secret Key**.
+
+Uten en gyldig `VITE_TURNSTILE_SITE_KEY` viser registreringsskjemaet en
+tydelig feilmelding i stedet for CAPTCHA-widgeten, og registrering vil
+feile mot Supabase (siden CAPTCHA-beskyttelsen er skrudd på server-side).
+
+### Opprett en bruker manuelt i stedet (alternativ til selvregistrering)
+
+Du kan fortsatt opprette brukere manuelt i Supabase Dashboard i stedet for
+å bruke registreringsskjemaet, f.eks. for å slippe CAPTCHA-oppsettet:
 
 1. Gå til **Authentication -> Users -> Add user -> Create new user**, skriv
-   inn e-post og passord, og huk av for **Auto Confirm User** slik at
-   personen slipper e-postbekreftelse.
+   inn e-post og passord, og huk av for **Auto Confirm User**.
 2. Kopier bruker-ID-en (UUID-en) til den nye brukeren fra brukerlisten.
 3. Gå til **SQL Editor** og gi dem et visningsnavn (det som vises på
    oppskriftene deres i appen), f.eks.:
@@ -59,17 +88,25 @@ deg selv og for hvert familiemedlem som skal kunne legge til oppskrifter:
    insert into profiles (id, display_name) values ('<uuid-fra-auth-users>', 'Mamma');
    ```
 
-Gjenta for hvert familiemedlem. Uten en rad i `profiles` vises brukerens
-oppskrifter i appen med navnet "Ukjent".
+Uten en rad i `profiles` vises brukerens oppskrifter i appen med navnet
+"Ukjent".
 
-### Eier-modellen
+### Eier- og familie-modellen
 
-- Alle (også ikke-innloggede) kan **se** alle oppskrifter, uansett hvem som
-  eier dem.
-- En innlogget bruker kan bare **legge til, endre eller slette** oppskrifter
-  i sin egen kokebok. Dette håndheves av databasens tilgangsregler (RLS) —
-  ikke bare av appens grensesnitt — så det er ikke mulig å omgå ved å prøve
-  seg fram i appen eller sende forespørsler direkte til Supabase.
+- En oppskrift uten familie (`family_id` er tom) er **personlig** — kun
+  synlig og redigerbar for den som opprettet den, uansett om personen
+  senere blir medlem av en familie eller ikke.
+- En oppskrift som tilhører en familie er synlig for alle medlemmer av den
+  familien, men kan fortsatt kun **endres eller slettes** av den som
+  opprettet den (med mindre oppretteren ikke lenger er medlem av familien —
+  da kan alle nåværende medlemmer redigere den i stedet for at den låses).
+- Familie er alltid valgfritt: en innlogget bruker kan legge til, endre og
+  slette sine egne oppskrifter uten noen gang å opprette eller bli med i en
+  familie. "Familie"-lenken på profilsiden (`/familie`) er der for den som
+  vil opprette eller bli med i en familie senere, for å dele med andre.
+- Alt dette håndheves av databasens tilgangsregler (RLS) — ikke bare av
+  appens grensesnitt — så det er ikke mulig å omgå ved å prøve seg fram i
+  appen eller sende forespørsler direkte til Supabase.
 
 ### Eksisterende oppskrifter fra før denne endringen
 
@@ -93,6 +130,7 @@ cp .env.example .env
 ```
 VITE_SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
 VITE_SUPABASE_ANON_KEY=din-anon-key
+VITE_TURNSTILE_SITE_KEY=din-turnstile-site-key
 ```
 
 `.env` skal ikke lastes opp til git — sjekk at den står i `.gitignore`.
@@ -212,12 +250,16 @@ kjøre mot det ekte prosjektet igjen.
 3. **Add new site -> Import an existing project**, velg repoet ditt.
    Netlify finner `netlify.toml` automatisk (build-kommando og publish-mappe
    er allerede satt opp).
-4. Under **Site settings -> Environment variables**, legg inn de samme to
+4. Under **Site settings -> Environment variables**, legg inn de samme
    variablene som i `.env`:
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
+   - `VITE_TURNSTILE_SITE_KEY`
 5. Deploy. Du får en `.netlify.app`-adresse (kan endres til noe kortere under
    **Site settings -> Change site name**, eller kobles til eget domene).
+   Husk å legge til denne adressen som et domene på Turnstile-widgeten din
+   (se punkt 2) — CAPTCHA-en fungerer ikke på et domene den ikke er
+   registrert for.
 
 ## 6. Legg til på hjemskjermen (quick-link)
 
@@ -260,7 +302,8 @@ Ingen API-nøkkel eller ekstra kostnad er nødvendig for denne funksjonen.
 - `src/lib/importRecipe.ts` – frontend-klient som kaller import-funksjonen.
 - `netlify/functions/` – `import-recipe.mjs` (funksjonshandler) og `lib/`
   (URL-sikkerhet og parsing av schema.org-oppskriftsdata).
-- `src/components/Login.tsx` – innlogging via e-post og passord.
+- `src/components/Login.tsx` – innlogging og selvbetjent registrering (e-post/passord).
+- `src/components/TurnstileWidget.tsx` – Cloudflare Turnstile-widget for menneske-verifikasjon ved registrering.
 - `src/components/RecipeForm.tsx` – skjema for å legge til/redigere oppskrift + bilde.
 - `src/pages/` – de syv skjermene (Hjem, Samling, Oppskrift, Kokemodus,
   Ny oppskrift, Søk, Profil), koblet sammen med `react-router-dom`.

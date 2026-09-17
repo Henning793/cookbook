@@ -48,12 +48,12 @@ export function OppskriftPage() {
     setTargetServingsInput(String(recipe?.servings ?? 1))
   }, [recipe?.id])
 
-  const sharedIn = recipe && family ? isSharedIn(recipe, family.id) : false
+  const sharedIn = recipe ? isSharedIn(recipe, family?.id ?? null) : false
 
   const [originFamilyName, setOriginFamilyName] = useState<string | null>(null)
 
   useEffect(() => {
-    if (recipe && sharedIn) {
+    if (recipe && sharedIn && recipe.family_id) {
       getFamilyName(recipe.family_id).then(setOriginFamilyName).catch(() => setOriginFamilyName(null))
     } else {
       setOriginFamilyName(null)
@@ -73,9 +73,12 @@ export function OppskriftPage() {
   const description = recipe.description ?? null
   const totalMinutes = recipe.total_minutes ?? null
   const servings = recipe.servings ?? null
-  const canEdit = family
-    ? canEditRecipe(recipe, session?.user.id ?? '', family.id, new Set(members.map((m) => m.user_id)))
-    : false
+  const canEdit = canEditRecipe(
+    recipe,
+    session?.user.id ?? '',
+    family?.id ?? null,
+    new Set(members.map((m) => m.user_id))
+  )
 
   const parsedTarget = Number(targetServingsInput.replace(',', '.'))
   const scaleFactor =
@@ -163,7 +166,7 @@ export function OppskriftPage() {
             <Share2 size={14} strokeWidth={2.75} aria-hidden="true" />
             {shareCopied ? 'Kopiert!' : 'Del'}
           </button>
-          {canEdit && (
+          {canEdit && recipe.family_id && family && (
             <button type="button" className="nav-link" onClick={() => setShowFamilyShareDialog(true)}>
               Del med en familie
             </button>

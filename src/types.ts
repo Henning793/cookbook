@@ -13,7 +13,10 @@ export interface Recipe {
   steps: string[]
   image_url: string | null
   owner_id: string
-  family_id: string
+  // NULL = personlig oppskrift, ikke tilknyttet noen familie. Kun synlig
+  // og redigerbar for owner_id selv, uavhengig av om eieren senere blir
+  // medlem av en familie eller ikke - se canEditRecipe/isSharedIn.
+  family_id: string | null
   tags: string[]
   // Lagt til av migration_recipe_header_fields.sql (Task 7). Frem til den
   // migreringen er kjørt finnes ikke kolonnene i databasen, så disse er alltid undefined.
