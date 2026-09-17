@@ -10,6 +10,7 @@ export function FamiliePage() {
   const { family, members, myRole, profiles, session, outgoingShares, reloadFamily } = useApp()
   const [codeCopied, setCodeCopied] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   // Task 11 (DelTilFamilieDialog) consumes this piece of state; this task only
   // wires up the trigger button below.
   const [showShareDialog, setShowShareDialog] = useState(false)
@@ -38,9 +39,12 @@ export function FamiliePage() {
 
   async function handleRegenerate() {
     setBusy(true)
+    setError(null)
     try {
       await regenerateCode(family!.id)
       reloadFamily()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Noe gikk feil.')
     } finally {
       setBusy(false)
     }
@@ -48,9 +52,12 @@ export function FamiliePage() {
 
   async function handleRemove(userId: string) {
     setBusy(true)
+    setError(null)
     try {
       await removeMember(family!.id, userId)
       reloadFamily()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Noe gikk feil.')
     } finally {
       setBusy(false)
     }
@@ -58,10 +65,13 @@ export function FamiliePage() {
 
   async function handleLeave() {
     setBusy(true)
+    setError(null)
     try {
       await leaveFamily()
       reloadFamily()
       navigate('/')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Noe gikk feil.')
     } finally {
       setBusy(false)
     }
@@ -69,9 +79,12 @@ export function FamiliePage() {
 
   async function handleRevoke(shareId: string) {
     setBusy(true)
+    setError(null)
     try {
       await revokeShare(shareId)
       reloadFamily()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Noe gikk feil.')
     } finally {
       setBusy(false)
     }
@@ -87,6 +100,8 @@ export function FamiliePage() {
       </nav>
 
       <h1 className="oppskrift-title">{family.name}</h1>
+
+      {error && <p className="status-message">{error}</p>}
 
       <h2 className="section-kicker">Invitasjonskode</h2>
       <p className="oppskrift-description">
