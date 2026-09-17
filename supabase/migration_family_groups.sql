@@ -290,7 +290,11 @@ begin
   update family_shares
   set status = case when p_accept then 'accepted' else 'rejected' end,
       responded_at = now()
-  where id = p_share_id;
+  where id = p_share_id and status = 'pending';
+
+  if not found then
+    raise exception 'Delingsforespørselen er allerede besvart.';
+  end if;
 end;
 $$;
 
@@ -396,7 +400,7 @@ drop policy if exists "Innloggede kan legge til i egen kokebok" on recipes;
 create policy "Innloggede kan legge til i egen kokebok"
   on recipes for insert
   to authenticated
-  with check (owner_id = auth.uid());
+  with check (owner_id = auth.uid() and (family_id is null or family_id in (select family_id from family_members where user_id = auth.uid())));
 
 -- collections: alle i familien kan lese/opprette/endre/slette samlinger i
 -- egen familie (samme åpenhet som tags har i dag), pluss lesing av
@@ -446,6 +450,7 @@ create policy "Familiemedlemmer administrerer collection_recipes"
         select family_id from family_members where user_id = auth.uid()
       )
     )
+    and recipe_id in (select id from recipes where family_id in (select family_id from family_members where user_id = auth.uid()))
   );
 
 -- family_shares: begge sider (avsender og mottaker) kan se raden, ingen
