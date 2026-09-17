@@ -35,9 +35,10 @@ cache, slik at tidligere sette oppskrifter også vises uten nett.
    onboarding-skjerm hvor de kan opprette en ny familiegruppe eller bli
    med i en eksisterende ved å skrive inn invitasjonskoden fra et
    familiemedlem. Invitasjonskoden brukes både for å bli medlem av
-   familien og for å dele oppskrifter eller samlinger mellom familier.
-   All familieadministrasjon — medlemmer, invitasjonskode, delinger —
-   skjer via "Familie"-lenken på profilsiden (`/familie`).
+   familien og for å dele oppskrifter, samlinger, eller hele familiens
+   bok mellom familier. All familieadministrasjon — medlemmer,
+   invitasjonskode, delinger — skjer via "Familie"-lenken på profilsiden
+   (`/familie`).
 6. Gå til **Project settings -> API**. Du trenger to verdier derfra:
    - **Project URL**
    - **anon public key**
