@@ -1,8 +1,10 @@
-import { useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { ChevronLeft, Share2 } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { UNTAGGED_TAG, UNTAGGED_LABEL } from '../lib/tags'
+import { listRecipeIdsInCollection } from '../lib/collections'
+import { DelTilFamilieDialog } from '../components/DelTilFamilieDialog'
 
 const DOT_COLORS = [
   'var(--color-accent-100)',
@@ -17,10 +19,69 @@ const TAG_TINTS = [
 ]
 
 export function SamlingPage() {
-  const params = useParams<{ tag: string }>()
+  const params = useParams<{ tag?: string; id?: string }>()
+  const location = useLocation()
   const navigate = useNavigate()
-  const { recipes, availableTags, loading } = useApp()
+  const { recipes, availableTags, loading, family } = useApp()
   const [shareCopied, setShareCopied] = useState(false)
+  const [collectionRecipeIds, setCollectionRecipeIds] = useState<string[] | null>(null)
+  const [showFamilyShareDialog, setShowFamilyShareDialog] = useState(false)
+
+  const isCollectionRoute = location.pathname.startsWith('/samlinger/')
+  const collectionId = params.id
+
+  useEffect(() => {
+    if (!collectionId) return
+    listRecipeIdsInCollection(collectionId).then(setCollectionRecipeIds)
+  }, [collectionId])
+
+  if (isCollectionRoute) {
+    const collectionRecipes = collectionRecipeIds
+      ? recipes.filter((r) => collectionRecipeIds.includes(r.id))
+      : []
+
+    return (
+      <div className="page samling-page">
+        <nav className="nav-bar">
+          <button type="button" className="nav-link" onClick={() => navigate('/samlinger')}>
+            <ChevronLeft size={14} strokeWidth={2.75} aria-hidden="true" />
+            Samlinger
+          </button>
+          <button type="button" className="nav-link" onClick={() => setShowFamilyShareDialog(true)}>
+            <Share2 size={14} strokeWidth={2.75} aria-hidden="true" />
+            Del med en familie
+          </button>
+        </nav>
+
+        {collectionRecipeIds === null ? (
+          <p className="status-message">Laster samling...</p>
+        ) : collectionRecipes.length === 0 ? (
+          <p className="status-message">Ingen oppskrifter i denne samlingen enda.</p>
+        ) : (
+          <div className="samling-recipe-list">
+            {collectionRecipes.map((recipe) => (
+              <button
+                type="button"
+                key={recipe.id}
+                className="samling-recipe-row"
+                onClick={() => navigate(`/oppskrift/${recipe.id}`)}
+              >
+                <span className="samling-recipe-title">{recipe.title}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {showFamilyShareDialog && family && collectionId && (
+          <DelTilFamilieDialog
+            shareType="collection"
+            collectionId={collectionId}
+            onClose={() => setShowFamilyShareDialog(false)}
+          />
+        )}
+      </div>
+    )
+  }
 
   const tag = params.tag ? decodeURIComponent(params.tag) : ''
   const isUntagged = tag === UNTAGGED_TAG

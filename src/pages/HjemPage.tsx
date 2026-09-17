@@ -105,6 +105,9 @@ export function HjemPage() {
       ) : (
         <>
           <p className="hjem-samlinger-kicker">Samlinger</p>
+          <button type="button" className="nav-link" onClick={() => navigate('/samlinger')}>
+            Mine samlinger
+          </button>
           <div className="hjem-grid">
             {collections.map(({ tag, label, count }, index) => {
               const isUntagged = tag === UNTAGGED_TAG
