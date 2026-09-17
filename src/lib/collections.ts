@@ -1,6 +1,12 @@
 import { supabase } from './supabaseClient'
 import type { Collection } from '../types'
 
+export async function getCollection(id: string): Promise<Collection | null> {
+  const { data, error } = await supabase.from('collections').select('*').eq('id', id).maybeSingle()
+  if (error) throw error
+  return data
+}
+
 export async function listCollections(familyId: string): Promise<Collection[]> {
   const { data, error } = await supabase
     .from('collections')

@@ -169,11 +169,30 @@ $$;
 
 create or replace function leave_family()
 returns void
-language sql
+language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  v_family_id uuid;
+  v_role text;
+  v_admin_count int;
+  v_member_count int;
+begin
+  select family_id, role into v_family_id, v_role from family_members where user_id = auth.uid();
+  if v_family_id is null then
+    return;
+  end if;
+
+  select count(*) into v_admin_count from family_members where family_id = v_family_id and role = 'admin';
+  select count(*) into v_member_count from family_members where family_id = v_family_id;
+
+  if v_role = 'admin' and v_admin_count = 1 and v_member_count > 1 then
+    raise exception 'Du er den eneste admin i familien. Fjern de andre medlemmene, eller be en admin overta, før du forlater.';
+  end if;
+
   delete from family_members where user_id = auth.uid();
+end;
 $$;
 
 create or replace function remove_family_member(p_family_id uuid, p_user_id uuid)
@@ -182,12 +201,24 @@ language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  v_target_role text;
+  v_admin_count int;
+  v_member_count int;
 begin
   if not exists (
     select 1 from family_members
     where family_id = p_family_id and user_id = auth.uid() and role = 'admin'
   ) then
     raise exception 'Kun admin kan fjerne medlemmer.';
+  end if;
+
+  select role into v_target_role from family_members where family_id = p_family_id and user_id = p_user_id;
+  select count(*) into v_admin_count from family_members where family_id = p_family_id and role = 'admin';
+  select count(*) into v_member_count from family_members where family_id = p_family_id;
+
+  if v_target_role = 'admin' and v_admin_count = 1 and v_member_count > 1 then
+    raise exception 'Kan ikke fjerne den eneste admin mens familien har andre medlemmer.';
   end if;
 
   delete from family_members where family_id = p_family_id and user_id = p_user_id;
@@ -328,7 +359,10 @@ alter table collections enable row level security;
 alter table collection_recipes enable row level security;
 alter table family_shares enable row level security;
 
--- families/family_members: kun lesing av egen familie, ingen direkte
+-- families/family_members: lesing av egen familie, samt av enhver familie
+-- man har en delingsrelasjon med (i begge retninger, uansett status - dette
+-- avslører kun navnet, ikke innhold, og at relasjonen finnes kan man
+-- allerede se via family_shares-raden man har lov til å lese), ingen direkte
 -- skriving (alt går via RPC-ene over, som er security definer og dermed
 -- omgår RLS for sine egne interne writes).
 drop policy if exists "Kan lese egen familie" on families;
@@ -339,8 +373,11 @@ create policy "Kan lese egen familie"
     id in (select family_id from family_members where user_id = auth.uid())
     or id in (
       select from_family_id from family_shares
-      where status = 'accepted'
-        and to_family_id in (select family_id from family_members where user_id = auth.uid())
+      where to_family_id in (select family_id from family_members where user_id = auth.uid())
+    )
+    or id in (
+      select to_family_id from family_shares
+      where from_family_id in (select family_id from family_members where user_id = auth.uid())
     )
   );
 
@@ -377,6 +414,7 @@ create policy "Familiemedlemmer kan se egne og delte oppskrifter"
     )
   );
 
+-- Mirrors canEditRecipe in src/lib/recipePermissions.ts — keep both in sync.
 drop policy if exists "Innloggede kan endre egne oppskrifter" on recipes;
 create policy "Innloggede kan endre egne oppskrifter"
   on recipes for update
@@ -390,6 +428,7 @@ create policy "Innloggede kan endre egne oppskrifter"
     )
   );
 
+-- Mirrors canEditRecipe in src/lib/recipePermissions.ts — keep both in sync.
 drop policy if exists "Innloggede kan slette egne oppskrifter" on recipes;
 create policy "Innloggede kan slette egne oppskrifter"
   on recipes for delete
@@ -422,6 +461,11 @@ create policy "Familiemedlemmer kan se egne og delte samlinger"
       select collection_id from family_shares
       where status = 'accepted' and share_type = 'collection'
         and to_family_id in (select family_id from family_members where user_id = auth.uid())
+    )
+    or family_id in (
+      select fs.from_family_id from family_shares fs
+      where fs.status = 'accepted' and fs.share_type = 'whole_family'
+        and fs.to_family_id in (select family_id from family_members where user_id = auth.uid())
     )
   );
 

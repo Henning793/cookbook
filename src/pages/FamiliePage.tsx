@@ -1,19 +1,66 @@
 import { useNavigate } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useApp } from '../context/AppContext'
-import { removeMember, regenerateCode, leaveFamily } from '../lib/families'
+import { removeMember, regenerateCode, leaveFamily, getFamilyName } from '../lib/families'
 import { revokeShare, respondToShare } from '../lib/shares'
 import { DelTilFamilieDialog } from '../components/DelTilFamilieDialog'
+import type { ShareType } from '../types'
+
+function shareTypeLabel(shareType: ShareType): string {
+  switch (shareType) {
+    case 'recipe':
+      return 'Oppskrift'
+    case 'collection':
+      return 'Samling'
+    case 'whole_family':
+      return 'Hele boken'
+    default:
+      return shareType
+  }
+}
 
 export function FamiliePage() {
   const navigate = useNavigate()
-  const { family, members, myRole, profiles, session, incomingShares, outgoingShares, reloadFamily } =
-    useApp()
+  const {
+    family,
+    members,
+    myRole,
+    profiles,
+    session,
+    incomingShares,
+    outgoingShares,
+    reloadFamily,
+    reload,
+  } = useApp()
   const [codeCopied, setCodeCopied] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showWholeFamilyDialog, setShowWholeFamilyDialog] = useState(false)
+  const [familyNames, setFamilyNames] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    const ids = new Set<string>()
+    for (const share of incomingShares) ids.add(share.from_family_id)
+    for (const share of outgoingShares) ids.add(share.to_family_id)
+    const idsToFetch = [...ids].filter((id) => !(id in familyNames))
+    if (idsToFetch.length === 0) return
+    let cancelled = false
+    Promise.all(idsToFetch.map((id) => getFamilyName(id).then((name) => [id, name] as const))).then(
+      (entries) => {
+        if (cancelled) return
+        setFamilyNames((current) => {
+          const next = { ...current }
+          for (const [id, name] of entries) next[id] = name
+          return next
+        })
+      }
+    )
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incomingShares, outgoingShares])
 
   if (!family) {
     return (
@@ -83,6 +130,7 @@ export function FamiliePage() {
     try {
       await revokeShare(shareId)
       reloadFamily()
+      reload()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Noe gikk feil.')
     } finally {
@@ -96,6 +144,7 @@ export function FamiliePage() {
     try {
       await respondToShare(shareId, accept)
       reloadFamily()
+      reload()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Noe gikk feil.')
     } finally {
@@ -159,7 +208,9 @@ export function FamiliePage() {
             .filter((s) => s.status === 'pending')
             .map((share) => (
               <li key={share.id} className="samling-recipe-row">
-                <span>{share.share_type === 'whole_family' ? 'Hele boken' : share.share_type}</span>
+                <span>
+                  {shareTypeLabel(share.share_type)} fra {familyNames[share.from_family_id] ?? '…'}
+                </span>
                 <button type="button" onClick={() => handleRespond(share.id, true)} disabled={busy}>
                   Godta
                 </button>
@@ -181,7 +232,8 @@ export function FamiliePage() {
             .map((share) => (
               <li key={share.id} className="samling-recipe-row">
                 <span>
-                  {share.share_type === 'whole_family' ? 'Hele boken' : share.share_type} — {share.status}
+                  {shareTypeLabel(share.share_type)} til {familyNames[share.to_family_id] ?? '…'} —{' '}
+                  {share.status}
                 </span>
                 <button type="button" onClick={() => handleRevoke(share.id)} disabled={busy}>
                   Trekk tilbake

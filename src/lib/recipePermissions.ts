@@ -1,5 +1,6 @@
 import type { Recipe } from '../types'
 
+// Mirrors the recipes update/delete RLS policy in supabase/migration_family_groups.sql — keep both in sync.
 export function canEditRecipe(
   recipe: Recipe,
   currentUserId: string,

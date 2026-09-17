@@ -103,30 +103,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const loadFamily = useCallback(async () => {
     const generation = ++familyLoadGeneration.current
     setFamilyLoading(true)
-    const membership = await getMyMembership()
-    if (generation !== familyLoadGeneration.current) return
-    if (!membership) {
-      setFamily(null)
-      setMembers([])
-      setMyRole(null)
-      setIncomingShares([])
-      setOutgoingShares([])
+    try {
+      const membership = await getMyMembership()
+      if (generation !== familyLoadGeneration.current) return
+      if (!membership) {
+        setFamily(null)
+        setMembers([])
+        setMyRole(null)
+        setIncomingShares([])
+        setOutgoingShares([])
+        setFamilyLoading(false)
+        return
+      }
+      setMyRole(membership.role)
+      const [familyRow, memberRows, incoming, outgoing] = await Promise.all([
+        getMyFamily(membership.family_id),
+        listMembers(membership.family_id),
+        listIncomingShares(membership.family_id),
+        listOutgoingShares(membership.family_id),
+      ])
+      if (generation !== familyLoadGeneration.current) return
+      setFamily(familyRow)
+      setMembers(memberRows)
+      setIncomingShares(incoming)
+      setOutgoingShares(outgoing)
       setFamilyLoading(false)
-      return
+    } catch (err) {
+      if (generation !== familyLoadGeneration.current) return
+      console.error('Kunne ikke laste familiedata', err)
+      setFamilyLoading(false)
     }
-    setMyRole(membership.role)
-    const [familyRow, memberRows, incoming, outgoing] = await Promise.all([
-      getMyFamily(membership.family_id),
-      listMembers(membership.family_id),
-      listIncomingShares(membership.family_id),
-      listOutgoingShares(membership.family_id),
-    ])
-    if (generation !== familyLoadGeneration.current) return
-    setFamily(familyRow)
-    setMembers(memberRows)
-    setIncomingShares(incoming)
-    setOutgoingShares(outgoing)
-    setFamilyLoading(false)
   }, [])
 
   useEffect(() => {
