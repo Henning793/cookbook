@@ -53,7 +53,7 @@ export function SamlingPage() {
           </button>
         </nav>
 
-        {collectionRecipeIds === null ? (
+        {collectionRecipeIds === null || loading ? (
           <p className="status-message">Laster samling...</p>
         ) : collectionRecipes.length === 0 ? (
           <p className="status-message">Ingen oppskrifter i denne samlingen enda.</p>
