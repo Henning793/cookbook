@@ -5,6 +5,7 @@ import { useApp } from '../context/AppContext'
 import { UNTAGGED_TAG, UNTAGGED_LABEL } from '../lib/tags'
 import { listRecipeIdsInCollection } from '../lib/collections'
 import { DelTilFamilieDialog } from '../components/DelTilFamilieDialog'
+import { isSharedIn } from '../lib/recipePermissions'
 
 const DOT_COLORS = [
   'var(--color-accent-100)',
@@ -59,16 +60,27 @@ export function SamlingPage() {
           <p className="status-message">Ingen oppskrifter i denne samlingen enda.</p>
         ) : (
           <div className="samling-recipe-list">
-            {collectionRecipes.map((recipe) => (
-              <button
-                type="button"
-                key={recipe.id}
-                className="samling-recipe-row"
-                onClick={() => navigate(`/oppskrift/${recipe.id}`)}
-              >
-                <span className="samling-recipe-title">{recipe.title}</span>
-              </button>
-            ))}
+            {collectionRecipes.map((recipe) => {
+              const sharedIn = family ? isSharedIn(recipe, family.id) : false
+              return (
+                <button
+                  type="button"
+                  key={recipe.id}
+                  className="samling-recipe-row"
+                  onClick={() => navigate(`/oppskrift/${recipe.id}`)}
+                >
+                  <span className="samling-recipe-title">{recipe.title}</span>
+                  {sharedIn && (
+                    <span
+                      className="pill-tag"
+                      style={{ background: 'var(--color-neutral-300)', color: 'var(--color-neutral-800)' }}
+                    >
+                      Delt
+                    </span>
+                  )}
+                </button>
+              )
+            })}
           </div>
         )}
 

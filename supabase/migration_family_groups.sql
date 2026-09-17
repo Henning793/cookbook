@@ -335,7 +335,14 @@ drop policy if exists "Kan lese egen familie" on families;
 create policy "Kan lese egen familie"
   on families for select
   to authenticated
-  using (id in (select family_id from family_members where user_id = auth.uid()));
+  using (
+    id in (select family_id from family_members where user_id = auth.uid())
+    or id in (
+      select from_family_id from family_shares
+      where status = 'accepted'
+        and to_family_id in (select family_id from family_members where user_id = auth.uid())
+    )
+  );
 
 drop policy if exists "Kan lese medlemmer av egen familie" on family_members;
 create policy "Kan lese medlemmer av egen familie"

@@ -5,6 +5,8 @@ import { supabase } from '../lib/supabaseClient'
 import { useApp } from '../context/AppContext'
 import { RecipeForm, type RecipeFormValues } from '../components/RecipeForm'
 import { DelTilFamilieDialog } from '../components/DelTilFamilieDialog'
+import { canEditRecipe, isSharedIn } from '../lib/recipePermissions'
+import { getFamilyName } from '../lib/families'
 
 const TAG_TINTS = [
   { bg: 'var(--color-accent-100)', text: 'var(--color-accent-700)' },
@@ -20,7 +22,7 @@ export function OppskriftPage() {
   const { id } = useParams<{ id: string }>()
   const location = useLocation()
   const navigate = useNavigate()
-  const { recipes, session, reload, availableTags, loading } = useApp()
+  const { recipes, session, reload, availableTags, loading, family, members } = useApp()
 
   const [editing, setEditing] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
@@ -46,6 +48,18 @@ export function OppskriftPage() {
     setTargetServingsInput(String(recipe?.servings ?? 1))
   }, [recipe?.id])
 
+  const sharedIn = recipe && family ? isSharedIn(recipe, family.id) : false
+
+  const [originFamilyName, setOriginFamilyName] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (recipe && sharedIn) {
+      getFamilyName(recipe.family_id).then(setOriginFamilyName)
+    } else {
+      setOriginFamilyName(null)
+    }
+  }, [recipe?.id, sharedIn])
+
   if (!recipe) {
     return (
       <div className="page oppskrift-page">
@@ -59,7 +73,9 @@ export function OppskriftPage() {
   const description = recipe.description ?? null
   const totalMinutes = recipe.total_minutes ?? null
   const servings = recipe.servings ?? null
-  const canEdit = recipe.owner_id === session?.user.id
+  const canEdit = family
+    ? canEditRecipe(recipe, session?.user.id ?? '', family.id, new Set(members.map((m) => m.user_id)))
+    : false
 
   const parsedTarget = Number(targetServingsInput.replace(',', '.'))
   const scaleFactor =
@@ -198,6 +214,14 @@ export function OppskriftPage() {
             style={{ background: 'var(--color-neutral-100)', color: 'var(--color-neutral-800)' }}
           >
             {formatNumber(servings)} porsjoner
+          </span>
+        )}
+        {sharedIn && originFamilyName && (
+          <span
+            className="pill-tag"
+            style={{ background: 'var(--color-neutral-300)', color: 'var(--color-neutral-800)' }}
+          >
+            Fra {originFamilyName}
           </span>
         )}
       </div>

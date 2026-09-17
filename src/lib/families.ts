@@ -53,3 +53,9 @@ export async function regenerateCode(familyId: string): Promise<string> {
   if (error) throw error
   return data as string
 }
+
+export async function getFamilyName(familyId: string): Promise<string> {
+  const { data, error } = await supabase.from('families').select('name').eq('id', familyId).maybeSingle()
+  if (error) throw error
+  return data?.name ?? 'en annen familie'
+}
