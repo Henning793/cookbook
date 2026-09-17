@@ -148,6 +148,11 @@ begin
   insert into family_members (family_id, user_id, role)
   values (v_family_id, auth.uid(), 'admin');
 
+  -- Personlige oppskrifter (uten familie fra før) blir med inn i den nye
+  -- familien, slik at alle medlemmer av familien kan se dem - matcher
+  -- join_family_by_code sin tilsvarende oppførsel under.
+  update recipes set family_id = v_family_id where owner_id = auth.uid() and family_id is null;
+
   return v_family_id;
 end;
 $$;
@@ -172,6 +177,10 @@ begin
 
   insert into family_members (family_id, user_id, role)
   values (v_family_id, auth.uid(), 'member');
+
+  -- Personlige oppskrifter (uten familie fra før) blir med inn i familien
+  -- man blir medlem av, slik at alle medlemmer kan se dem.
+  update recipes set family_id = v_family_id where owner_id = auth.uid() and family_id is null;
 
   return v_family_id;
 end;
@@ -563,3 +572,14 @@ create policy "Brukere kan opprette egen profil"
   on profiles for insert
   to authenticated
   with check (id = auth.uid());
+
+-- =========================================================================
+-- Engangsretting: brukere som ble medlem av en familie FØR create_family/
+-- join_family_by_code begynte å absorbere personlige oppskrifter (se over)
+-- kan ha gjenværende oppskrifter med family_id NULL selv om de nå er
+-- medlem av en familie. Trygt å kjøre på nytt - finner ingen rader etter
+-- første kjøring.
+update recipes r
+set family_id = fm.family_id
+from family_members fm
+where fm.user_id = r.owner_id and r.family_id is null;

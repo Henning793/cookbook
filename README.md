@@ -94,8 +94,14 @@ Uten en rad i `profiles` vises brukerens oppskrifter i appen med navnet
 ### Eier- og familie-modellen
 
 - En oppskrift uten familie (`family_id` er tom) er **personlig** — kun
-  synlig og redigerbar for den som opprettet den, uansett om personen
-  senere blir medlem av en familie eller ikke.
+  synlig og redigerbar for den som opprettet den.
+- Når en bruker **oppretter eller blir med i en familie**, blir alle deres
+  personlige oppskrifter automatisk med inn i familien og synlige for alle
+  medlemmene (`create_family`/`join_family_by_code` i
+  [`supabase/migration_family_groups.sql`](supabase/migration_family_groups.sql)).
+  Dette skjer kun i det øyeblikket man blir medlem — oppskrifter man legger
+  til etter det, mens man allerede er medlem, tilhører automatisk familien
+  fra starten av.
 - En oppskrift som tilhører en familie er synlig for alle medlemmer av den
   familien, men kan fortsatt kun **endres eller slettes** av den som
   opprettet den (med mindre oppretteren ikke lenger er medlem av familien —
@@ -103,7 +109,9 @@ Uten en rad i `profiles` vises brukerens oppskrifter i appen med navnet
 - Familie er alltid valgfritt: en innlogget bruker kan legge til, endre og
   slette sine egne oppskrifter uten noen gang å opprette eller bli med i en
   familie. "Familie"-lenken på profilsiden (`/familie`) er der for den som
-  vil opprette eller bli med i en familie senere, for å dele med andre.
+  vil opprette eller bli med i en familie senere, for å dele med andre —
+  merk at dette da gjør alle ens egne oppskrifter synlige for hele familien,
+  se punktet over.
 - Alt dette håndheves av databasens tilgangsregler (RLS) — ikke bare av
   appens grensesnitt — så det er ikke mulig å omgå ved å prøve seg fram i
   appen eller sende forespørsler direkte til Supabase.
