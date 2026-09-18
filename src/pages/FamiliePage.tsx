@@ -11,7 +11,11 @@ import {
 } from '../lib/families'
 import { revokeShare, respondToShare } from '../lib/shares'
 import { DelTilFamilieDialog } from '../components/DelTilFamilieDialog'
+import { listMenuDays, resetMenu } from '../lib/menuDays'
+import { deleteAllManualItems, listManualItems } from '../lib/shoppingList'
 import type { ShareType } from '../types'
+
+type PendingOnboardingAction = { type: 'create'; name: string } | { type: 'join'; code: string }
 
 function shareTypeLabel(shareType: ShareType): string {
   switch (shareType) {
@@ -51,6 +55,7 @@ export function FamiliePage() {
   const [joinCode, setJoinCode] = useState('')
   const [onboardingBusy, setOnboardingBusy] = useState(false)
   const [onboardingError, setOnboardingError] = useState<string | null>(null)
+  const [pendingOnboardingAction, setPendingOnboardingAction] = useState<PendingOnboardingAction | null>(null)
 
   useEffect(() => {
     const ids = new Set<string>()
@@ -75,40 +80,57 @@ export function FamiliePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [incomingShares, outgoingShares])
 
-  async function handleCreateFamily(event: React.FormEvent) {
-    event.preventDefault()
+  async function hasPersonalMenuData(): Promise<boolean> {
+    const [days, manual] = await Promise.all([listMenuDays(null), listManualItems(null)])
+    return days.length > 0 || manual.length > 0
+  }
+
+  async function runOnboardingAction(action: PendingOnboardingAction) {
     setOnboardingError(null)
     setOnboardingBusy(true)
     try {
-      await createFamily(newFamilyName.trim())
-      // Å opprette en familie absorberer alle våre personlige oppskrifter
-      // inn i den (se create_family i migration_family_groups.sql) - må
-      // laste oppskriftene på nytt også, ikke bare familien, ellers viser
-      // UI-et fortsatt den gamle (personlige) family_id for dem til man
-      // laster siden på nytt.
+      if (action.type === 'create') {
+        await createFamily(action.name)
+      } else {
+        await joinFamilyByCode(action.code)
+      }
+      // Bli medlem av en familie forkaster en eventuell aktiv personlig
+      // ukesmeny/handleliste (inkludert egne varer) i stedet for å slå den
+      // sammen med familiens - se advarselsdialogen under.
+      await Promise.all([resetMenu(null), deleteAllManualItems(null)])
+      // Å opprette/bli med i en familie absorberer også alle våre
+      // personlige oppskrifter inn i den (se create_family/join_family_by_code
+      // i migration_family_groups.sql) - må laste oppskriftene på nytt også,
+      // ikke bare familien, ellers viser UI-et fortsatt den gamle
+      // (personlige) family_id for dem til man laster siden på nytt.
       reloadFamily()
       reload()
     } catch (err) {
       setOnboardingError(err instanceof Error ? err.message : 'Noe gikk feil.')
     } finally {
       setOnboardingBusy(false)
+      setPendingOnboardingAction(null)
     }
+  }
+
+  async function handleCreateFamily(event: React.FormEvent) {
+    event.preventDefault()
+    const action: PendingOnboardingAction = { type: 'create', name: newFamilyName.trim() }
+    if (await hasPersonalMenuData()) {
+      setPendingOnboardingAction(action)
+      return
+    }
+    await runOnboardingAction(action)
   }
 
   async function handleJoinFamily(event: React.FormEvent) {
     event.preventDefault()
-    setOnboardingError(null)
-    setOnboardingBusy(true)
-    try {
-      await joinFamilyByCode(joinCode.trim())
-      // Samme grunn som i handleCreateFamily over.
-      reloadFamily()
-      reload()
-    } catch (err) {
-      setOnboardingError(err instanceof Error ? err.message : 'Noe gikk feil.')
-    } finally {
-      setOnboardingBusy(false)
+    const action: PendingOnboardingAction = { type: 'join', code: joinCode.trim() }
+    if (await hasPersonalMenuData()) {
+      setPendingOnboardingAction(action)
+      return
     }
+    await runOnboardingAction(action)
   }
 
   if (familyLoading) {
@@ -186,6 +208,37 @@ export function FamiliePage() {
         )}
 
         {onboardingError && <p className="status-message">{onboardingError}</p>}
+
+        {pendingOnboardingAction && (
+          <div className="del-dialog-backdrop" onClick={() => !onboardingBusy && setPendingOnboardingAction(null)}>
+            <div className="del-dialog-sheet" onClick={(e) => e.stopPropagation()}>
+              <h2 className="del-dialog-title">Forkast personlig ukesmeny?</h2>
+              <p className="del-dialog-body">
+                Du har en aktiv personlig ukesmeny og/eller handleliste. Å bli med i en familie sletter
+                disse (inkludert egne varer) — de erstattes av familiens felles ukesmeny og handleliste.
+                Dette kan ikke angres.
+              </p>
+              <div className="del-dialog-actions">
+                <button
+                  type="button"
+                  className="del-dialog-cancel"
+                  onClick={() => setPendingOnboardingAction(null)}
+                  disabled={onboardingBusy}
+                >
+                  Avbryt
+                </button>
+                <button
+                  type="button"
+                  className="del-dialog-submit"
+                  disabled={onboardingBusy}
+                  onClick={() => runOnboardingAction(pendingOnboardingAction)}
+                >
+                  {onboardingBusy ? 'Fortsetter...' : 'Fortsett og forkast'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     )
   }
