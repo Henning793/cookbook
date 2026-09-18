@@ -48,7 +48,7 @@ export function OppskriftPage() {
     setTargetServingsInput(String(recipe?.servings ?? 1))
   }, [recipe?.id])
 
-  const sharedIn = recipe ? isSharedIn(recipe, family?.id ?? null) : false
+  const sharedIn = recipe ? isSharedIn(recipe, session?.user.id ?? '', family?.id ?? null) : false
 
   const [originFamilyName, setOriginFamilyName] = useState<string | null>(null)
 

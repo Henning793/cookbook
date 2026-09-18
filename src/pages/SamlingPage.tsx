@@ -24,7 +24,7 @@ export function SamlingPage() {
   const params = useParams<{ tag?: string; id?: string }>()
   const location = useLocation()
   const navigate = useNavigate()
-  const { recipes, availableTags, loading, family } = useApp()
+  const { recipes, availableTags, loading, family, session } = useApp()
   const [shareCopied, setShareCopied] = useState(false)
   const [collectionRecipeIds, setCollectionRecipeIds] = useState<string[] | null>(null)
   const [showFamilyShareDialog, setShowFamilyShareDialog] = useState(false)
@@ -72,7 +72,7 @@ export function SamlingPage() {
         ) : (
           <div className="samling-recipe-list">
             {collectionRecipes.map((recipe) => {
-              const sharedIn = family ? isSharedIn(recipe, family.id) : false
+              const sharedIn = isSharedIn(recipe, session?.user.id ?? '', family?.id ?? null)
               return (
                 <button
                   type="button"

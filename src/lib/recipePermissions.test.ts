@@ -58,10 +58,20 @@ test('nobody outside the recipe family can edit it, even the owner viewing it as
   )
 })
 
-test('isSharedIn is true when the recipe family differs from the current family', () => {
-  const recipe = makeRecipe({ family_id: 'family-a' })
-  assert.equal(isSharedIn(recipe, 'family-b'), true)
-  assert.equal(isSharedIn(recipe, 'family-a'), false)
+test('isSharedIn is true when a non-owner views a recipe from a different family', () => {
+  const recipe = makeRecipe({ owner_id: 'owner-1', family_id: 'family-a' })
+  assert.equal(isSharedIn(recipe, 'viewer-2', 'family-b'), true)
+  assert.equal(isSharedIn(recipe, 'viewer-2', 'family-a'), false)
+})
+
+test('isSharedIn is false for the owner viewing their own recipe, even after leaving that family', () => {
+  const recipe = makeRecipe({ owner_id: 'user-1', family_id: 'family-a' })
+  // Still a member of family-a.
+  assert.equal(isSharedIn(recipe, 'user-1', 'family-a'), false)
+  // Left family-a (no family now) - still their own recipe, never "shared in".
+  assert.equal(isSharedIn(recipe, 'user-1', null), false)
+  // Joined a different family-b - still their own recipe, never "shared in".
+  assert.equal(isSharedIn(recipe, 'user-1', 'family-b'), false)
 })
 
 test('owner can edit their own personal (no-family) recipe even with no family of their own', () => {
@@ -80,7 +90,7 @@ test('nobody but the owner can edit a personal recipe, family membership is irre
 })
 
 test('a personal (no-family) recipe is never considered shared-in', () => {
-  const recipe = makeRecipe({ family_id: null })
-  assert.equal(isSharedIn(recipe, null), false)
-  assert.equal(isSharedIn(recipe, 'family-a'), false)
+  const recipe = makeRecipe({ owner_id: 'owner-1', family_id: null })
+  assert.equal(isSharedIn(recipe, 'viewer-2', null), false)
+  assert.equal(isSharedIn(recipe, 'viewer-2', 'family-a'), false)
 })

@@ -410,13 +410,22 @@ create policy "Kan lese medlemmer av egen familie"
 -- FamiliePage/Login.tsx) - en oppskrift med family_id NULL er en personlig
 -- oppskrift, kun synlig/redigerbar for sin egen owner_id, uavhengig av om
 -- eieren senere blir medlem av en familie eller ikke.
+--
+-- owner_id = auth.uid() er også en egen, ubetinget synlighets-gren: man
+-- skal alltid kunne se sine egne oppskrifter, uansett familiestatus. Dette
+-- er det som gjør at forlater man familien man skrev en oppskrift i,
+-- forsvinner den ikke fra familien (family_id endres ikke, resten av
+-- familien ser den fortsatt via family_id-grenen under) OG man selv
+-- fortsetter å se den (denne grenen) - men man mister synlighet på alle
+-- andre familie-oppskrifter man ikke selv eier, siden family_id-grenen da
+-- ikke lenger treffer for dem.
 drop policy if exists "Alle kan lese oppskrifter" on recipes;
 drop policy if exists "Familiemedlemmer kan se egne og delte oppskrifter" on recipes;
 create policy "Familiemedlemmer kan se egne og delte oppskrifter"
   on recipes for select
   to authenticated
   using (
-    (family_id is null and owner_id = auth.uid())
+    owner_id = auth.uid()
     or family_id in (select family_id from family_members where user_id = auth.uid())
     or id in (
       select recipe_id from family_shares

@@ -18,7 +18,18 @@ export function canEditRecipe(
   return !familyMemberIds.has(recipe.owner_id)
 }
 
-export function isSharedIn(recipe: Recipe, currentFamilyId: string | null): boolean {
+// "Delt inn" betyr spesifikt "jeg ser denne fordi en annen familie delte
+// den med min", ikke "jeg eier denne, men den tilhører ikke lenger min
+// nåværende familie" (f.eks. egne oppskrifter man skrev i en familie man
+// senere har forlatt - man ser dem fortsatt, se recipes SELECT-policyen
+// sin owner_id = auth.uid()-gren, men de er ikke "delt inn"). Derfor
+// sjekkes eierskap først og vinner alltid over familie-sammenligningen.
+export function isSharedIn(
+  recipe: Recipe,
+  currentUserId: string,
+  currentFamilyId: string | null
+): boolean {
+  if (recipe.owner_id === currentUserId) return false
   if (recipe.family_id === null) return false
   return recipe.family_id !== currentFamilyId
 }
