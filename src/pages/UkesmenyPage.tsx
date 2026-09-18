@@ -4,13 +4,14 @@ import { ChevronLeft } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { listMenuDays, setMenuDayRecipe, setMenuDayFreetext, clearMenuDay, resetMenu } from '../lib/menuDays'
 import { RecipePickerDialog } from '../components/RecipePickerDialog'
+import { Login } from '../components/Login'
 import type { MenuDay } from '../types'
 
 const WEEKDAY_LABELS = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn']
 
 export function UkesmenyPage() {
   const navigate = useNavigate()
-  const { family, familyLoading, recipes } = useApp()
+  const { session, family, familyLoading, recipes } = useApp()
   const [days, setDays] = useState<MenuDay[]>([])
   const [loading, setLoading] = useState(true)
   const [editingWeekday, setEditingWeekday] = useState<number | null>(null)
@@ -20,7 +21,7 @@ export function UkesmenyPage() {
   const familyId = family?.id ?? null
 
   useEffect(() => {
-    if (familyLoading) return
+    if (familyLoading || !session) return
     listMenuDays(familyId).then((rows) => {
       setDays(rows)
       setLoading(false)
@@ -80,6 +81,21 @@ export function UkesmenyPage() {
     } finally {
       setBusy(false)
     }
+  }
+
+  if (!session) {
+    return (
+      <div className="page ukesmeny-page">
+        <nav className="nav-bar">
+          <button type="button" className="nav-link" onClick={() => navigate('/')}>
+            <ChevronLeft size={14} strokeWidth={2.75} aria-hidden="true" />
+            Kokeboka
+          </button>
+        </nav>
+
+        <Login />
+      </div>
+    )
   }
 
   return (
