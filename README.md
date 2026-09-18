@@ -33,6 +33,13 @@ cache, slik at tidligere sette oppskrifter også vises uten nett.
    oppskrifter, og deling mellom familier. Eksisterende brukere blir
    automatisk lagt til i en "Default-familie" som admin.
 
+   Samlinger opprettes og fylles automatisk fra etikettene på oppskriftene
+   (en trigger på `recipes` — se `sync_recipe_tags_to_collections` i samme
+   fil): den første familie-oppskriften med etiketten "Middag" oppretter
+   samlingen "Middag", og senere oppskrifter med samme etikett i samme
+   familie kobles automatisk til den. Man oppretter eller fyller aldri en
+   samling manuelt — det gjør man ved å sette etiketter på oppskriften.
+
    Nye brukere lagd manuelt i Supabase Dashboard får ikke en familie til
    de logger inn i appen. Ved første innlogging ser de en
    onboarding-skjerm hvor de kan opprette en ny familiegruppe eller bli

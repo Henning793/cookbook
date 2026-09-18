@@ -3,12 +3,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { ChevronLeft, Share2 } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { UNTAGGED_TAG, UNTAGGED_LABEL } from '../lib/tags'
-import {
-  listRecipeIdsInCollection,
-  getCollection,
-  addRecipeToCollection,
-  removeRecipeFromCollection,
-} from '../lib/collections'
+import { listRecipeIdsInCollection, getCollection } from '../lib/collections'
 import { DelTilFamilieDialog } from '../components/DelTilFamilieDialog'
 import { isSharedIn } from '../lib/recipePermissions'
 import type { Collection } from '../types'
@@ -34,64 +29,21 @@ export function SamlingPage() {
   const [collectionRecipeIds, setCollectionRecipeIds] = useState<string[] | null>(null)
   const [showFamilyShareDialog, setShowFamilyShareDialog] = useState(false)
   const [collection, setCollection] = useState<Collection | null>(null)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [selectedRecipeId, setSelectedRecipeId] = useState('')
 
   const isCollectionRoute = location.pathname.startsWith('/samlinger/')
   const collectionId = params.id
 
-  async function refetchCollectionRecipes(id: string) {
-    const ids = await listRecipeIdsInCollection(id)
-    setCollectionRecipeIds(ids)
-  }
-
   useEffect(() => {
     if (!collectionId) return
-    refetchCollectionRecipes(collectionId)
+    listRecipeIdsInCollection(collectionId).then(setCollectionRecipeIds)
     getCollection(collectionId).then(setCollection)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [collectionId])
-
-  async function handleAddRecipe() {
-    if (!collectionId || !selectedRecipeId) return
-    setBusy(true)
-    setError(null)
-    try {
-      await addRecipeToCollection(collectionId, selectedRecipeId)
-      setSelectedRecipeId('')
-      await refetchCollectionRecipes(collectionId)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Noe gikk feil.')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  async function handleRemoveRecipe(recipeId: string) {
-    if (!collectionId) return
-    setBusy(true)
-    setError(null)
-    try {
-      await removeRecipeFromCollection(collectionId, recipeId)
-      await refetchCollectionRecipes(collectionId)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Noe gikk feil.')
-    } finally {
-      setBusy(false)
-    }
-  }
 
   if (isCollectionRoute) {
     const collectionRecipes = collectionRecipeIds
       ? recipes.filter((r) => collectionRecipeIds.includes(r.id))
       : []
     const isOwnCollection = !!family && !!collection && collection.family_id === family.id
-    const ownRecipesNotInCollection = family
-      ? recipes.filter(
-          (r) => r.family_id === family.id && !(collectionRecipeIds ?? []).includes(r.id)
-        )
-      : []
 
     return (
       <div className="page samling-page">
@@ -100,13 +52,15 @@ export function SamlingPage() {
             <ChevronLeft size={14} strokeWidth={2.75} aria-hidden="true" />
             Samlinger
           </button>
-          <button type="button" className="nav-link" onClick={() => setShowFamilyShareDialog(true)}>
-            <Share2 size={14} strokeWidth={2.75} aria-hidden="true" />
-            Del med en familie
-          </button>
+          {isOwnCollection && (
+            <button type="button" className="nav-link" onClick={() => setShowFamilyShareDialog(true)}>
+              <Share2 size={14} strokeWidth={2.75} aria-hidden="true" />
+              Del med en familie
+            </button>
+          )}
         </nav>
 
-        {error && <p className="status-message">{error}</p>}
+        <h1 className="samling-title">{collection?.name ?? ''}</h1>
 
         {collectionRecipeIds === null || loading ? (
           <p className="status-message">Laster samling...</p>
@@ -117,68 +71,27 @@ export function SamlingPage() {
             {collectionRecipes.map((recipe) => {
               const sharedIn = family ? isSharedIn(recipe, family.id) : false
               return (
-                <div key={recipe.id} className="samling-recipe-row">
-                  <button
-                    type="button"
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 12,
-                      background: 'none',
-                      border: 'none',
-                      padding: 0,
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      font: 'inherit',
-                      color: 'inherit',
-                    }}
-                    onClick={() => navigate(`/oppskrift/${recipe.id}`)}
-                  >
-                    <span className="samling-recipe-title">{recipe.title}</span>
-                    {sharedIn && (
-                      <span
-                        className="pill-tag"
-                        style={{
-                          background: 'var(--color-neutral-300)',
-                          color: 'var(--color-neutral-800)',
-                        }}
-                      >
-                        Delt
-                      </span>
-                    )}
-                  </button>
-                  {isOwnCollection && (
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveRecipe(recipe.id)}
-                      disabled={busy}
+                <button
+                  type="button"
+                  key={recipe.id}
+                  className="samling-recipe-row"
+                  onClick={() => navigate(`/oppskrift/${recipe.id}`)}
+                >
+                  <span className="samling-recipe-title">{recipe.title}</span>
+                  {sharedIn && (
+                    <span
+                      className="pill-tag"
+                      style={{
+                        background: 'var(--color-neutral-300)',
+                        color: 'var(--color-neutral-800)',
+                      }}
                     >
-                      Fjern
-                    </button>
+                      Delt
+                    </span>
                   )}
-                </div>
+                </button>
               )
             })}
-          </div>
-        )}
-
-        {isOwnCollection && (
-          <div className="form-actions">
-            <select
-              value={selectedRecipeId}
-              onChange={(e) => setSelectedRecipeId(e.target.value)}
-              disabled={busy}
-            >
-              <option value="">Velg oppskrift...</option>
-              {ownRecipesNotInCollection.map((recipe) => (
-                <option key={recipe.id} value={recipe.id}>
-                  {recipe.title}
-                </option>
-              ))}
-            </select>
-            <button type="button" onClick={handleAddRecipe} disabled={busy || !selectedRecipeId}>
-              Legg til
-            </button>
           </div>
         )}
 

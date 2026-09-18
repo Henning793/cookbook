@@ -583,3 +583,120 @@ update recipes r
 set family_id = fm.family_id
 from family_members fm
 where fm.user_id = r.owner_id and r.family_id is null;
+
+-- =========================================================================
+-- Samlinger følger etiketter automatisk: en samling er ikke lenger noe man
+-- oppretter eller legger oppskrifter i manuelt. Den første familie-
+-- oppskriften som får etiketten "Middag" oppretter samlingen "Middag" i
+-- den familien; senere oppskrifter med samme etikett (i samme familie)
+-- kobles automatisk til den samme samlingen. Personlige oppskrifter
+-- (family_id NULL) får ingen samlinger, siden collections krever en
+-- familie.
+-- =========================================================================
+
+-- Forutsetning for "finn-eller-opprett samling per (familie, navn)" under:
+-- maks én samling per etikett per familie. Fjern eventuelle duplikater fra
+-- før denne regelen fantes (kan ha oppstått ved manuell oppretting) slik at
+-- constraint-en er trygg å legge til.
+do $$
+declare
+  dup record;
+begin
+  for dup in
+    select family_id, name,
+           (array_agg(id order by created_at))[1] as keep_id,
+           array_remove(array_agg(id order by created_at), (array_agg(id order by created_at))[1]) as dup_ids
+    from collections
+    group by family_id, name
+    having count(*) > 1
+  loop
+    -- Fjern duplikat-koblinger som ville kollidert med primærnøkkelen på
+    -- collection_recipes når vi flytter dem over til samlingen vi beholder.
+    delete from collection_recipes cr
+    where cr.collection_id = any(dup.dup_ids)
+      and exists (
+        select 1 from collection_recipes cr2
+        where cr2.collection_id = dup.keep_id and cr2.recipe_id = cr.recipe_id
+      );
+
+    update collection_recipes set collection_id = dup.keep_id
+    where collection_id = any(dup.dup_ids);
+
+    delete from collections where id = any(dup.dup_ids);
+  end loop;
+end $$;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'collections_family_id_name_key'
+  ) then
+    alter table collections add constraint collections_family_id_name_key unique (family_id, name);
+  end if;
+end $$;
+
+create or replace function sync_recipe_tags_to_collections()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_tag text;
+  v_collection_id uuid;
+begin
+  if new.family_id is null then
+    return new;
+  end if;
+
+  -- Koble fra samlinger (i samme familie) for etiketter som ikke lenger er
+  -- satt på oppskriften (relevant ved redigering av etiketter).
+  delete from collection_recipes cr
+  using collections c
+  where cr.collection_id = c.id
+    and cr.recipe_id = new.id
+    and c.family_id = new.family_id
+    and not (c.name = any(new.tags));
+
+  -- Finn eller opprett en samling for hver gjeldende etikett, og koble
+  -- oppskriften til den.
+  foreach v_tag in array new.tags loop
+    select id into v_collection_id from collections where family_id = new.family_id and name = v_tag;
+    if v_collection_id is null then
+      insert into collections (family_id, name, created_by)
+      values (new.family_id, v_tag, new.owner_id)
+      on conflict (family_id, name) do update set name = excluded.name
+      returning id into v_collection_id;
+    end if;
+
+    insert into collection_recipes (collection_id, recipe_id)
+    values (v_collection_id, new.id)
+    on conflict do nothing;
+  end loop;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_sync_recipe_tags_to_collections on recipes;
+create trigger trg_sync_recipe_tags_to_collections
+  after insert or update of tags, family_id on recipes
+  for each row execute function sync_recipe_tags_to_collections();
+
+-- Engangs-backfill: opprett samlinger for etiketter som allerede er i bruk
+-- på eksisterende familie-oppskrifter, og koble oppskriftene til dem.
+-- Trygt å kjøre på nytt (on conflict do nothing / do update).
+insert into collections (family_id, name, created_by)
+select r.family_id, t.tag, (array_agg(r.owner_id order by r.created_at))[1]
+from recipes r, unnest(r.tags) as t(tag)
+where r.family_id is not null
+group by r.family_id, t.tag
+on conflict (family_id, name) do nothing;
+
+insert into collection_recipes (collection_id, recipe_id)
+select c.id, r.id
+from recipes r
+join unnest(r.tags) as t(tag) on true
+join collections c on c.family_id = r.family_id and c.name = t.tag
+where r.family_id is not null
+on conflict do nothing;

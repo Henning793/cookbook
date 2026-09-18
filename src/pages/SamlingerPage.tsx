@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
 import { useApp } from '../context/AppContext'
-import { listCollections, createCollection } from '../lib/collections'
+import { listCollections } from '../lib/collections'
 import type { Collection } from '../types'
 
 export function SamlingerPage() {
@@ -10,7 +10,6 @@ export function SamlingerPage() {
   const { family } = useApp()
   const [collections, setCollections] = useState<Collection[]>([])
   const [loading, setLoading] = useState(true)
-  const [newName, setNewName] = useState('')
 
   useEffect(() => {
     if (!family) return
@@ -19,14 +18,6 @@ export function SamlingerPage() {
       setLoading(false)
     })
   }, [family])
-
-  async function handleCreate(event: React.FormEvent) {
-    event.preventDefault()
-    if (!family || !newName.trim()) return
-    const created = await createCollection(newName.trim(), family.id)
-    setCollections((current) => [created, ...current])
-    setNewName('')
-  }
 
   return (
     <div className="page samlinger-page">
@@ -45,21 +36,16 @@ export function SamlingerPage() {
           i eller opprett en familie under "Familie" på profilsiden for å ta dem i bruk.
         </p>
       ) : (
-        <form onSubmit={handleCreate} className="form-actions">
-          <input
-            type="text"
-            placeholder="Ny samling"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-          />
-          <button type="submit">Opprett</button>
-        </form>
+        <p className="oppskrift-description">
+          Samlinger følger etikettene dine automatisk — legg en etikett på en oppskrift for å
+          plassere den i den tilsvarende samlingen.
+        </p>
       )}
 
       {!family ? null : loading ? (
         <p className="status-message">Laster samlinger...</p>
       ) : collections.length === 0 ? (
-        <p className="status-message">Ingen samlinger enda.</p>
+        <p className="status-message">Ingen samlinger enda. Legg en etikett på en oppskrift for å opprette en.</p>
       ) : (
         <div className="samling-recipe-list">
           {collections.map((collection) => (
