@@ -446,17 +446,22 @@ create policy "Familiemedlemmer kan se egne og delte oppskrifter"
   );
 
 -- Mirrors canEditRecipe in src/lib/recipePermissions.ts — keep both in sync.
+-- owner_id = auth.uid() er en egen, ubetinget gren: man kan alltid redigere
+-- sine egne oppskrifter, uansett nåværende familiestatus (også etter å ha
+-- forlatt familien oppskriften ligger i). Resten av grenen dekker kun
+-- tilfeller der man IKKE selv eier oppskriften, men er medlem av familien
+-- den ligger i, og eieren enten mangler (gammel data) eller ikke lenger er
+-- medlem der selv.
 drop policy if exists "Innloggede kan endre egne oppskrifter" on recipes;
 create policy "Innloggede kan endre egne oppskrifter"
   on recipes for update
   to authenticated
   using (
-    (family_id is null and owner_id = auth.uid())
+    owner_id = auth.uid()
     or (
       family_id in (select family_id from family_members where user_id = auth.uid())
       and (
-        owner_id = auth.uid()
-        or owner_id is null
+        owner_id is null
         or owner_id not in (select user_id from family_members where family_id = recipes.family_id)
       )
     )
@@ -468,12 +473,11 @@ create policy "Innloggede kan slette egne oppskrifter"
   on recipes for delete
   to authenticated
   using (
-    (family_id is null and owner_id = auth.uid())
+    owner_id = auth.uid()
     or (
       family_id in (select family_id from family_members where user_id = auth.uid())
       and (
-        owner_id = auth.uid()
-        or owner_id is null
+        owner_id is null
         or owner_id not in (select user_id from family_members where family_id = recipes.family_id)
       )
     )

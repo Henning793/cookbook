@@ -50,12 +50,20 @@ test('anyone in the family can edit a recipe whose owner has left the family', (
   )
 })
 
-test('nobody outside the recipe family can edit it, even the owner viewing it as a shared-in item', () => {
+test('a non-owner outside the recipe family cannot edit it', () => {
   const recipe = makeRecipe({ owner_id: 'user-1', family_id: 'family-a' })
   assert.equal(
-    canEditRecipe(recipe, 'user-1', 'family-b', new Set(['user-1'])),
+    canEditRecipe(recipe, 'user-2', 'family-b', new Set(['user-2'])),
     false
   )
+})
+
+test('the owner can always edit their own recipe, even after leaving or switching to a different family', () => {
+  const recipe = makeRecipe({ owner_id: 'user-1', family_id: 'family-a' })
+  // Left family-a entirely (no family now).
+  assert.equal(canEditRecipe(recipe, 'user-1', null, new Set()), true)
+  // Joined a different family-b - still their own recipe, still editable.
+  assert.equal(canEditRecipe(recipe, 'user-1', 'family-b', new Set(['user-1'])), true)
 })
 
 test('isSharedIn is true when a non-owner views a recipe from a different family', () => {
