@@ -1491,3 +1491,223 @@
   text-align: center;
   cursor: pointer;
 }
+
+/* --- Familie --- */
+
+.familie-invite-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--color-surface);
+  border-radius: 999px;
+  padding: 12px 8px 12px 20px;
+}
+
+.familie-invite-code {
+  font: 600 15px/1 ui-monospace, monospace;
+  letter-spacing: 0.04em;
+}
+
+.familie-invite-copy {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-accent-700);
+  background: var(--color-bg);
+  border: none;
+  border-radius: 999px;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+
+.familie-section {
+  margin-top: 22px;
+}
+
+.familie-member-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--color-divider);
+  font-size: 15px;
+}
+
+.familie-member-row:last-child {
+  border-bottom: none;
+}
+
+.familie-member-role {
+  color: var(--color-neutral-700);
+  font-size: 12px;
+}
+
+.familie-remove-button {
+  font: inherit;
+  font-size: 13px;
+  color: var(--color-accent-700);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.familie-share-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.familie-share-card + .familie-share-card {
+  margin-top: 10px;
+}
+
+.familie-share-actions {
+  display: flex;
+  gap: 8px;
+  flex: none;
+}
+
+.familie-share-accept {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-accent-700);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.familie-share-decline,
+.familie-share-revoke {
+  font: inherit;
+  font-size: 13px;
+  color: var(--color-neutral-700);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.familie-footer {
+  margin-top: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.familie-leave-button {
+  background: none;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-accent-700);
+  text-align: center;
+  cursor: pointer;
+  padding: 6px 0;
+}
+
+/* Onboarding (no family yet) - reuse owner-tab look */
+.familie-onboarding-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+
+/* --- Del med en familie (dialog) --- */
+
+.del-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(32, 30, 29, 0.42);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 20;
+}
+
+.del-dialog-sheet {
+  width: 100%;
+  max-width: 640px;
+  background: var(--color-bg);
+  border-radius: 28px 28px 0 0;
+  padding: 26px 24px 34px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: var(--shadow-lg);
+}
+
+.del-dialog-title {
+  font-family: var(--font-heading);
+  font-size: 22px;
+  margin: 0;
+}
+
+.del-dialog-body {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--color-neutral-700);
+  margin: 0;
+}
+
+.del-dialog-input {
+  font: inherit;
+  font-size: 15px;
+  background: var(--color-surface);
+  border: none;
+  border-radius: 999px;
+  padding: 13px 18px;
+  color: var(--color-text);
+}
+
+.del-dialog-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.del-dialog-cancel {
+  flex: 1;
+  text-align: center;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-neutral-700);
+  background: var(--color-surface);
+  border: none;
+  border-radius: 999px;
+  padding: 14px;
+  cursor: pointer;
+}
+
+.del-dialog-submit {
+  flex: 1;
+  text-align: center;
+  border: none;
+  border-radius: 999px;
+  background: var(--color-accent);
+  color: var(--color-bg);
+  font-family: var(--font-heading);
+  font-size: 15px;
+  padding: 14px;
+  cursor: pointer;
+}
+
+.del-dialog-submit:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.del-dialog-done {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
