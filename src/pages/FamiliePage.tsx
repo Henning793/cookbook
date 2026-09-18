@@ -82,7 +82,13 @@ export function FamiliePage() {
     setOnboardingBusy(true)
     try {
       await createFamily(newFamilyName.trim())
+      // Å opprette en familie absorberer alle våre personlige oppskrifter
+      // inn i den (se create_family i migration_family_groups.sql) - må
+      // laste oppskriftene på nytt også, ikke bare familien, ellers viser
+      // UI-et fortsatt den gamle (personlige) family_id for dem til man
+      // laster siden på nytt.
       reloadFamily()
+      reload()
     } catch (err) {
       setOnboardingError(err instanceof Error ? err.message : 'Noe gikk feil.')
     } finally {
@@ -96,7 +102,9 @@ export function FamiliePage() {
     setOnboardingBusy(true)
     try {
       await joinFamilyByCode(joinCode.trim())
+      // Samme grunn som i handleCreateFamily over.
       reloadFamily()
+      reload()
     } catch (err) {
       setOnboardingError(err instanceof Error ? err.message : 'Noe gikk feil.')
     } finally {
@@ -218,7 +226,11 @@ export function FamiliePage() {
     setError(null)
     try {
       await leaveFamily()
+      // Samme grunn som i handleCreateFamily/handleJoinFamily - hvilke
+      // oppskrifter man har tilgang til endrer seg når familiemedlemskapet
+      // endrer seg, ikke bare familien selv.
       reloadFamily()
+      reload()
       navigate('/')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Noe gikk feil.')
