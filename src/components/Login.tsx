@@ -23,10 +23,25 @@ export function Login() {
 
   async function handleLogin(e: FormEvent) {
     e.preventDefault()
-    setStatus('sending')
     setErrorMessage('')
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    // Supabase sin CAPTCHA-beskyttelse gjelder innlogging også, ikke bare
+    // registrering - se README. Uten en gyldig captchaToken her avviser
+    // Supabase Auth ethvert innloggingsforsøk med en feilmelding fra
+    // serveren, uansett om e-post/passord er riktig.
+    if (!captchaToken) {
+      setStatus('error')
+      setErrorMessage('Bekreft at du ikke er en robot.')
+      return
+    }
+
+    setStatus('sending')
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+      options: { captchaToken },
+    })
 
     if (error) {
       setStatus('error')
@@ -147,6 +162,7 @@ export function Login() {
         value={password}
         onChange={(e) => setPassword(e.target.value)}
       />
+      <TurnstileWidget onVerify={setCaptchaToken} onExpire={() => setCaptchaToken(null)} />
       <button type="submit" disabled={status === 'sending'}>
         {status === 'sending' ? 'Logger inn...' : 'Logg inn'}
       </button>
