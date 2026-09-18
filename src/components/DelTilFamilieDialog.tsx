@@ -30,35 +30,41 @@ export function DelTilFamilieDialog({ shareType, recipeId, collectionId, onClose
   }
 
   return (
-    <div className="delete-confirm">
-      {done ? (
-        <>
-          <p>Delingsforespørsel sendt. Familien må godta den før de får tilgang.</p>
-          <button type="button" onClick={onClose}>
-            Lukk
-          </button>
-        </>
-      ) : (
-        <form onSubmit={handleSubmit}>
-          <p>Lim inn familiekoden til familien du vil dele med.</p>
-          <input
-            type="text"
-            required
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            placeholder="Familiekode"
-          />
-          <div className="form-actions">
-            <button type="button" onClick={onClose}>
-              Avbryt
-            </button>
-            <button type="submit" disabled={busy}>
-              {busy ? 'Sender...' : 'Send delingsforespørsel'}
+    <div className="del-dialog-backdrop" onClick={onClose}>
+      <div className="del-dialog-sheet" onClick={(e) => e.stopPropagation()}>
+        {done ? (
+          <div className="del-dialog-done">
+            <p className="del-dialog-body">
+              Delingsforespørsel sendt. Familien må godta den før de får tilgang.
+            </p>
+            <button type="button" className="cta-button" onClick={onClose}>
+              Lukk
             </button>
           </div>
-          {error && <p className="status-message">{error}</p>}
-        </form>
-      )}
+        ) : (
+          <form onSubmit={handleSubmit}>
+            <h2 className="del-dialog-title">Del med en familie</h2>
+            <p className="del-dialog-body">Lim inn familiekoden til familien du vil dele med.</p>
+            <input
+              type="text"
+              required
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="Familiekode"
+              className="del-dialog-input"
+            />
+            <div className="del-dialog-actions">
+              <button type="button" className="del-dialog-cancel" onClick={onClose}>
+                Avbryt
+              </button>
+              <button type="submit" className="del-dialog-submit" disabled={busy}>
+                {busy ? 'Sender...' : 'Send forespørsel'}
+              </button>
+            </div>
+            {error && <p className="status-message">{error}</p>}
+          </form>
+        )}
+      </div>
     </div>
   )
 }

@@ -136,17 +136,27 @@ export function FamiliePage() {
           når du vil dele oppskrifter med andre.
         </p>
 
-        <div className="form-actions">
-          <button type="button" onClick={() => setOnboardingMode('create')} disabled={onboardingMode === 'create'}>
+        <div className="familie-onboarding-tabs">
+          <button
+            type="button"
+            className={`owner-tab${onboardingMode === 'create' ? ' owner-tab-active' : ''}`}
+            onClick={() => setOnboardingMode('create')}
+            disabled={onboardingMode === 'create'}
+          >
             Opprett familie
           </button>
-          <button type="button" onClick={() => setOnboardingMode('join')} disabled={onboardingMode === 'join'}>
+          <button
+            type="button"
+            className={`owner-tab${onboardingMode === 'join' ? ' owner-tab-active' : ''}`}
+            onClick={() => setOnboardingMode('join')}
+            disabled={onboardingMode === 'join'}
+          >
             Bli med med kode
           </button>
         </div>
 
         {onboardingMode === 'create' ? (
-          <form onSubmit={handleCreateFamily}>
+          <form className="add-recipe-form" onSubmit={handleCreateFamily}>
             <label htmlFor="familie-navn">Familiens navn</label>
             <input
               id="familie-navn"
@@ -160,7 +170,7 @@ export function FamiliePage() {
             </button>
           </form>
         ) : (
-          <form onSubmit={handleJoinFamily}>
+          <form className="add-recipe-form" onSubmit={handleJoinFamily}>
             <label htmlFor="familie-kode">Familiekode</label>
             <input
               id="familie-kode"
@@ -267,90 +277,124 @@ export function FamiliePage() {
 
       {error && <p className="status-message">{error}</p>}
 
-      <h2 className="section-kicker">Invitasjonskode</h2>
-      <p className="oppskrift-description">
-        Del denne koden med noen for å invitere dem til familien, eller for å starte en deling med en annen familie.
-      </p>
-      <div className="form-actions">
-        <code>{family.invite_code}</code>
-        <button type="button" onClick={copyCode}>
-          {codeCopied ? 'Kopiert!' : 'Kopier'}
-        </button>
+      <div className="familie-section">
+        <h2 className="section-kicker">Invitasjonskode</h2>
+        <p className="oppskrift-description">
+          Del denne koden med noen for å invitere dem til familien, eller for å starte en deling med en annen familie.
+        </p>
+        <div className="familie-invite-row">
+          <span className="familie-invite-code">{family.invite_code}</span>
+          <button type="button" className="familie-invite-copy" onClick={copyCode}>
+            {codeCopied ? 'Kopiert!' : 'Kopier'}
+          </button>
+        </div>
       </div>
 
-      <h2 className="section-kicker">Medlemmer</h2>
-      <ul>
-        {members.map((member) => (
-          <li key={member.user_id} className="samling-recipe-row">
-            <span>
-              {nameFor(member.user_id)} {member.role === 'admin' && '(admin)'}
-            </span>
-            {myRole === 'admin' && member.user_id !== session?.user.id && (
-              <button type="button" onClick={() => handleRemove(member.user_id)} disabled={busy}>
-                Fjern
-              </button>
-            )}
-          </li>
-        ))}
-      </ul>
-
-      <h2 className="section-kicker">Innkommende delinger</h2>
-      {myRole !== 'admin' ? (
-        <p className="status-message">Kun admin kan godta eller avslå delinger.</p>
-      ) : incomingShares.filter((s) => s.status === 'pending').length === 0 ? (
-        <p className="status-message">Ingen ventende forespørsler.</p>
-      ) : (
-        <ul>
-          {incomingShares
-            .filter((s) => s.status === 'pending')
-            .map((share) => (
-              <li key={share.id} className="samling-recipe-row">
-                <span>
-                  {shareTypeLabel(share.share_type)} fra {familyNames[share.from_family_id] ?? '…'}
-                </span>
-                <button type="button" onClick={() => handleRespond(share.id, true)} disabled={busy}>
-                  Godta
+      <div className="familie-section">
+        <h2 className="section-kicker">Medlemmer</h2>
+        <div>
+          {members.map((member) => (
+            <div className="familie-member-row" key={member.user_id}>
+              <span>
+                {nameFor(member.user_id)}{' '}
+                {member.role === 'admin' && <span className="familie-member-role">(admin)</span>}
+              </span>
+              {myRole === 'admin' && member.user_id !== session?.user.id && (
+                <button
+                  type="button"
+                  className="familie-remove-button"
+                  onClick={() => handleRemove(member.user_id)}
+                  disabled={busy}
+                >
+                  Fjern
                 </button>
-                <button type="button" onClick={() => handleRespond(share.id, false)} disabled={busy}>
-                  Avslå
-                </button>
-              </li>
-            ))}
-        </ul>
-      )}
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
 
-      <h2 className="section-kicker">Utgående delinger</h2>
-      {outgoingShares.filter((s) => s.status === 'accepted' || s.status === 'pending').length === 0 ? (
-        <p className="status-message">Ingen aktive delinger.</p>
-      ) : (
-        <ul>
-          {outgoingShares
-            .filter((s) => s.status === 'accepted' || s.status === 'pending')
-            .map((share) => (
-              <li key={share.id} className="samling-recipe-row">
-                <span>
-                  {shareTypeLabel(share.share_type)} til {familyNames[share.to_family_id] ?? '…'} —{' '}
-                  {share.status}
-                </span>
-                <button type="button" onClick={() => handleRevoke(share.id)} disabled={busy}>
-                  Trekk tilbake
-                </button>
-              </li>
-            ))}
-        </ul>
-      )}
+      <div className="familie-section">
+        <h2 className="section-kicker">Innkommende delinger</h2>
+        {myRole !== 'admin' ? (
+          <p className="status-message">Kun admin kan godta eller avslå delinger.</p>
+        ) : incomingShares.filter((s) => s.status === 'pending').length === 0 ? (
+          <p className="status-message">Ingen ventende forespørsler.</p>
+        ) : (
+          <div>
+            {incomingShares
+              .filter((s) => s.status === 'pending')
+              .map((share) => (
+                <div className="familie-share-card" key={share.id}>
+                  <span>
+                    {shareTypeLabel(share.share_type)} fra {familyNames[share.from_family_id] ?? '…'}
+                  </span>
+                  <div className="familie-share-actions">
+                    <button
+                      type="button"
+                      className="familie-share-accept"
+                      onClick={() => handleRespond(share.id, true)}
+                      disabled={busy}
+                    >
+                      Godta
+                    </button>
+                    <button
+                      type="button"
+                      className="familie-share-decline"
+                      onClick={() => handleRespond(share.id, false)}
+                      disabled={busy}
+                    >
+                      Avslå
+                    </button>
+                  </div>
+                </div>
+              ))}
+          </div>
+        )}
+      </div>
 
-      <button type="button" onClick={() => setShowWholeFamilyDialog(true)}>
-        Del hele boken med en familie
-      </button>
+      <div className="familie-section">
+        <h2 className="section-kicker">Utgående delinger</h2>
+        {outgoingShares.filter((s) => s.status === 'accepted' || s.status === 'pending').length === 0 ? (
+          <p className="status-message">Ingen aktive delinger.</p>
+        ) : (
+          <div>
+            {outgoingShares
+              .filter((s) => s.status === 'accepted' || s.status === 'pending')
+              .map((share) => (
+                <div className="familie-share-card" key={share.id}>
+                  <span>
+                    {shareTypeLabel(share.share_type)} til {familyNames[share.to_family_id] ?? '…'} —{' '}
+                    {share.status}
+                  </span>
+                  <div className="familie-share-actions">
+                    <button
+                      type="button"
+                      className="familie-share-revoke"
+                      onClick={() => handleRevoke(share.id)}
+                      disabled={busy}
+                    >
+                      Trekk tilbake
+                    </button>
+                  </div>
+                </div>
+              ))}
+          </div>
+        )}
+      </div>
 
       {showWholeFamilyDialog && (
         <DelTilFamilieDialog shareType="whole_family" onClose={() => setShowWholeFamilyDialog(false)} />
       )}
 
-      <button type="button" className="delete-confirm-button" onClick={handleLeave} disabled={busy}>
-        Forlat familien
-      </button>
+      <div className="familie-footer">
+        <button type="button" className="cta-button" onClick={() => setShowWholeFamilyDialog(true)}>
+          Del hele boken med en familie
+        </button>
+        <button type="button" className="familie-leave-button" onClick={handleLeave} disabled={busy}>
+          Forlat familien
+        </button>
+      </div>
     </div>
   )
 }
