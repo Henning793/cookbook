@@ -9,6 +9,8 @@ import { NyOppskriftPage } from './pages/NyOppskriftPage'
 import { SokPage } from './pages/SokPage'
 import { ProfilPage } from './pages/ProfilPage'
 import { FamiliePage } from './pages/FamiliePage'
+import { UkesmenyPage } from './pages/UkesmenyPage'
+import { HandlelistePage } from './pages/HandlelistePage'
 import './App.css'
 
 function App() {
@@ -26,6 +28,8 @@ function App() {
           <Route path="/sok" element={<SokPage />} />
           <Route path="/meg" element={<ProfilPage />} />
           <Route path="/familie" element={<FamiliePage />} />
+          <Route path="/ukesmeny" element={<UkesmenyPage />} />
+          <Route path="/handleliste" element={<HandlelistePage />} />
           <Route path="*" element={<HjemPage />} />
         </Routes>
       </BrowserRouter>
