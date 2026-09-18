@@ -129,3 +129,34 @@ create policy "Familie eller eier administrerer manual_shopping_items"
     (family_id is null and owner_id = auth.uid())
     or family_id in (select family_id from family_members where user_id = auth.uid())
   );
+
+-- =========================================================================
+-- Rettelse: sletting av en oppskrift som ligger i en ukesmeny-dag feilet.
+-- menu_days.recipe_id sin "on delete set null" satte kun recipe_id til
+-- NULL, men lot entry_type stå som 'recipe' - en rad med
+-- (entry_type='recipe', recipe_id=NULL) bryter menu_days_entry_matches_type
+-- over, som ruller tilbake HELE oppskrift-slettingen (funnet ved manuell
+-- testing: import + slett av en oppskrift som lå i ukesmenyen feilet
+-- stille, siden UI-et ikke viser Postgres-feilen). Denne BEFORE DELETE-
+-- triggeren tømmer hele dagraden (entry_type, recipe_id OG freetext) FØR
+-- selve slettingen skjer, slik at dagen faller tilbake til "tom dag" slik
+-- spesifisert, i stedet for at den ordinære FK-handlingen kolliderer med
+-- CHECK-constrainten.
+create or replace function clear_menu_day_on_recipe_delete()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update menu_days
+  set entry_type = null, recipe_id = null, freetext = null, updated_at = now()
+  where recipe_id = old.id;
+  return old;
+end;
+$$;
+
+drop trigger if exists trg_clear_menu_day_on_recipe_delete on recipes;
+create trigger trg_clear_menu_day_on_recipe_delete
+  before delete on recipes
+  for each row execute function clear_menu_day_on_recipe_delete();
