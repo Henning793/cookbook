@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { useApp } from '../context/AppContext'
 import {
   removeMember,
-  regenerateCode,
   leaveFamily,
   getFamilyName,
   createFamily,
@@ -195,18 +194,6 @@ export function FamiliePage() {
     }
   }
 
-  async function handleRegenerate() {
-    setBusy(true)
-    setError(null)
-    try {
-      await regenerateCode(family!.id)
-      reloadFamily()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Noe gikk feil.')
-    } finally {
-      setBusy(false)
-    }
-  }
 
   async function handleRemove(userId: string) {
     setBusy(true)
@@ -289,11 +276,6 @@ export function FamiliePage() {
         <button type="button" onClick={copyCode}>
           {codeCopied ? 'Kopiert!' : 'Kopier'}
         </button>
-        {myRole === 'admin' && (
-          <button type="button" onClick={handleRegenerate} disabled={busy}>
-            Generer ny kode
-          </button>
-        )}
       </div>
 
       <h2 className="section-kicker">Medlemmer</h2>

@@ -244,27 +244,9 @@ begin
 end;
 $$;
 
-create or replace function regenerate_family_code(p_family_id uuid)
-returns text
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  v_new_code text;
-begin
-  if not exists (
-    select 1 from family_members
-    where family_id = p_family_id and user_id = auth.uid() and role = 'admin'
-  ) then
-    raise exception 'Kun admin kan generere ny kode.';
-  end if;
-
-  v_new_code := substr(replace(gen_random_uuid()::text, '-', ''), 1, 8);
-  update families set invite_code = v_new_code where id = p_family_id;
-  return v_new_code;
-end;
-$$;
+-- regenerate_family_code fantes tidligere her, men funksjonen for å
+-- generere ny kode er fjernet fra appen - se drop-setningen nedenfor.
+drop function if exists regenerate_family_code(uuid);
 
 create or replace function start_family_share(
   p_code text,

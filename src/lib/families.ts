@@ -55,12 +55,6 @@ export async function removeMember(familyId: string, userId: string): Promise<vo
   if (error) throw error
 }
 
-export async function regenerateCode(familyId: string): Promise<string> {
-  const { data, error } = await supabase.rpc('regenerate_family_code', { p_family_id: familyId })
-  if (error) throw error
-  return data as string
-}
-
 export async function getFamilyName(familyId: string): Promise<string> {
   const { data, error } = await supabase.from('families').select('name').eq('id', familyId).maybeSingle()
   if (error) throw error
