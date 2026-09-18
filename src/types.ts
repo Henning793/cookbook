@@ -56,6 +56,19 @@ export interface Collection {
   created_by: string | null
 }
 
+export type MenuEntryType = 'recipe' | 'freetext'
+
+export interface MenuDay {
+  id: string
+  family_id: string | null
+  owner_id: string
+  weekday: number
+  entry_type: MenuEntryType | null
+  recipe_id: string | null
+  freetext: string | null
+  updated_at: string
+}
+
 export type ShareType = 'recipe' | 'collection' | 'whole_family'
 export type ShareStatus = 'pending' | 'accepted' | 'rejected' | 'revoked'
 
