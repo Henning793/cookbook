@@ -48,7 +48,9 @@ export interface FamilyMember {
 
 export interface Collection {
   id: string
-  family_id: string
+  // NULL = personlig samling (ingen familie), scopet på created_by i
+  // stedet for family_id - se sync_recipe_tags_to_collections.
+  family_id: string | null
   name: string
   created_at: string
   created_by: string | null

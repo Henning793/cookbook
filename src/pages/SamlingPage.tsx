@@ -43,7 +43,10 @@ export function SamlingPage() {
     const collectionRecipes = collectionRecipeIds
       ? recipes.filter((r) => collectionRecipeIds.includes(r.id))
       : []
-    const isOwnCollection = !!family && !!collection && collection.family_id === family.id
+    // Deling krever at samlingen tilhører ens egen familie - en personlig
+    // samling (collection.family_id null) kan aldri deles, siden man må
+    // være medlem av en familie for å starte en deling i det hele tatt.
+    const canShareCollection = !!family && !!collection && collection.family_id === family.id
 
     return (
       <div className="page samling-page">
@@ -52,7 +55,7 @@ export function SamlingPage() {
             <ChevronLeft size={14} strokeWidth={2.75} aria-hidden="true" />
             Samlinger
           </button>
-          {isOwnCollection && (
+          {canShareCollection && (
             <button type="button" className="nav-link" onClick={() => setShowFamilyShareDialog(true)}>
               <Share2 size={14} strokeWidth={2.75} aria-hidden="true" />
               Del med en familie

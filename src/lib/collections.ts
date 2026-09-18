@@ -7,11 +7,28 @@ export async function getCollection(id: string): Promise<Collection | null> {
   return data
 }
 
-export async function listCollections(familyId: string): Promise<Collection[]> {
+// Familiens samlinger når familyId er satt, ellers den innloggede brukerens
+// egne personlige samlinger (family_id NULL, scopet på created_by).
+export async function listCollections(familyId: string | null): Promise<Collection[]> {
+  if (familyId) {
+    const { data, error } = await supabase
+      .from('collections')
+      .select('*')
+      .eq('family_id', familyId)
+      .order('name', { ascending: true })
+    if (error) throw error
+    return data ?? []
+  }
+
+  const { data: userData } = await supabase.auth.getUser()
+  const userId = userData.user?.id
+  if (!userId) return []
+
   const { data, error } = await supabase
     .from('collections')
     .select('*')
-    .eq('family_id', familyId)
+    .is('family_id', null)
+    .eq('created_by', userId)
     .order('name', { ascending: true })
   if (error) throw error
   return data ?? []

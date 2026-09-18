@@ -478,13 +478,16 @@ create policy "Innloggede kan legge til i egen kokebok"
 
 -- collections: alle i familien kan lese/opprette/endre/slette samlinger i
 -- egen familie (samme åpenhet som tags har i dag), pluss lesing av
--- godkjente delte samlinger.
+-- godkjente delte samlinger. En samling uten familie (family_id NULL) er
+-- personlig, og kun synlig for den som opprettet den (created_by) - se
+-- personlig-samling-støtten lenger ned i filen.
 drop policy if exists "Familiemedlemmer kan se egne og delte samlinger" on collections;
 create policy "Familiemedlemmer kan se egne og delte samlinger"
   on collections for select
   to authenticated
   using (
-    family_id in (select family_id from family_members where user_id = auth.uid())
+    (family_id is null and created_by = auth.uid())
+    or family_id in (select family_id from family_members where user_id = auth.uid())
     or id in (
       select collection_id from family_shares
       where status = 'accepted' and share_type = 'collection'
@@ -568,18 +571,22 @@ where fm.user_id = r.owner_id and r.family_id is null;
 
 -- =========================================================================
 -- Samlinger følger etiketter automatisk: en samling er ikke lenger noe man
--- oppretter eller legger oppskrifter i manuelt. Den første familie-
--- oppskriften som får etiketten "Middag" oppretter samlingen "Middag" i
--- den familien; senere oppskrifter med samme etikett (i samme familie)
--- kobles automatisk til den samme samlingen. Personlige oppskrifter
--- (family_id NULL) får ingen samlinger, siden collections krever en
--- familie.
+-- oppretter eller legger oppskrifter i manuelt. Den første oppskriften som
+-- får etiketten "Middag" oppretter samlingen "Middag"; senere oppskrifter
+-- med samme etikett kobles automatisk til den samme samlingen. Dette
+-- gjelder også personlige oppskrifter (family_id NULL) - de får da en
+-- personlig samling (også family_id NULL), synlig kun for eieren
+-- (created_by), i stedet for en familie-samling. collections.family_id må
+-- derfor være valgfri.
 -- =========================================================================
 
--- Forutsetning for "finn-eller-opprett samling per (familie, navn)" under:
--- maks én samling per etikett per familie. Fjern eventuelle duplikater fra
--- før denne regelen fantes (kan ha oppstått ved manuell oppretting) slik at
--- constraint-en er trygg å legge til.
+alter table collections alter column family_id drop not null;
+
+-- Forutsetning for "finn-eller-opprett samling" under: maks én
+-- familie-samling per (familie, navn), og maks én personlig samling per
+-- (eier, navn). Fjern eventuelle duplikater fra før denne regelen fantes
+-- (kan ha oppstått ved manuell oppretting) slik at indeksene er trygge å
+-- legge til.
 do $$
 declare
   dup record;
@@ -589,33 +596,58 @@ begin
            (array_agg(id order by created_at))[1] as keep_id,
            array_remove(array_agg(id order by created_at), (array_agg(id order by created_at))[1]) as dup_ids
     from collections
+    where family_id is not null
     group by family_id, name
     having count(*) > 1
   loop
-    -- Fjern duplikat-koblinger som ville kollidert med primærnøkkelen på
-    -- collection_recipes når vi flytter dem over til samlingen vi beholder.
     delete from collection_recipes cr
     where cr.collection_id = any(dup.dup_ids)
       and exists (
         select 1 from collection_recipes cr2
         where cr2.collection_id = dup.keep_id and cr2.recipe_id = cr.recipe_id
       );
-
     update collection_recipes set collection_id = dup.keep_id
     where collection_id = any(dup.dup_ids);
+    delete from collections where id = any(dup.dup_ids);
+  end loop;
 
+  for dup in
+    select created_by, name,
+           (array_agg(id order by created_at))[1] as keep_id,
+           array_remove(array_agg(id order by created_at), (array_agg(id order by created_at))[1]) as dup_ids
+    from collections
+    where family_id is null
+    group by created_by, name
+    having count(*) > 1
+  loop
+    delete from collection_recipes cr
+    where cr.collection_id = any(dup.dup_ids)
+      and exists (
+        select 1 from collection_recipes cr2
+        where cr2.collection_id = dup.keep_id and cr2.recipe_id = cr.recipe_id
+      );
+    update collection_recipes set collection_id = dup.keep_id
+    where collection_id = any(dup.dup_ids);
     delete from collections where id = any(dup.dup_ids);
   end loop;
 end $$;
 
+-- Fjern den eldre, ufullstendige constraint-en (dekket ikke personlige
+-- samlinger med family_id NULL korrekt - NULL gjør et vanlig unique(a,b)
+-- virkningsløst for rader der a er NULL) til fordel for to partielle
+-- unike indekser under.
 do $$
 begin
-  if not exists (
-    select 1 from pg_constraint where conname = 'collections_family_id_name_key'
-  ) then
-    alter table collections add constraint collections_family_id_name_key unique (family_id, name);
+  if exists (select 1 from pg_constraint where conname = 'collections_family_id_name_key') then
+    alter table collections drop constraint collections_family_id_name_key;
   end if;
 end $$;
+
+create unique index if not exists collections_family_name_key
+  on collections (family_id, name) where family_id is not null;
+
+create unique index if not exists collections_personal_owner_name_key
+  on collections (created_by, name) where family_id is null;
 
 create or replace function sync_recipe_tags_to_collections()
 returns trigger
@@ -627,28 +659,36 @@ declare
   v_tag text;
   v_collection_id uuid;
 begin
-  if new.family_id is null then
-    return new;
-  end if;
+  -- Fjern alle eksisterende koblinger for denne oppskriften, og bygg dem
+  -- opp igjen fra bunnen ut fra gjeldende etiketter og familie/eier-status.
+  -- Enklere og mer robust enn å prøve å matche "riktig gammel samling å
+  -- koble fra" når oppskriften samtidig kan ha byttet fra personlig til
+  -- familie (eller omvendt) ved at family_id endret seg.
+  delete from collection_recipes where recipe_id = new.id;
 
-  -- Koble fra samlinger (i samme familie) for etiketter som ikke lenger er
-  -- satt på oppskriften (relevant ved redigering av etiketter).
-  delete from collection_recipes cr
-  using collections c
-  where cr.collection_id = c.id
-    and cr.recipe_id = new.id
-    and c.family_id = new.family_id
-    and not (c.name = any(new.tags));
-
-  -- Finn eller opprett en samling for hver gjeldende etikett, og koble
-  -- oppskriften til den.
   foreach v_tag in array new.tags loop
-    select id into v_collection_id from collections where family_id = new.family_id and name = v_tag;
-    if v_collection_id is null then
-      insert into collections (family_id, name, created_by)
-      values (new.family_id, v_tag, new.owner_id)
-      on conflict (family_id, name) do update set name = excluded.name
-      returning id into v_collection_id;
+    if new.family_id is not null then
+      select id into v_collection_id from collections
+      where family_id = new.family_id and name = v_tag;
+
+      if v_collection_id is null then
+        insert into collections (family_id, name, created_by)
+        values (new.family_id, v_tag, new.owner_id)
+        on conflict (family_id, name) where family_id is not null
+        do update set name = excluded.name
+        returning id into v_collection_id;
+      end if;
+    else
+      select id into v_collection_id from collections
+      where family_id is null and created_by = new.owner_id and name = v_tag;
+
+      if v_collection_id is null then
+        insert into collections (family_id, name, created_by)
+        values (null, v_tag, new.owner_id)
+        on conflict (created_by, name) where family_id is null
+        do update set name = excluded.name
+        returning id into v_collection_id;
+      end if;
     end if;
 
     insert into collection_recipes (collection_id, recipe_id)
@@ -665,20 +705,31 @@ create trigger trg_sync_recipe_tags_to_collections
   after insert or update of tags, family_id on recipes
   for each row execute function sync_recipe_tags_to_collections();
 
--- Engangs-backfill: opprett samlinger for etiketter som allerede er i bruk
--- på eksisterende familie-oppskrifter, og koble oppskriftene til dem.
--- Trygt å kjøre på nytt (on conflict do nothing / do update).
+-- Engangs-backfill: opprett samlinger (familie eller personlig) for
+-- etiketter som allerede er i bruk på eksisterende oppskrifter, og koble
+-- oppskriftene til dem. Trygt å kjøre på nytt (on conflict do nothing).
 insert into collections (family_id, name, created_by)
 select r.family_id, t.tag, (array_agg(r.owner_id order by r.created_at))[1]
 from recipes r, unnest(r.tags) as t(tag)
 where r.family_id is not null
 group by r.family_id, t.tag
-on conflict (family_id, name) do nothing;
+on conflict (family_id, name) where family_id is not null do nothing;
+
+insert into collections (family_id, name, created_by)
+select null, t.tag, r.owner_id
+from recipes r, unnest(r.tags) as t(tag)
+where r.family_id is null
+group by r.owner_id, t.tag
+on conflict (created_by, name) where family_id is null do nothing;
 
 insert into collection_recipes (collection_id, recipe_id)
 select c.id, r.id
 from recipes r
 join unnest(r.tags) as t(tag) on true
-join collections c on c.family_id = r.family_id and c.name = t.tag
-where r.family_id is not null
+join collections c
+  on c.name = t.tag
+  and (
+    (r.family_id is not null and c.family_id = r.family_id)
+    or (r.family_id is null and c.family_id is null and c.created_by = r.owner_id)
+  )
 on conflict do nothing;
