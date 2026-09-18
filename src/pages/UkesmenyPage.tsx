@@ -105,6 +105,11 @@ export function UkesmenyPage() {
           <ChevronLeft size={14} strokeWidth={2.75} aria-hidden="true" />
           Kokeboka
         </button>
+        {!loading && (
+          <button type="button" className="nav-link" onClick={() => setShowConfirm(true)}>
+            Ny ukesmeny
+          </button>
+        )}
       </nav>
 
       <h1 className="oppskrift-title">Ukesmeny</h1>
@@ -159,14 +164,6 @@ export function UkesmenyPage() {
               </button>
             )
           })}
-        </div>
-      )}
-
-      {!loading && (
-        <div className="oppskrift-footer">
-          <button type="button" className="cta-button" onClick={() => setShowConfirm(true)}>
-            Opprett ny ukesmeny
-          </button>
         </div>
       )}
 
