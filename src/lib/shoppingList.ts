@@ -1,6 +1,6 @@
 import { supabase } from './supabaseClient'
 
-export { aggregateIngredients } from './shoppingAggregate.ts'
+export { aggregateIngredients, ingredientKey } from './shoppingAggregate.ts'
 export type { AggregatedIngredient } from './shoppingAggregate.ts'
 
 async function currentUserId(): Promise<string> {
