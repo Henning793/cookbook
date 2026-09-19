@@ -4,7 +4,7 @@ import { ChevronLeft } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { listMenuDays, setMenuDayRecipe, setMenuDayFreetext, clearMenuDay, resetMenu } from '../lib/menuDays'
 import { addWeeklyItemsToShoppingList } from '../lib/standingItems'
-import { MenuDayForm } from '../components/MenuDayForm'
+import { RecipePickerDialog } from '../components/RecipePickerDialog'
 import { Login } from '../components/Login'
 import type { MenuDay } from '../types'
 
@@ -101,21 +101,6 @@ export function UkesmenyPage() {
     )
   }
 
-  if (editingWeekday !== null) {
-    return (
-      <MenuDayForm
-        weekdayName={WEEKDAY_NAMES[editingWeekday]}
-        recipes={recipes}
-        hasEntry={!!dayFor(editingWeekday)?.entry_type}
-        busy={busy}
-        onPick={handlePick}
-        onFreetext={handleFreetext}
-        onClear={handleClearDay}
-        onCancel={() => setEditingWeekday(null)}
-      />
-    )
-  }
-
   return (
     <div className="page ukesmeny-page">
       <nav className="nav-bar">
@@ -184,6 +169,16 @@ export function UkesmenyPage() {
             )
           })}
         </div>
+      )}
+
+      {editingWeekday !== null && (
+        <RecipePickerDialog
+          recipes={recipes}
+          onPick={handlePick}
+          onFreetext={handleFreetext}
+          onClear={dayFor(editingWeekday)?.entry_type ? handleClearDay : undefined}
+          onClose={() => !busy && setEditingWeekday(null)}
+        />
       )}
 
       {showConfirm && (

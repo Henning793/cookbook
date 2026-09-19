@@ -1775,6 +1775,13 @@
 
 /* --- Ukesmeny --- */
 
+.recipe-picker-list {
+  max-height: 200px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
 .ukesmeny-days {
   display: flex;
   flex-direction: column;
@@ -1859,31 +1866,6 @@
   font: 600 13px var(--font-body);
   color: var(--color-accent-700);
   cursor: pointer;
-}
-
-.menu-day-input {
-  width: 100%;
-  box-sizing: border-box;
-  font: inherit;
-  font-size: 15px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-divider);
-  border-radius: 999px;
-  padding: 12px 18px;
-  color: var(--color-text);
-  margin: 6px 0 20px;
-}
-
-.menu-day-kicker {
-  margin-bottom: 8px;
-}
-
-.menu-day-freetext-row .samling-recipe-title {
-  color: var(--color-accent-700);
-}
-
-.menu-day-clear {
-  margin-top: 24px;
 }
 
 /* --- Handleliste --- */
