@@ -90,3 +90,12 @@ export function planWeeklyAdds<T extends { normalized_name: string }>(
   }
   return { toInsert, toUncheckIds }
 }
+
+// Skjuler oppskrift-ingredienser som er fjernet med "Fjern avkryssede"
+// (samme navn + enhet som en rad med cleared = true).
+export function removeCleared(
+  items: AggregatedIngredient[],
+  clearedKeys: Set<string>
+): AggregatedIngredient[] {
+  return items.filter((item) => !clearedKeys.has(ingredientKey(item.normalizedName, item.unit)))
+}
