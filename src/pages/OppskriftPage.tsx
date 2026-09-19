@@ -244,7 +244,7 @@ export function OppskriftPage() {
 
       <h1 className="oppskrift-title">{recipe.title}</h1>
 
-      {description && <p className="oppskrift-description">{description}</p>}
+      {description && <p className="oppskrift-description oppskrift-description-text">{description}</p>}
 
       <h2 className="section-kicker">Ingredienser</h2>
       <ul className="oppskrift-ingredients">
