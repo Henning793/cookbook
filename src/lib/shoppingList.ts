@@ -52,7 +52,7 @@ export async function setItemUnchecked(
   if (error) throw error
 }
 
-// "Tøm huket av": fjerner avkryssede oppskrift-ingredienser og avkryssede
+// "Fjern avkrysset": fjerner avkryssede oppskrift-ingredienser og avkryssede
 // Egne varer for scopet.
 export async function clearCheckedItems(familyId: string | null): Promise<void> {
   const userId = familyId ? null : await currentUserId()

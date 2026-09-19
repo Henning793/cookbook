@@ -163,7 +163,7 @@ export function HandlelistePage() {
         </button>
         {hasCheckedItems && (
           <button type="button" className="nav-link" onClick={handleClearChecked} disabled={busy}>
-            Tøm huket av
+            Fjern avkrysset
           </button>
         )}
       </nav>
@@ -206,7 +206,7 @@ export function HandlelistePage() {
           )}
 
           <h2 className="section-kicker">Egne varer</h2>
-          <p className="handleliste-hint">Blir stående til du trykker «Tøm huket av»</p>
+          <p className="handleliste-hint">Blir stående til du trykker «Fjern avkrysset»</p>
           <div className="handleliste-rows">
             {sortedManual.map((item) => (
               <button
