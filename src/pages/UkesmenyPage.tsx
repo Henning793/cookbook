@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { listMenuDays, setMenuDayRecipe, setMenuDayFreetext, clearMenuDay, resetMenu } from '../lib/menuDays'
+import { addWeeklyItemsToShoppingList } from '../lib/standingItems'
 import { RecipePickerDialog } from '../components/RecipePickerDialog'
 import { Login } from '../components/Login'
 import type { MenuDay } from '../types'
@@ -76,6 +77,7 @@ export function UkesmenyPage() {
     setBusy(true)
     try {
       await resetMenu(familyId)
+      await addWeeklyItemsToShoppingList(familyId)
       await reload()
       setShowConfirm(false)
     } finally {
@@ -182,7 +184,7 @@ export function UkesmenyPage() {
           <div className="del-dialog-sheet" onClick={(e) => e.stopPropagation()}>
             <h2 className="del-dialog-title">Ny ukesmeny?</h2>
             <p className="del-dialog-body">
-              Dette tømmer alle dagene og handlelisten. Egne varer blir stående. Du kan ikke angre.
+              Dette tømmer alle dagene og handlelisten. Egne varer blir stående, og faste kjøp legges til. Du kan ikke angre.
             </p>
             <div className="del-dialog-actions">
               <button type="button" className="del-dialog-cancel" onClick={() => setShowConfirm(false)} disabled={busy}>

@@ -1974,6 +1974,60 @@
   color: var(--color-text);
 }
 
+/* --- Faste varer --- */
+
+.faste-varer-link {
+  margin: 4px 0 8px;
+}
+
+.faste-varer-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--color-surface);
+  border-radius: 999px;
+  margin: 14px 0 12px;
+}
+
+.faste-varer-tab {
+  flex: 1;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  padding: 10px 12px;
+  font: 600 14px var(--font-body);
+  color: var(--color-neutral-700);
+  cursor: pointer;
+}
+
+.faste-varer-tab-active {
+  background: var(--color-accent);
+  color: var(--color-bg);
+}
+
+.faste-varer-row {
+  cursor: default;
+}
+
+.faste-varer-remove {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-neutral-600);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.faste-varer-remove:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 /* --- Hjem: Ukesmeny/Handleliste-kort --- */
 
 .hjem-menu-row {

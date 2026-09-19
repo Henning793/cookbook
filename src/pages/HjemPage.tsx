@@ -4,7 +4,14 @@ import { Search, Plus, User } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { UNTAGGED_TAG, UNTAGGED_LABEL } from '../lib/tags'
 import { listMenuDays } from '../lib/menuDays'
-import { aggregateIngredients, ingredientKey, listCheckedItems, listManualItems } from '../lib/shoppingList'
+import {
+  aggregateIngredients,
+  ingredientKey,
+  listCheckedItems,
+  listManualItems,
+  removeAlwaysHome,
+} from '../lib/shoppingList'
+import { listStandingItems } from '../lib/standingItems'
 import type { MenuDay } from '../types'
 
 const DOT_COLORS = [
@@ -32,10 +39,18 @@ export function HjemPage() {
     const familyId = family?.id ?? null
     const isoWeekday = (new Date().getDay() + 6) % 7 // JS: 0=søn -> her: 0=man ... 6=søn
 
-    Promise.all([listMenuDays(familyId), listCheckedItems(familyId), listManualItems(familyId)]).then(
-      ([days, checkedRows, manualItems]) => {
+    Promise.all([
+      listMenuDays(familyId),
+      listCheckedItems(familyId),
+      listManualItems(familyId),
+      listStandingItems(familyId, 'always_home'),
+    ]).then(
+      ([days, checkedRows, manualItems, alwaysHome]) => {
         setTodayMenu(days.find((d) => d.weekday === isoWeekday && d.entry_type) ?? null)
-        const aggregated = aggregateIngredients(days, recipes)
+        const aggregated = removeAlwaysHome(
+          aggregateIngredients(days, recipes),
+          new Set(alwaysHome.map((i) => i.normalized_name))
+        )
         const checkedKeys = new Set(checkedRows.map((c) => ingredientKey(c.normalized_name, c.unit)))
         const uncheckedCount = aggregated.filter(
           (item) => !checkedKeys.has(ingredientKey(item.normalizedName, item.unit))

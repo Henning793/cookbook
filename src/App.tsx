@@ -11,6 +11,7 @@ import { ProfilPage } from './pages/ProfilPage'
 import { FamiliePage } from './pages/FamiliePage'
 import { UkesmenyPage } from './pages/UkesmenyPage'
 import { HandlelistePage } from './pages/HandlelistePage'
+import { FasteVarerPage } from './pages/FasteVarerPage'
 import './App.css'
 
 function App() {
@@ -30,6 +31,7 @@ function App() {
           <Route path="/familie" element={<FamiliePage />} />
           <Route path="/ukesmeny" element={<UkesmenyPage />} />
           <Route path="/handleliste" element={<HandlelistePage />} />
+          <Route path="/handleliste/faste" element={<FasteVarerPage />} />
           <Route path="*" element={<HjemPage />} />
         </Routes>
       </BrowserRouter>
