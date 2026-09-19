@@ -112,12 +112,18 @@ test('removeAlwaysHome hides exact-name matches only', async () => {
   assert.deepEqual(result.map((i) => i.normalizedName), ['rød curry paste', 'løk'])
 })
 
-test('missingWeeklyItems skips names already in Egne varer', async () => {
-  const { missingWeeklyItems } = await import('./shoppingAggregate.ts')
+test('planWeeklyAdds inserts missing, skips unchecked duplicates, unchecks checked duplicates', async () => {
+  const { planWeeklyAdds } = await import('./shoppingAggregate.ts')
   const weekly = [
     { name: 'Melk', normalized_name: 'melk' },
     { name: 'Brød', normalized_name: 'brød' },
+    { name: 'Egg', normalized_name: 'egg' },
   ]
-  const result = missingWeeklyItems(weekly, new Set(['melk']))
-  assert.deepEqual(result.map((i) => i.name), ['Brød'])
+  const manual = [
+    { id: 'm1', name: ' melk ', checked: false },
+    { id: 'm2', name: 'BRØD', checked: true },
+  ]
+  const plan = planWeeklyAdds(weekly, manual)
+  assert.deepEqual(plan.toInsert.map((i) => i.name), ['Egg'])
+  assert.deepEqual(plan.toUncheckIds, ['m2'])
 })

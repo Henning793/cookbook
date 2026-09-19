@@ -13,7 +13,7 @@ import {
   clearCheckedItems,
   listManualItems,
   addManualItem,
-  removeManualItem,
+  setManualChecked,
   type AggregatedIngredient,
   type CheckedItem,
   type ManualItem,
@@ -81,10 +81,14 @@ export function HandlelistePage() {
   const uncheckedFromRecipesCount = aggregated.filter(
     (item) => !checkedKeys.has(keyFor(item.normalizedName, item.unit))
   ).length
-  const itemsLeft = uncheckedFromRecipesCount + manualItems.length
+  const sortedManual = useMemo(
+    () => [...manualItems].sort((a, b) => Number(a.checked) - Number(b.checked)),
+    [manualItems]
+  )
+  const itemsLeft = uncheckedFromRecipesCount + manualItems.filter((m) => !m.checked).length
 
   const freetextDays = menuDays.filter((d) => d.entry_type === 'freetext')
-  const hasCheckedItems = checked.length > 0
+  const hasCheckedItems = checked.length > 0 || manualItems.some((m) => m.checked)
 
   async function toggleChecked(item: AggregatedIngredient) {
     setBusy(true)
@@ -105,15 +109,16 @@ export function HandlelistePage() {
     try {
       await clearCheckedItems(familyId)
       setChecked([])
+      setManualItems(await listManualItems(familyId))
     } finally {
       setBusy(false)
     }
   }
 
-  async function handleRemoveManual(id: string) {
+  async function handleToggleManual(item: ManualItem) {
     setBusy(true)
     try {
-      await removeManualItem(id)
+      await setManualChecked(item.id, !item.checked)
       setManualItems(await listManualItems(familyId))
     } finally {
       setBusy(false)
@@ -201,18 +206,20 @@ export function HandlelistePage() {
           )}
 
           <h2 className="section-kicker">Egne varer</h2>
-          <p className="handleliste-hint">Ligger til du krysser den av</p>
+          <p className="handleliste-hint">Blir stående til du trykker «Tøm huket av»</p>
           <div className="handleliste-rows">
-            {manualItems.map((item) => (
+            {sortedManual.map((item) => (
               <button
                 type="button"
                 key={item.id}
                 className="handleliste-row"
-                onClick={() => handleRemoveManual(item.id)}
+                onClick={() => handleToggleManual(item)}
                 disabled={busy}
               >
-                <span className="handleliste-checkbox" />
-                <span className="handleliste-name">{item.name}</span>
+                <span className={`handleliste-checkbox${item.checked ? ' handleliste-checkbox-checked' : ''}`} />
+                <span className={`handleliste-name${item.checked ? ' handleliste-name-checked' : ''}`}>
+                  {item.name}
+                </span>
               </button>
             ))}
           </div>
