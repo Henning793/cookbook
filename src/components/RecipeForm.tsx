@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Check, Plus } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { UNITS } from '../lib/units'
+import { CustomUnitDialog } from './CustomUnitDialog'
 import type { IngredientItem } from '../types'
 
 interface IngredientRow {
@@ -72,6 +73,7 @@ interface Props {
   onSubmit: (values: RecipeFormValues) => Promise<void>
   onCancel: () => void
   onDelete?: () => void
+  saveAtBottom?: boolean
 }
 
 export function RecipeForm({
@@ -83,6 +85,7 @@ export function RecipeForm({
   onSubmit,
   onCancel,
   onDelete,
+  saveAtBottom = false,
 }: Props) {
   const [title, setTitle] = useState(initial?.title ?? '')
   const [ingredientRows, setIngredientRows] = useState<IngredientRow[]>(
@@ -98,6 +101,7 @@ export function RecipeForm({
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [customUnitRowIndex, setCustomUnitRowIndex] = useState<number | null>(null)
 
   const tagOptions = [...new Set([...availableTags, ...customTagOptions])]
 
@@ -215,7 +219,10 @@ export function RecipeForm({
     }
   }
 
+  const customUnitRow = customUnitRowIndex === null ? null : ingredientRows[customUnitRowIndex]
+
   return (
+    <>
     <form className="add-recipe-form" onSubmit={handleSubmit}>
       <h2>{heading}</h2>
 
@@ -268,25 +275,33 @@ export function RecipeForm({
                   value={row.amount}
                   onChange={(e) => updateIngredientRow(index, { amount: e.target.value })}
                 />
-                <select
-                  className="ingredient-unit"
-                  value={row.unit}
-                  onChange={(e) => updateIngredientRow(index, { unit: e.target.value })}
-                >
-                  {UNITS.map((unit) => (
-                    <option key={unit} value={unit}>
-                      {unit}
-                    </option>
-                  ))}
-                  <option value="annet">annet</option>
-                </select>
-                {row.unit === 'annet' && (
-                  <input
-                    className="ingredient-custom-unit"
-                    placeholder="Enhet"
-                    value={row.customUnit}
-                    onChange={(e) => updateIngredientRow(index, { customUnit: e.target.value })}
-                  />
+                {row.unit === 'annet' ? (
+                  <button
+                    type="button"
+                    className="ingredient-unit-chip"
+                    aria-label="Rediger egendefinert enhet"
+                    onClick={() => setCustomUnitRowIndex(index)}
+                  >
+                    <span className="ingredient-unit-chip-text">{row.customUnit || '–'}</span>
+                    <span aria-hidden="true">›</span>
+                  </button>
+                ) : (
+                  <select
+                    className="ingredient-unit"
+                    value={row.unit}
+                    onChange={(e) =>
+                      e.target.value === 'annet'
+                        ? setCustomUnitRowIndex(index)
+                        : updateIngredientRow(index, { unit: e.target.value })
+                    }
+                  >
+                    {UNITS.map((unit) => (
+                      <option key={unit} value={unit}>
+                        {unit}
+                      </option>
+                    ))}
+                    <option value="annet">annet</option>
+                  </select>
                 )}
               </>
             )}
@@ -441,10 +456,20 @@ export function RecipeForm({
         <button type="button" onClick={onCancel} disabled={saving}>
           Avbryt
         </button>
-        <button type="submit" disabled={saving}>
-          {saving ? savingLabel : submitLabel}
-        </button>
+        {!saveAtBottom && (
+          <button type="submit" disabled={saving}>
+            {saving ? savingLabel : submitLabel}
+          </button>
+        )}
       </div>
+
+      {saveAtBottom && (
+        <div className="form-save-bar">
+          <button type="submit" disabled={saving}>
+            {saving ? savingLabel : submitLabel}
+          </button>
+        </div>
+      )}
 
       {onDelete && (
         <button type="button" className="delete-recipe-button" onClick={onDelete} disabled={saving}>
@@ -452,5 +477,25 @@ export function RecipeForm({
         </button>
       )}
     </form>
+
+    {customUnitRowIndex !== null && customUnitRow && (
+      <CustomUnitDialog
+        initialValue={customUnitRow.unit === 'annet' ? customUnitRow.customUnit : ''}
+        onConfirm={(unit) => {
+          updateIngredientRow(customUnitRowIndex, { unit: 'annet', customUnit: unit })
+          setCustomUnitRowIndex(null)
+        }}
+        onUseStandard={
+          customUnitRow.unit === 'annet'
+            ? () => {
+                updateIngredientRow(customUnitRowIndex, { unit: UNITS[0], customUnit: '' })
+                setCustomUnitRowIndex(null)
+              }
+            : undefined
+        }
+        onClose={() => setCustomUnitRowIndex(null)}
+      />
+    )}
+    </>
   )
 }
