@@ -1,6 +1,11 @@
 import { supabase } from './supabaseClient'
 
-export { aggregateIngredients, ingredientKey, removeAlwaysHome } from './shoppingAggregate.ts'
+export {
+  aggregateIngredients,
+  ingredientKey,
+  removeAlwaysHome,
+  removeCleared,
+} from './shoppingAggregate.ts'
 export type { AggregatedIngredient } from './shoppingAggregate.ts'
 
 async function currentUserId(): Promise<string> {
@@ -13,10 +18,11 @@ async function currentUserId(): Promise<string> {
 export interface CheckedItem {
   normalized_name: string
   unit: string
+  cleared: boolean
 }
 
 export async function listCheckedItems(familyId: string | null): Promise<CheckedItem[]> {
-  const query = supabase.from('shopping_checked_items').select('normalized_name, unit')
+  const query = supabase.from('shopping_checked_items').select('normalized_name, unit, cleared')
   const { data, error } = familyId
     ? await query.eq('family_id', familyId)
     : await query.is('family_id', null).eq('owner_id', await currentUserId())
@@ -52,14 +58,15 @@ export async function setItemUnchecked(
   if (error) throw error
 }
 
-// "Fjern avkrysset": fjerner avkryssede oppskrift-ingredienser og avkryssede
-// Egne varer for scopet.
+// "Fjern avkryssede": Egne varer som er huket av slettes, mens avkryssede
+// oppskrift-ingredienser (regnet ut live fra ukesmenyen) markeres cleared så
+// de skjules fra listen. Radene slettes ved ny ukesmeny.
 export async function clearCheckedItems(familyId: string | null): Promise<void> {
   const userId = familyId ? null : await currentUserId()
   const scope = <T extends { eq: (c: string, v: string) => T; is: (c: string, v: null) => T }>(q: T) =>
     familyId ? q.eq('family_id', familyId) : q.is('family_id', null).eq('owner_id', userId!)
   const [a, b] = await Promise.all([
-    scope(supabase.from('shopping_checked_items').delete()),
+    scope(supabase.from('shopping_checked_items').update({ cleared: true })),
     scope(supabase.from('manual_shopping_items').delete().eq('checked', true)),
   ])
   if (a.error) throw a.error

@@ -6,6 +6,7 @@ import { listMenuDays } from '../lib/menuDays'
 import {
   aggregateIngredients,
   removeAlwaysHome,
+  removeCleared,
   ingredientKey,
   listCheckedItems,
   setItemChecked,
@@ -63,10 +64,15 @@ export function HandlelistePage() {
     )
   }, [familyId, familyLoading])
 
-  const aggregated = useMemo(
-    () => removeAlwaysHome(aggregateIngredients(menuDays, recipes), alwaysHomeNames),
-    [menuDays, recipes, alwaysHomeNames]
-  )
+  const aggregated = useMemo(() => {
+    const clearedKeys = new Set(
+      checked.filter((c) => c.cleared).map((c) => keyFor(c.normalized_name, c.unit))
+    )
+    return removeCleared(
+      removeAlwaysHome(aggregateIngredients(menuDays, recipes), alwaysHomeNames),
+      clearedKeys
+    )
+  }, [menuDays, recipes, alwaysHomeNames, checked])
 
   const checkedKeys = useMemo(
     () => new Set(checked.map((c) => keyFor(c.normalized_name, c.unit))),
@@ -88,7 +94,7 @@ export function HandlelistePage() {
   const itemsLeft = uncheckedFromRecipesCount + manualItems.filter((m) => !m.checked).length
 
   const freetextDays = menuDays.filter((d) => d.entry_type === 'freetext')
-  const hasCheckedItems = checked.length > 0 || manualItems.some((m) => m.checked)
+  const hasCheckedItems = checked.some((c) => !c.cleared) || manualItems.some((m) => m.checked)
 
   async function toggleChecked(item: AggregatedIngredient) {
     setBusy(true)
@@ -108,7 +114,7 @@ export function HandlelistePage() {
     setBusy(true)
     try {
       await clearCheckedItems(familyId)
-      setChecked([])
+      setChecked(await listCheckedItems(familyId))
       setManualItems(await listManualItems(familyId))
     } finally {
       setBusy(false)
@@ -163,7 +169,7 @@ export function HandlelistePage() {
         </button>
         {hasCheckedItems && (
           <button type="button" className="nav-link" onClick={handleClearChecked} disabled={busy}>
-            Fjern avkrysset
+            Fjern avkryssede
           </button>
         )}
       </nav>
@@ -206,7 +212,7 @@ export function HandlelistePage() {
           )}
 
           <h2 className="section-kicker">Egne varer</h2>
-          <p className="handleliste-hint">Blir stående til du trykker «Fjern avkrysset»</p>
+          <p className="handleliste-hint">Blir stående til du trykker «Fjern avkryssede»</p>
           <div className="handleliste-rows">
             {sortedManual.map((item) => (
               <button

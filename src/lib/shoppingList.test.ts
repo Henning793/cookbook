@@ -127,3 +127,14 @@ test('planWeeklyAdds inserts missing, skips unchecked duplicates, unchecks check
   assert.deepEqual(plan.toInsert.map((i) => i.name), ['Egg'])
   assert.deepEqual(plan.toUncheckIds, ['m2'])
 })
+
+test('removeCleared hides only items whose name+unit was cleared', async () => {
+  const { removeCleared, ingredientKey } = await import('./shoppingAggregate.ts')
+  const items = [
+    { normalizedName: 'melk', displayName: 'Melk', unit: 'dl', amount: 8 },
+    { normalizedName: 'melk', displayName: 'Melk', unit: 'ss', amount: 2 },
+    { normalizedName: 'løk', displayName: 'Løk', unit: 'stk', amount: 1 },
+  ]
+  const result = removeCleared(items, new Set([ingredientKey('melk', 'dl')]))
+  assert.deepEqual(result.map((i) => `${i.normalizedName}/${i.unit}`), ['melk/ss', 'løk/stk'])
+})
