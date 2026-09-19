@@ -55,7 +55,7 @@ export function HjemPage() {
         const uncheckedCount = aggregated.filter(
           (item) => !checkedKeys.has(ingredientKey(item.normalizedName, item.unit))
         ).length
-        setShoppingItemsLeft(uncheckedCount + manualItems.length)
+        setShoppingItemsLeft(uncheckedCount + manualItems.filter((m) => !m.checked).length)
       }
     )
   }, [family, familyLoading, session, recipes])

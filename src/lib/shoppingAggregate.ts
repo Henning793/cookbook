@@ -70,10 +70,23 @@ export function removeAlwaysHome(
   return items.filter((item) => !alwaysHomeNames.has(item.normalizedName))
 }
 
-// Faste kjøp som ikke allerede ligger i Egne varer (samme normaliserte navn).
-export function missingWeeklyItems<T extends { normalized_name: string }>(
+// Plan for faste kjøp ved ny ukesmeny: varer som mangler i Egne varer
+// settes inn, uavkryssede duplikater hoppes over, og avkryssede duplikater
+// (ligger igjen som huket av) settes tilbake til uavkrysset i stedet for
+// å dobles.
+export function planWeeklyAdds<T extends { normalized_name: string }>(
   weekly: T[],
-  manualNames: Set<string>
-): T[] {
-  return weekly.filter((item) => !manualNames.has(item.normalized_name))
+  manual: { id: string; name: string; checked: boolean }[]
+): { toInsert: T[]; toUncheckIds: string[] } {
+  const toInsert: T[] = []
+  const toUncheckIds: string[] = []
+  for (const item of weekly) {
+    const matches = manual.filter((m) => normalizeItemName(m.name) === item.normalized_name)
+    if (matches.length === 0) {
+      toInsert.push(item)
+    } else if (!matches.some((m) => !m.checked)) {
+      toUncheckIds.push(...matches.map((m) => m.id))
+    }
+  }
+  return { toInsert, toUncheckIds }
 }

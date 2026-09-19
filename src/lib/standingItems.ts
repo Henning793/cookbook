@@ -1,6 +1,6 @@
 import { supabase } from './supabaseClient'
 import { listManualItems } from './shoppingList'
-import { missingWeeklyItems, normalizeItemName } from './shoppingAggregate.ts'
+import { normalizeItemName, planWeeklyAdds } from './shoppingAggregate.ts'
 
 export type StandingKind = 'always_home' | 'weekly'
 
@@ -54,20 +54,26 @@ export async function removeStandingItem(id: string): Promise<void> {
   if (error) throw error
 }
 
-// Kalles etter "Opprett ny ukesmeny": legger faste kjøp inn i Egne varer,
-// men hopper over varer som allerede ligger der (samme normaliserte navn).
+// Kalles etter "Opprett ny ukesmeny": legger faste kjøp inn i Egne varer.
+// Uavkryssede duplikater hoppes over, avkryssede settes tilbake til uavkrysset.
 export async function addWeeklyItemsToShoppingList(familyId: string | null): Promise<void> {
   const [weekly, manual] = await Promise.all([
     listStandingItems(familyId, 'weekly'),
     listManualItems(familyId),
   ])
-  const manualNames = new Set(manual.map((m) => normalizeItemName(m.name)))
-  const toAdd = missingWeeklyItems(weekly, manualNames)
-  if (toAdd.length === 0) return
+  const { toInsert, toUncheckIds } = planWeeklyAdds(weekly, manual)
+  if (toUncheckIds.length > 0) {
+    const { error } = await supabase
+      .from('manual_shopping_items')
+      .update({ checked: false })
+      .in('id', toUncheckIds)
+    if (error) throw error
+  }
+  if (toInsert.length === 0) return
   const userId = await currentUserId()
   const { error } = await supabase
     .from('manual_shopping_items')
-    .insert(toAdd.map((item) => ({ family_id: familyId, owner_id: userId, name: item.name })))
+    .insert(toInsert.map((item) => ({ family_id: familyId, owner_id: userId, name: item.name })))
   if (error) throw error
 }
 

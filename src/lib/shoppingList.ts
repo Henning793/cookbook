@@ -52,21 +52,28 @@ export async function setItemUnchecked(
   if (error) throw error
 }
 
+// "Tøm huket av": fjerner avkryssede oppskrift-ingredienser og avkryssede
+// Egne varer for scopet.
 export async function clearCheckedItems(familyId: string | null): Promise<void> {
-  const query = supabase.from('shopping_checked_items').delete()
-  const { error } = familyId
-    ? await query.eq('family_id', familyId)
-    : await query.is('family_id', null).eq('owner_id', await currentUserId())
-  if (error) throw error
+  const userId = familyId ? null : await currentUserId()
+  const scope = <T extends { eq: (c: string, v: string) => T; is: (c: string, v: null) => T }>(q: T) =>
+    familyId ? q.eq('family_id', familyId) : q.is('family_id', null).eq('owner_id', userId!)
+  const [a, b] = await Promise.all([
+    scope(supabase.from('shopping_checked_items').delete()),
+    scope(supabase.from('manual_shopping_items').delete().eq('checked', true)),
+  ])
+  if (a.error) throw a.error
+  if (b.error) throw b.error
 }
 
 export interface ManualItem {
   id: string
   name: string
+  checked: boolean
 }
 
 export async function listManualItems(familyId: string | null): Promise<ManualItem[]> {
-  const query = supabase.from('manual_shopping_items').select('id, name').order('created_at', { ascending: true })
+  const query = supabase.from('manual_shopping_items').select('id, name, checked').order('created_at', { ascending: true })
   const { data, error } = familyId
     ? await query.eq('family_id', familyId)
     : await query.is('family_id', null).eq('owner_id', await currentUserId())
@@ -82,8 +89,8 @@ export async function addManualItem(familyId: string | null, name: string): Prom
   if (error) throw error
 }
 
-export async function removeManualItem(id: string): Promise<void> {
-  const { error } = await supabase.from('manual_shopping_items').delete().eq('id', id)
+export async function setManualChecked(id: string, checked: boolean): Promise<void> {
+  const { error } = await supabase.from('manual_shopping_items').update({ checked }).eq('id', id)
   if (error) throw error
 }
 
