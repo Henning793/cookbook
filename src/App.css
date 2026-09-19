@@ -1839,9 +1839,33 @@
   color: var(--color-neutral-500);
 }
 
-.ukesmeny-day-chevron {
-  font-size: 11px;
-  color: var(--color-neutral-500);
+.ukesmeny-day-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.ukesmeny-day-main-static {
+  cursor: default;
+}
+
+.ukesmeny-day-edit {
+  flex: none;
+  background: none;
+  border: none;
+  padding: 4px 0 4px 8px;
+  font: 600 13px var(--font-body);
+  color: var(--color-accent-700);
+  cursor: pointer;
 }
 
 /* --- Handleliste --- */

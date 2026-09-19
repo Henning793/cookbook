@@ -9,6 +9,7 @@ import { Login } from '../components/Login'
 import type { MenuDay } from '../types'
 
 const WEEKDAY_LABELS = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn']
+const WEEKDAY_NAMES = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag']
 
 export function UkesmenyPage() {
   const navigate = useNavigate()
@@ -136,34 +137,35 @@ export function UkesmenyPage() {
                 </button>
               )
             }
-            if (day.entry_type === 'freetext') {
-              return (
+            const isFreetext = day.entry_type === 'freetext'
+            const recipe = isFreetext ? undefined : recipes.find((r) => r.id === day.recipe_id)
+            return (
+              <div className="ukesmeny-day" key={weekday}>
+                {isFreetext ? (
+                  <div className="ukesmeny-day-main ukesmeny-day-main-static">
+                    <span className="ukesmeny-day-abbr">{label}</span>
+                    <span className="ukesmeny-day-title">{day.freetext}</span>
+                    <span className="ukesmeny-day-freetext-tag">fritekst</span>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="ukesmeny-day-main"
+                    onClick={() => recipe && navigate(`/oppskrift/${recipe.id}`)}
+                  >
+                    <span className="ukesmeny-day-abbr">{label}</span>
+                    <span className="ukesmeny-day-title">{recipe?.title ?? 'Slettet oppskrift'}</span>
+                  </button>
+                )}
                 <button
                   type="button"
-                  key={weekday}
-                  className="ukesmeny-day"
+                  className="ukesmeny-day-edit"
+                  aria-label={`Rediger ${WEEKDAY_NAMES[weekday].toLowerCase()}`}
                   onClick={() => setEditingWeekday(weekday)}
                 >
-                  <span className="ukesmeny-day-abbr">{label}</span>
-                  <span className="ukesmeny-day-title">{day.freetext}</span>
-                  <span className="ukesmeny-day-freetext-tag">fritekst</span>
+                  Rediger
                 </button>
-              )
-            }
-            const recipe = recipes.find((r) => r.id === day.recipe_id)
-            return (
-              <button
-                type="button"
-                key={weekday}
-                className="ukesmeny-day"
-                onClick={() => setEditingWeekday(weekday)}
-              >
-                <span className="ukesmeny-day-abbr">{label}</span>
-                <span className="ukesmeny-day-title">{recipe?.title ?? 'Slettet oppskrift'}</span>
-                <span className="ukesmeny-day-chevron" aria-hidden="true">
-                  ›
-                </span>
-              </button>
+              </div>
             )
           })}
         </div>
