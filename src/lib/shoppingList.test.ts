@@ -95,3 +95,29 @@ test('same recipe on multiple days is counted once per day (not deduplicated)', 
   assert.equal(result.length, 1)
   assert.equal(result[0].amount, 2)
 })
+
+test('normalizeItemName trims and lowercases', async () => {
+  const { normalizeItemName } = await import('./shoppingAggregate.ts')
+  assert.equal(normalizeItemName('  Curry Paste '), 'curry paste')
+})
+
+test('removeAlwaysHome hides exact-name matches only', async () => {
+  const { removeAlwaysHome } = await import('./shoppingAggregate.ts')
+  const items = [
+    { normalizedName: 'curry paste', displayName: 'Curry paste', unit: 'ss', amount: 2 },
+    { normalizedName: 'rød curry paste', displayName: 'Rød curry paste', unit: 'ss', amount: 1 },
+    { normalizedName: 'løk', displayName: 'Løk', unit: 'stk', amount: 1 },
+  ]
+  const result = removeAlwaysHome(items, new Set(['curry paste']))
+  assert.deepEqual(result.map((i) => i.normalizedName), ['rød curry paste', 'løk'])
+})
+
+test('missingWeeklyItems skips names already in Egne varer', async () => {
+  const { missingWeeklyItems } = await import('./shoppingAggregate.ts')
+  const weekly = [
+    { name: 'Melk', normalized_name: 'melk' },
+    { name: 'Brød', normalized_name: 'brød' },
+  ]
+  const result = missingWeeklyItems(weekly, new Set(['melk']))
+  assert.deepEqual(result.map((i) => i.name), ['Brød'])
+})

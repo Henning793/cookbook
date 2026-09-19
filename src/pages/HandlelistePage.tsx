@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft } from 'lucide-react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { listMenuDays } from '../lib/menuDays'
 import {
   aggregateIngredients,
+  removeAlwaysHome,
   ingredientKey,
   listCheckedItems,
   setItemChecked,
@@ -17,6 +18,7 @@ import {
   type CheckedItem,
   type ManualItem,
 } from '../lib/shoppingList'
+import { listStandingItems } from '../lib/standingItems'
 import { Login } from '../components/Login'
 import type { MenuDay } from '../types'
 
@@ -37,6 +39,7 @@ export function HandlelistePage() {
   const [menuDays, setMenuDays] = useState<MenuDay[]>([])
   const [checked, setChecked] = useState<CheckedItem[]>([])
   const [manualItems, setManualItems] = useState<ManualItem[]>([])
+  const [alwaysHomeNames, setAlwaysHomeNames] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
   const [newItemName, setNewItemName] = useState('')
@@ -44,17 +47,26 @@ export function HandlelistePage() {
 
   useEffect(() => {
     if (familyLoading || !session) return
-    Promise.all([listMenuDays(familyId), listCheckedItems(familyId), listManualItems(familyId)]).then(
-      ([days, checkedRows, manual]) => {
+    Promise.all([
+      listMenuDays(familyId),
+      listCheckedItems(familyId),
+      listManualItems(familyId),
+      listStandingItems(familyId, 'always_home'),
+    ]).then(
+      ([days, checkedRows, manual, alwaysHome]) => {
         setMenuDays(days)
         setChecked(checkedRows)
         setManualItems(manual)
+        setAlwaysHomeNames(new Set(alwaysHome.map((i) => i.normalized_name)))
         setLoading(false)
       }
     )
   }, [familyId, familyLoading])
 
-  const aggregated = useMemo(() => aggregateIngredients(menuDays, recipes), [menuDays, recipes])
+  const aggregated = useMemo(
+    () => removeAlwaysHome(aggregateIngredients(menuDays, recipes), alwaysHomeNames),
+    [menuDays, recipes, alwaysHomeNames]
+  )
 
   const checkedKeys = useMemo(
     () => new Set(checked.map((c) => keyFor(c.normalized_name, c.unit))),
@@ -152,6 +164,10 @@ export function HandlelistePage() {
       </nav>
 
       <h1 className="oppskrift-title">Handleliste</h1>
+      <button type="button" className="nav-link faste-varer-link" onClick={() => navigate('/handleliste/faste')}>
+        Personaliser handlelisten
+        <ChevronRight size={14} strokeWidth={2.75} aria-hidden="true" />
+      </button>
       <p className="oppskrift-description">{itemsLeft} varer igjen</p>
 
       {loading ? (

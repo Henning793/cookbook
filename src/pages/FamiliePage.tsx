@@ -13,6 +13,7 @@ import { revokeShare, respondToShare } from '../lib/shares'
 import { DelTilFamilieDialog } from '../components/DelTilFamilieDialog'
 import { listMenuDays, resetMenu } from '../lib/menuDays'
 import { deleteAllManualItems, listManualItems } from '../lib/shoppingList'
+import { deleteAllStandingItems, listStandingItems } from '../lib/standingItems'
 import type { ShareType } from '../types'
 
 type PendingOnboardingAction = { type: 'create'; name: string } | { type: 'join'; code: string }
@@ -81,8 +82,13 @@ export function FamiliePage() {
   }, [incomingShares, outgoingShares])
 
   async function hasPersonalMenuData(): Promise<boolean> {
-    const [days, manual] = await Promise.all([listMenuDays(null), listManualItems(null)])
-    return days.length > 0 || manual.length > 0
+    const [days, manual, alwaysHome, weekly] = await Promise.all([
+      listMenuDays(null),
+      listManualItems(null),
+      listStandingItems(null, 'always_home'),
+      listStandingItems(null, 'weekly'),
+    ])
+    return days.length > 0 || manual.length > 0 || alwaysHome.length > 0 || weekly.length > 0
   }
 
   async function runOnboardingAction(action: PendingOnboardingAction) {
@@ -97,7 +103,7 @@ export function FamiliePage() {
       // Bli medlem av en familie forkaster en eventuell aktiv personlig
       // ukesmeny/handleliste (inkludert egne varer) i stedet for å slå den
       // sammen med familiens - se advarselsdialogen under.
-      await Promise.all([resetMenu(null), deleteAllManualItems(null)])
+      await Promise.all([resetMenu(null), deleteAllManualItems(null), deleteAllStandingItems(null)])
       // Å opprette/bli med i en familie absorberer også alle våre
       // personlige oppskrifter inn i den (se create_family/join_family_by_code
       // i migration_family_groups.sql) - må laste oppskriftene på nytt også,
@@ -214,7 +220,7 @@ export function FamiliePage() {
             <div className="del-dialog-sheet" onClick={(e) => e.stopPropagation()}>
               <h2 className="del-dialog-title">Forkast personlig ukesmeny?</h2>
               <p className="del-dialog-body">
-                Du har en aktiv personlig ukesmeny og/eller handleliste. Å bli med i en familie sletter
+                Du har en aktiv personlig ukesmeny, handleliste og/eller faste varer. Å bli med i en familie sletter
                 disse (inkludert egne varer) — de erstattes av familiens felles ukesmeny og handleliste.
                 Dette kan ikke angres.
               </p>

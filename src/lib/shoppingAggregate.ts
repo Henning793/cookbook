@@ -7,9 +7,11 @@ export interface AggregatedIngredient {
   amount: number | null
 }
 
-function normalize(name: string): string {
+export function normalizeItemName(name: string): string {
   return name.trim().toLowerCase()
 }
+
+const normalize = normalizeItemName
 
 // JSON.stringify av et par gir en trygg, kollisjonsfri nøkkel uansett hva
 // normalizedName/unit inneholder — en manuelt valgt skilletegn-streng (f.eks.
@@ -57,4 +59,21 @@ export function aggregateIngredients(menuDays: MenuDay[], recipes: Recipe[]): Ag
   }
 
   return [...byKey.values()]
+}
+
+// Skjuler oppskrift-ingredienser som står i "Alltid hjemme" (eksakt navn,
+// trim + små bokstaver, uavhengig av enhet). Egne varer påvirkes ikke.
+export function removeAlwaysHome(
+  items: AggregatedIngredient[],
+  alwaysHomeNames: Set<string>
+): AggregatedIngredient[] {
+  return items.filter((item) => !alwaysHomeNames.has(item.normalizedName))
+}
+
+// Faste kjøp som ikke allerede ligger i Egne varer (samme normaliserte navn).
+export function missingWeeklyItems<T extends { normalized_name: string }>(
+  weekly: T[],
+  manualNames: Set<string>
+): T[] {
+  return weekly.filter((item) => !manualNames.has(item.normalized_name))
 }
