@@ -136,6 +136,7 @@ export function OppskriftPage() {
             heading="Rediger oppskrift"
             initial={{
               title: recipe.title,
+              description: recipe.description ?? null,
               ingredients: recipe.ingredients,
               steps: recipe.steps,
               image_url: recipe.image_url,
