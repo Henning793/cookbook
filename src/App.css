@@ -697,6 +697,10 @@
   margin: 0 0 20px;
 }
 
+.oppskrift-description-text {
+  white-space: pre-line;
+}
+
 .section-kicker {
   font-family: var(--font-body);
   font-size: 12px;

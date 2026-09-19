@@ -50,6 +50,7 @@ function toIngredientRow(item: IngredientItem): IngredientRow {
 
 export interface RecipeFormValues {
   title: string
+  description: string | null
   ingredients: IngredientItem[]
   steps: string[]
   image_url: string | null
@@ -61,6 +62,7 @@ interface Props {
   heading: string
   initial?: {
     title: string
+    description?: string | null
     ingredients: IngredientItem[]
     steps: string[]
     image_url: string | null
@@ -88,6 +90,7 @@ export function RecipeForm({
   saveAtBottom = false,
 }: Props) {
   const [title, setTitle] = useState(initial?.title ?? '')
+  const [description, setDescription] = useState(initial?.description ?? '')
   const [ingredientRows, setIngredientRows] = useState<IngredientRow[]>(
     initial && initial.ingredients.length > 0 ? initial.ingredients.map(toIngredientRow) : [emptyIngredientRow()]
   )
@@ -206,6 +209,7 @@ export function RecipeForm({
 
       await onSubmit({
         title,
+        description: description.trim() === '' ? null : description.trim(),
         ingredients,
         steps: steps.map((step) => step.trim()),
         image_url: imageUrl,
@@ -232,6 +236,15 @@ export function RecipeForm({
         required
         value={title}
         onChange={(e) => setTitle(e.target.value)}
+      />
+
+      <label htmlFor="description">Beskrivelse (valgfritt)</label>
+      <textarea
+        id="description"
+        rows={2}
+        placeholder="En kort beskrivelse av retten"
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
       />
 
       <label htmlFor="servings">Antall porsjoner</label>
