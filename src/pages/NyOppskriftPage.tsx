@@ -113,7 +113,8 @@ export function NyOppskriftPage() {
         heading="Ny oppskrift"
         initial={importedValues ?? undefined}
         availableTags={availableTags}
-        submitLabel="Lagre"
+        submitLabel="Lagre oppskrift"
+        saveAtBottom
         savingLabel="Lagrer..."
         onSubmit={handleSubmit}
         onCancel={resetToChoose}
