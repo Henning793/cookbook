@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ChevronLeft, Pencil, Share2 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
@@ -8,12 +8,7 @@ import { DelTilFamilieDialog } from '../components/DelTilFamilieDialog'
 import { canEditRecipe, isSharedIn } from '../lib/recipePermissions'
 import { getFamilyName } from '../lib/families'
 import { StepText } from '../components/StepText'
-
-const TAG_TINTS = [
-  { bg: 'var(--color-accent-100)', text: 'var(--color-accent-700)' },
-  { bg: 'var(--color-accent-2-100)', text: 'var(--color-accent-2-700)' },
-  { bg: 'var(--color-neutral-100)', text: 'var(--color-neutral-800)' },
-]
+import type { IngredientItem } from '../types'
 
 function formatNumber(value: number) {
   return value.toLocaleString('nb-NO')
@@ -73,7 +68,6 @@ export function OppskriftPage() {
 
   const description = recipe.description ?? null
   const totalMinutes = recipe.total_minutes ?? null
-  const servings = recipe.servings ?? null
   const canEdit = canEditRecipe(
     recipe,
     session?.user.id ?? '',
@@ -156,31 +150,53 @@ export function OppskriftPage() {
     )
   }
 
+  // Knappene rundt porsjonsfeltet går i hele steg; feltet tar fortsatt desimaler.
+  const currentServings = Number.isFinite(parsedTarget) && parsedTarget > 0 ? parsedTarget : baseServings
+  function stepServings(delta: number) {
+    setTargetServingsInput(String(Math.max(1, Math.round((currentServings + delta) * 10) / 10)))
+  }
+
+  // Mengden står først (tom når ingrediensen ikke har mengde), så navnene flukter.
+  const renderIngredient = (ingredient: IngredientItem, index: number) => {
+    return (
+      <li key={index} className="oppskrift-ingredient-row">
+        <span className="oppskrift-ingredient-amount">
+          {ingredient.amount != null &&
+            `${formatNumber(Math.round(ingredient.amount * scaleFactor * 10) / 10)} ${ingredient.unit}`}
+        </span>
+        <span>{ingredient.name}</span>
+      </li>
+    )
+  }
+
   return (
     <div className="page oppskrift-page">
-      <nav className="nav-bar">
-        <button type="button" className="nav-link" onClick={goBack}>
-          <ChevronLeft size={14} strokeWidth={2.75} aria-hidden="true" />
-          {backLabel}
-        </button>
-        <div className="nav-bar-actions">
-          <button type="button" className="nav-link" onClick={handleShare}>
-            <Share2 size={14} strokeWidth={2.75} aria-hidden="true" />
-            {shareCopied ? 'Kopiert!' : 'Del'}
+      <div className={`oppskrift-hero${recipe.image_url ? '' : ' oppskrift-hero-empty'}`}>
+        {recipe.image_url && <img src={recipe.image_url} alt={recipe.title} />}
+        <nav className="oppskrift-bar">
+          <button type="button" className="pill-button pill-button-back" onClick={goBack}>
+            <ChevronLeft size={15} strokeWidth={2.75} aria-hidden="true" />
+            <span>{backLabel}</span>
           </button>
-          {canEdit && recipe.family_id && family && (
-            <button type="button" className="nav-link" onClick={() => setShowFamilyShareDialog(true)}>
-              Del med en familie
+          <div className="oppskrift-bar-actions">
+            <button type="button" className="pill-button" onClick={handleShare}>
+              <Share2 size={14} strokeWidth={2.5} aria-hidden="true" />
+              {shareCopied ? 'Kopiert!' : 'Del'}
             </button>
-          )}
-          {canEdit && (
-            <button type="button" className="nav-link" onClick={() => setEditing(true)}>
-              <Pencil size={14} strokeWidth={2.75} aria-hidden="true" />
-              Endre
-            </button>
-          )}
-        </div>
-      </nav>
+            {canEdit && recipe.family_id && family && (
+              <button type="button" className="pill-button" onClick={() => setShowFamilyShareDialog(true)}>
+                Del med en familie
+              </button>
+            )}
+            {canEdit && (
+              <button type="button" className="pill-button" onClick={() => setEditing(true)}>
+                <Pencil size={14} strokeWidth={2.5} aria-hidden="true" />
+                Endre
+              </button>
+            )}
+          </div>
+        </nav>
+      </div>
 
       {showFamilyShareDialog && (
         <DelTilFamilieDialog
@@ -190,105 +206,59 @@ export function OppskriftPage() {
         />
       )}
 
-      {recipe.image_url && (
-        <div className="oppskrift-image washed">
-          <img src={recipe.image_url} alt={recipe.title} />
-        </div>
-      )}
-
-      <div className="tag-row">
-        {recipe.tags.map((tag, index) => {
-          const tint = TAG_TINTS[index % TAG_TINTS.length]
-          return (
-            <span key={tag} className="pill-tag" style={{ background: tint.bg, color: tint.text }}>
-              {tag}
-            </span>
-          )
-        })}
-        {totalMinutes != null && (
-          <span
-            className="pill-tag"
-            style={{ background: 'var(--color-accent-2-100)', color: 'var(--color-accent-2-700)' }}
-          >
-            {totalMinutes} min
-          </span>
-        )}
-        {servings != null && (
-          <span
-            className="pill-tag"
-            style={{ background: 'var(--color-neutral-100)', color: 'var(--color-neutral-800)' }}
-          >
-            {formatNumber(servings)} porsjoner
-          </span>
-        )}
-        {sharedIn && originFamilyName && (
-          <span
-            className="pill-tag"
-            style={{ background: 'var(--color-neutral-300)', color: 'var(--color-neutral-800)' }}
-          >
-            Fra {originFamilyName}
-          </span>
-        )}
-      </div>
-
-      <label className="servings-adjust" htmlFor="servings-adjust">
-        Antall porsjoner
-        <input
-          id="servings-adjust"
-          type="number"
-          min="1"
-          step="0.1"
-          value={targetServingsInput}
-          onChange={(e) => setTargetServingsInput(e.target.value)}
-        />
-      </label>
-
-      <h1 className="oppskrift-title">{recipe.title}</h1>
-
-      {description && <p className="oppskrift-description oppskrift-description-text">{description}</p>}
-
-      <h2 className="section-kicker">Ingredienser</h2>
-      <ul className="oppskrift-ingredients">
-        {recipe.ingredients.loose.map((ingredient, index) => (
-          <li key={`l${index}`} className="oppskrift-ingredient-row">
-            <span>{ingredient.name}</span>
-            {ingredient.amount != null && (
-              <span className="oppskrift-ingredient-amount">
-                {formatNumber(Math.round(ingredient.amount * scaleFactor * 10) / 10)} {ingredient.unit}
+      <div className={`oppskrift-sheet${recipe.image_url ? '' : ' oppskrift-sheet-plain'}`}>
+        {(recipe.tags.length > 0 || (sharedIn && originFamilyName)) && (
+          <div className="oppskrift-tags">
+            {recipe.tags.map((tag) => (
+              <span key={tag} className="oppskrift-tag">
+                {tag}
               </span>
-            )}
-          </li>
-        ))}
-        {recipe.ingredients.components.map((component, componentIndex) => (
-          <Fragment key={`c${componentIndex}`}>
-            <li className="oppskrift-ingredient-heading">{component.name}</li>
-            {component.ingredients.map((ingredient, index) => (
-              <li key={index} className="oppskrift-ingredient-row">
-                <span>{ingredient.name}</span>
-                {ingredient.amount != null && (
-                  <span className="oppskrift-ingredient-amount">
-                    {formatNumber(Math.round(ingredient.amount * scaleFactor * 10) / 10)} {ingredient.unit}
-                  </span>
-                )}
-              </li>
             ))}
-          </Fragment>
-        ))}
-      </ul>
+            {sharedIn && originFamilyName && (
+              <span className="oppskrift-tag oppskrift-tag-origin">Fra {originFamilyName}</span>
+            )}
+          </div>
+        )}
 
-      <h2 className="section-kicker section-kicker-steps">Fremgangsmåte</h2>
-      <ol className="oppskrift-steps">
-        {recipe.steps.map((step, index) => (
-          <li key={index} className="oppskrift-step-row">
-            <span className="oppskrift-step-badge">{index + 1}</span>
-            <span className="oppskrift-step-text">
-              <StepText text={step} ingredients={recipe.ingredients} />
+        <h1 className="oppskrift-heading">{recipe.title}</h1>
+
+        {description && <p className="oppskrift-lede">{description}</p>}
+
+        <div className="oppskrift-facts">
+          {totalMinutes != null && (
+            <div className="oppskrift-fact">
+              <span className="oppskrift-fact-label">Tid</span>
+              <span className="oppskrift-fact-value">{totalMinutes} min</span>
+            </div>
+          )}
+          <div className="oppskrift-fact">
+            <label className="oppskrift-fact-label" htmlFor="servings-adjust">
+              Porsjoner
+            </label>
+            <span className="servings-stepper">
+              <button
+                type="button"
+                aria-label="Færre porsjoner"
+                disabled={!(currentServings > 1)}
+                onClick={() => stepServings(-1)}
+              >
+                &minus;
+              </button>
+              <input
+                id="servings-adjust"
+                type="number"
+                min="1"
+                step="0.1"
+                value={targetServingsInput}
+                onChange={(e) => setTargetServingsInput(e.target.value)}
+              />
+              <button type="button" aria-label="Flere porsjoner" onClick={() => stepServings(1)}>
+                +
+              </button>
             </span>
-          </li>
-        ))}
-      </ol>
+          </div>
+        </div>
 
-      <div className="oppskrift-footer">
         <button
           type="button"
           className="cta-button"
@@ -303,6 +273,29 @@ export function OppskriftPage() {
         >
           Start kokemodus
         </button>
+
+        <h2 className="oppskrift-section-heading">Ingredienser</h2>
+        {recipe.ingredients.loose.length > 0 && (
+          <ul className="oppskrift-ingredients">{recipe.ingredients.loose.map(renderIngredient)}</ul>
+        )}
+        {recipe.ingredients.components.map((component, componentIndex) => (
+          <div key={componentIndex} className="oppskrift-component">
+            <h3 className="oppskrift-component-name">{component.name}</h3>
+            <ul className="oppskrift-ingredients">{component.ingredients.map(renderIngredient)}</ul>
+          </div>
+        ))}
+
+        <h2 className="oppskrift-section-heading">Fremgangsmåte</h2>
+        <ol className="oppskrift-steps">
+          {recipe.steps.map((step, index) => (
+            <li key={index} className="oppskrift-step-row">
+              <span className="oppskrift-step-badge">{index + 1}</span>
+              <span className="oppskrift-step-text">
+                <StepText text={step} ingredients={recipe.ingredients} />
+              </span>
+            </li>
+          ))}
+        </ol>
       </div>
     </div>
   )

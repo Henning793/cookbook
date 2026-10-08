@@ -15,8 +15,8 @@ import { listStandingItems } from '../lib/standingItems'
 import type { MenuDay } from '../types'
 
 const DOT_COLORS = [
-  'var(--color-accent-100)',
-  'var(--color-accent-2-100)',
+  'var(--color-accent-200)',
+  'var(--color-accent-2-200)',
   'var(--color-neutral-300)',
 ]
 
@@ -113,7 +113,7 @@ export function HjemPage() {
       </div>
 
       <div className="search-field" onClick={() => navigate('/sok')}>
-        <Search size={13} strokeWidth={2.75} aria-hidden="true" />
+        <Search size={15} strokeWidth={2.5} aria-hidden="true" />
         <input
           readOnly
           type="text"
@@ -164,10 +164,12 @@ export function HjemPage() {
         <p className="status-message">Ingen oppskrifter enda. Legg til den første!</p>
       ) : (
         <>
-          <p className="hjem-samlinger-kicker">Samlinger</p>
-          <button type="button" className="nav-link" onClick={() => navigate('/samlinger')}>
-            Mine samlinger
-          </button>
+          <div className="hjem-section-head">
+            <h2>Samlinger</h2>
+            <button type="button" className="hjem-section-link" onClick={() => navigate('/samlinger')}>
+              Mine samlinger
+            </button>
+          </div>
           <div className="hjem-grid">
             {collections.map(({ tag, label, count }, index) => {
               const isUntagged = tag === UNTAGGED_TAG

@@ -15,8 +15,8 @@ export default defineConfig({
         name: 'Kokeboka',
         short_name: 'Kokeboka',
         description: 'Oppskriftene dine, samlet.',
-        theme_color: '#f5ead8',
-        background_color: '#f5ead8',
+        theme_color: '#efe4d2',
+        background_color: '#efe4d2',
         display: 'standalone',
         start_url: '/',
         icons: [
