@@ -20,6 +20,7 @@ import {
   type ManualItem,
 } from '../lib/shoppingList'
 import { listStandingItems } from '../lib/standingItems'
+import { sortShoppingItems } from '../lib/shoppingSort'
 import { Login } from '../components/Login'
 import type { MenuDay } from '../types'
 
@@ -80,15 +81,18 @@ export function HandlelistePage() {
   )
 
   const sortedAggregated = useMemo(() => {
-    const isChecked = (item: AggregatedIngredient) => checkedKeys.has(keyFor(item.normalizedName, item.unit))
-    return [...aggregated].sort((a, b) => Number(isChecked(a)) - Number(isChecked(b)))
+    return sortShoppingItems(
+      aggregated,
+      (item) => item.displayName,
+      (item) => checkedKeys.has(keyFor(item.normalizedName, item.unit))
+    )
   }, [aggregated, checkedKeys])
 
   const uncheckedFromRecipesCount = aggregated.filter(
     (item) => !checkedKeys.has(keyFor(item.normalizedName, item.unit))
   ).length
   const sortedManual = useMemo(
-    () => [...manualItems].sort((a, b) => Number(a.checked) - Number(b.checked)),
+    () => sortShoppingItems(manualItems, (item) => item.name, (item) => item.checked),
     [manualItems]
   )
   const itemsLeft = uncheckedFromRecipesCount + manualItems.filter((m) => !m.checked).length
