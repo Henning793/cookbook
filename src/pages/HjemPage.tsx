@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Search, Plus, User } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { UNTAGGED_TAG, UNTAGGED_LABEL } from '../lib/tags'
+import { collectionIcon } from '../lib/collectionIcon'
 import { listMenuDays } from '../lib/menuDays'
 import {
   aggregateIngredients,
@@ -14,11 +15,8 @@ import {
 import { listStandingItems } from '../lib/standingItems'
 import type { MenuDay } from '../types'
 
-const DOT_COLORS = [
-  'var(--color-accent-100)',
-  'var(--color-accent-2-100)',
-  'var(--color-neutral-300)',
-]
+// Antall fargevarianter for samlingskort uten bilde (.hjem-collection-cover-N).
+const COVER_TINTS = 3
 
 function getGreeting() {
   const hour = new Date().getHours()
@@ -72,14 +70,19 @@ export function HjemPage() {
   }, [recipes, availableTags])
 
   const collections = useMemo(() => {
-    const tagged = tagsWithRecipes.map((tag) => ({
+    // Kortet viser bilder fra opptil tre oppskrifter i samlingen.
+    const summarize = (tag: string, label: string, inCollection: typeof recipes) => ({
       tag,
-      label: tag,
-      count: recipes.filter((recipe) => recipe.tags.includes(tag)).length,
-    }))
-    const untaggedCount = recipes.filter((recipe) => recipe.tags.length === 0).length
-    return untaggedCount > 0
-      ? [...tagged, { tag: UNTAGGED_TAG, label: UNTAGGED_LABEL, count: untaggedCount }]
+      label,
+      count: inCollection.length,
+      coverUrls: inCollection.flatMap((recipe) => (recipe.image_url ? [recipe.image_url] : [])).slice(0, 3),
+    })
+    const tagged = tagsWithRecipes.map((tag) =>
+      summarize(tag, tag, recipes.filter((recipe) => recipe.tags.includes(tag)))
+    )
+    const untagged = recipes.filter((recipe) => recipe.tags.length === 0)
+    return untagged.length > 0
+      ? [...tagged, summarize(UNTAGGED_TAG, UNTAGGED_LABEL, untagged)]
       : tagged
   }, [tagsWithRecipes, recipes])
 
@@ -113,7 +116,7 @@ export function HjemPage() {
       </div>
 
       <div className="search-field" onClick={() => navigate('/sok')}>
-        <Search size={13} strokeWidth={2.75} aria-hidden="true" />
+        <Search size={15} strokeWidth={2.5} aria-hidden="true" />
         <input
           readOnly
           type="text"
@@ -145,9 +148,11 @@ export function HjemPage() {
 
       {cookingSession && cookingRecipe && (
         <div className="hjem-sist-brukt">
-          <p className="hjem-sist-brukt-kicker">Sist brukt</p>
-          <h2 className="hjem-sist-brukt-title">{cookingRecipe.title}</h2>
-          <p className="hjem-sist-brukt-meta">Du stoppet på steg {cookingSession.stepIndex + 1}</p>
+          <div className="hjem-sist-brukt-text">
+            <p className="hjem-sist-brukt-kicker">Sist brukt</p>
+            <h2 className="hjem-sist-brukt-title">{cookingRecipe.title}</h2>
+            <p className="hjem-sist-brukt-meta">Du stoppet på steg {cookingSession.stepIndex + 1}</p>
+          </div>
           <button
             type="button"
             className="hjem-sist-brukt-cta"
@@ -164,13 +169,15 @@ export function HjemPage() {
         <p className="status-message">Ingen oppskrifter enda. Legg til den første!</p>
       ) : (
         <>
-          <p className="hjem-samlinger-kicker">Samlinger</p>
-          <button type="button" className="nav-link" onClick={() => navigate('/samlinger')}>
-            Mine samlinger
-          </button>
+          <div className="hjem-section-head">
+            <h2>Samlinger</h2>
+            <button type="button" className="hjem-section-link" onClick={() => navigate('/samlinger')}>
+              Mine samlinger
+            </button>
+          </div>
           <div className="hjem-grid">
-            {collections.map(({ tag, label, count }, index) => {
-              const isUntagged = tag === UNTAGGED_TAG
+            {collections.map(({ tag, label, count, coverUrls }, index) => {
+              const Icon = collectionIcon(label)
               return (
                 <button
                   type="button"
@@ -178,18 +185,28 @@ export function HjemPage() {
                   className="hjem-collection-card"
                   onClick={() => navigate(`/samling/${encodeURIComponent(tag)}`)}
                 >
-                  <span
-                    className="hjem-collection-dot"
-                    style={{
-                      background: isUntagged
-                        ? 'var(--color-neutral-400)'
-                        : DOT_COLORS[index % DOT_COLORS.length],
-                    }}
-                    aria-hidden="true"
-                  />
-                  <span className="hjem-collection-name">{label}</span>
-                  <span className="hjem-collection-count">
-                    {count} {count === 1 ? 'oppskrift' : 'oppskrifter'}
+                  {coverUrls.length > 0 ? (
+                    <span
+                      className={`hjem-collection-cover hjem-collection-mosaic-${coverUrls.length}`}
+                      aria-hidden="true"
+                    >
+                      {coverUrls.map((url) => (
+                        <img key={url} src={url} alt="" loading="lazy" />
+                      ))}
+                    </span>
+                  ) : (
+                    <span
+                      className={`hjem-collection-cover hjem-collection-cover-${index % COVER_TINTS}`}
+                      aria-hidden="true"
+                    >
+                      <Icon size={60} strokeWidth={1.3} />
+                    </span>
+                  )}
+                  <span className="hjem-collection-body">
+                    <span className="hjem-collection-name">{label}</span>
+                    <span className="hjem-collection-count">
+                      {count} {count === 1 ? 'oppskrift' : 'oppskrifter'}
+                    </span>
                   </span>
                 </button>
               )
