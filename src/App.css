@@ -1668,33 +1668,50 @@
 }
 
 .hjem-collection-cover {
-  height: 120px;
+  height: 130px;
   display: grid;
   place-items: center;
   overflow: hidden;
-  font: italic 400 64px/1 var(--font-heading);
 }
 
 .hjem-collection-cover img {
   width: 100%;
   height: 100%;
+  min-height: 0;
   object-fit: cover;
   display: block;
 }
 
+/* Bildemosaikk: ett stort bilde til venstre og opptil to små til høyre. */
+.hjem-collection-mosaic-2,
+.hjem-collection-mosaic-3 {
+  grid-template-columns: 2fr 1fr;
+  gap: 3px;
+  place-items: stretch;
+}
+
+.hjem-collection-mosaic-3 {
+  grid-template-rows: 1fr 1fr;
+}
+
+.hjem-collection-mosaic-3 img:first-child {
+  grid-row: span 2;
+}
+
+/* Uten bilder: en dempet fargeflate med en strektegning valgt ut fra navnet. */
 .hjem-collection-cover-0 {
   background: var(--color-accent-2-200);
-  color: var(--color-accent-2-500);
+  color: var(--color-accent-2-600);
 }
 
 .hjem-collection-cover-1 {
   background: var(--color-accent-200);
-  color: var(--color-accent-500);
+  color: var(--color-accent-600);
 }
 
 .hjem-collection-cover-2 {
-  background: var(--color-neutral-300);
-  color: var(--color-neutral-500);
+  background: var(--color-neutral-200);
+  color: var(--color-neutral-600);
 }
 
 .hjem-collection-body {
@@ -1704,7 +1721,7 @@
 }
 
 .hjem-collection-name {
-  font: 600 17px/1.15 var(--font-heading);
+  font: 600 19px/1.15 var(--font-heading);
   overflow-wrap: anywhere;
 }
 

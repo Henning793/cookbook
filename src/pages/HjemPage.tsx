@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Search, Plus, User } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { UNTAGGED_TAG, UNTAGGED_LABEL } from '../lib/tags'
+import { collectionIcon } from '../lib/collectionIcon'
 import { listMenuDays } from '../lib/menuDays'
 import {
   aggregateIngredients,
@@ -69,12 +70,12 @@ export function HjemPage() {
   }, [recipes, availableTags])
 
   const collections = useMemo(() => {
-    // Kortet viser bildet til den første oppskriften i samlingen som har et.
+    // Kortet viser bilder fra opptil tre oppskrifter i samlingen.
     const summarize = (tag: string, label: string, inCollection: typeof recipes) => ({
       tag,
       label,
       count: inCollection.length,
-      coverUrl: inCollection.find((recipe) => recipe.image_url)?.image_url ?? null,
+      coverUrls: inCollection.flatMap((recipe) => (recipe.image_url ? [recipe.image_url] : [])).slice(0, 3),
     })
     const tagged = tagsWithRecipes.map((tag) =>
       summarize(tag, tag, recipes.filter((recipe) => recipe.tags.includes(tag)))
@@ -175,33 +176,41 @@ export function HjemPage() {
             </button>
           </div>
           <div className="hjem-grid">
-            {collections.map(({ tag, label, count, coverUrl }, index) => (
-              <button
-                type="button"
-                key={tag}
-                className="hjem-collection-card"
-                onClick={() => navigate(`/samling/${encodeURIComponent(tag)}`)}
-              >
-                {coverUrl ? (
-                  <span className="hjem-collection-cover" aria-hidden="true">
-                    <img src={coverUrl} alt="" loading="lazy" />
+            {collections.map(({ tag, label, count, coverUrls }, index) => {
+              const Icon = collectionIcon(label)
+              return (
+                <button
+                  type="button"
+                  key={tag}
+                  className="hjem-collection-card"
+                  onClick={() => navigate(`/samling/${encodeURIComponent(tag)}`)}
+                >
+                  {coverUrls.length > 0 ? (
+                    <span
+                      className={`hjem-collection-cover hjem-collection-mosaic-${coverUrls.length}`}
+                      aria-hidden="true"
+                    >
+                      {coverUrls.map((url) => (
+                        <img key={url} src={url} alt="" loading="lazy" />
+                      ))}
+                    </span>
+                  ) : (
+                    <span
+                      className={`hjem-collection-cover hjem-collection-cover-${index % COVER_TINTS}`}
+                      aria-hidden="true"
+                    >
+                      <Icon size={60} strokeWidth={1.3} />
+                    </span>
+                  )}
+                  <span className="hjem-collection-body">
+                    <span className="hjem-collection-name">{label}</span>
+                    <span className="hjem-collection-count">
+                      {count} {count === 1 ? 'oppskrift' : 'oppskrifter'}
+                    </span>
                   </span>
-                ) : (
-                  <span
-                    className={`hjem-collection-cover hjem-collection-cover-${index % COVER_TINTS}`}
-                    aria-hidden="true"
-                  >
-                    {label.charAt(0).toUpperCase()}
-                  </span>
-                )}
-                <span className="hjem-collection-body">
-                  <span className="hjem-collection-name">{label}</span>
-                  <span className="hjem-collection-count">
-                    {count} {count === 1 ? 'oppskrift' : 'oppskrifter'}
-                  </span>
-                </span>
-              </button>
-            ))}
+                </button>
+              )
+            })}
           </div>
         </>
       )}
