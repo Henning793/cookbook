@@ -80,7 +80,6 @@ function norm(value: string): string {
 
 // Treffer navnet bare i begynnelsen av et ord, slik at "marinaden" treffer
 // komponenten "Marinade" mens "soyasaus" ikke treffer komponenten "Saus".
-// Gjelder også ingrediensnavn, så "hvetemel" ikke treffer ingrediensen "Mel".
 function mentionsAtWordStart(textLower: string, name: string): boolean {
   const needle = norm(name)
   if (!needle) return false
@@ -98,6 +97,77 @@ function mentionsAtWordStart(textLower: string, name: string): boolean {
 // skjemaendring. Lengste navn vinner, så "@Saus til servering" ikke tolkes
 // som "@Saus" når begge finnes.
 export type StepSegment = { text: string; component: RecipeComponent | null }
+
+// Korte vanlige ord som ellers kunne treffet slutten av et ingrediensnavn.
+const STOP_WORDS = new Set(['med', 'til', 'den', 'det', 'som', 'for', 'har', 'kan', 'ned', 'opp', 'inn', 'alt', 'all', 'men', 'mer', 'nok'])
+const MIN_LENGTH = 3
+const INFLECTIONS = new Set(['', 'e', 'n', 't', 'a', 'en', 'et', 'er', 'ne', 'te', 'ene', 'ane', 'ens', 'ets'])
+
+// Ordet med og uten bøyningsendelse, så "melet", "oljen" og "bananene"
+// kan sammenlignes med "mel", "olje" og "bananer".
+function stems(word: string): string[] {
+  const result = new Set([word])
+  for (const ending of INFLECTIONS) {
+    if (ending && word.endsWith(ending) && word.length - ending.length >= MIN_LENGTH) {
+      result.add(word.slice(0, -ending.length))
+    }
+  }
+  return [...result]
+}
+
+// Hvor i stegteksten en ingrediens er nevnt (startposisjonen til ordet),
+// delt i treff på hele navnet og løsere treff.
+// Ingredienslisten er ofte mer presis enn fremgangsmåten, så det er tilgivende:
+// - hele navnet, også bøyd ("løkpulveret" treffer "løkpulver")
+// - siste ord i navnet, også bøyd ("oljen" treffer "nøytral olje", "bananene"
+//   treffer "modne bananer")
+// - et ord i teksten som er slutten av navnet ("mel" treffer "hvetemel")
+interface Positions {
+  exact: number[]
+  loose: number[]
+}
+
+function ingredientPositions(textLower: string, name: string): Positions {
+  const needle = norm(name)
+  const exact = new Set<number>()
+  const loose = new Set<number>()
+  if (!needle) return { exact: [], loose: [] }
+
+  let from = 0
+  while (true) {
+    const index = textLower.indexOf(needle, from)
+    if (index === -1) break
+    from = index + 1
+    if (index > 0 && isWordChar(textLower[index - 1])) continue
+    // Resten av ordet må være en bøyning ("smøret"), ikke et nytt ord
+    // ("melblandingen" skal ikke treffe "mel").
+    const rest = /^[\p{L}\p{N}]*/u.exec(textLower.slice(index + needle.length))?.[0] ?? ''
+    if (INFLECTIONS.has(rest)) exact.add(index)
+  }
+
+  const tail = needle.split(/[^\p{L}\p{N}]+/u).filter(Boolean).pop() ?? ''
+  if (tail.length >= MIN_LENGTH) {
+    const tailStems = stems(tail)
+    for (const match of textLower.matchAll(/[\p{L}\p{N}]+/gu)) {
+      const word = match[0]
+      if (word.length < MIN_LENGTH) continue
+      const hit = stems(word).some(
+        (w) =>
+          tailStems.includes(w) ||
+          (!STOP_WORDS.has(w) && w.length >= MIN_LENGTH && tailStems.some((t) => t.endsWith(w)))
+      )
+      const index = match.index ?? 0
+      if (hit && !exact.has(index)) loose.add(index)
+    }
+  }
+
+  return { exact: [...exact], loose: [...loose] }
+}
+
+function isMentioned(textLower: string, name: string): boolean {
+  const { exact, loose } = ingredientPositions(textLower, name)
+  return exact.length + loose.length > 0
+}
 
 function isWordChar(char: string | undefined): boolean {
   return char !== undefined && /[\p{L}\p{N}]/u.test(char)
@@ -181,38 +251,60 @@ export function ingredientsForStep(stepText: string, ingredients: RecipeIngredie
     return ingredients.components
       .filter((c) => linked.has(c))
       .map((c) => {
-        const named = c.ingredients.filter((i) => mentionsAtWordStart(plain, i.name))
+        const named = c.ingredients.filter((i) => isMentioned(plain, i.name))
         return { componentName: c.name, items: named.length > 0 ? named : c.ingredients }
       })
       .filter((g) => g.items.length > 0)
   }
 
   const text = stepText.toLowerCase()
-
-  const mentioned = new Map<RecipeComponent, IngredientItem[]>()
-  const shownInMentioned = new Set<string>()
-
-  for (const component of ingredients.components) {
-    if (!mentionsAtWordStart(text, component.name)) continue
-    const named = component.ingredients.filter((i) => mentionsAtWordStart(text, i.name))
-    const items = named.length > 0 ? named : component.ingredients
-    mentioned.set(component, items)
-    for (const item of items) shownInMentioned.add(norm(item.name))
+  const positions = new Map<IngredientItem, Positions>()
+  const at = (item: IngredientItem) => {
+    if (!positions.has(item)) positions.set(item, ingredientPositions(text, item.name))
+    return positions.get(item)!
   }
 
-  const looseItems = ingredients.loose.filter(
-    (i) => mentionsAtWordStart(text, i.name) && !shownInMentioned.has(norm(i.name))
-  )
+  // Samme ord i teksten kan treffe flere ingredienser ("mel" treffer både
+  // "hvetemel" og "Mel" i en komponent). Ordet går da til den første i
+  // prioritert rekkefølge: nevnt komponent, løse ingredienser, øvrige komponenter.
+  // Innenfor hver gruppe vinner treff på hele navnet ("sukker") over løsere
+  // treff ("vaniljesukker" via "sukker").
+  const claimed = new Set<number>()
+  const claim = (items: IngredientItem[]) => {
+    const picked = new Set<IngredientItem>()
+    for (const kind of ['exact', 'loose'] as const) {
+      const hits = items.filter((i) => !picked.has(i) && at(i)[kind].some((p) => !claimed.has(p)))
+      for (const item of hits) {
+        picked.add(item)
+        for (const p of at(item)[kind]) claimed.add(p)
+      }
+    }
+    return items.filter((i) => picked.has(i))
+  }
 
-  const handled = new Set([...shownInMentioned, ...looseItems.map((i) => norm(i.name))])
+  // Ordet som nevner en komponent ("sausen") skal ikke også telle som en
+  // ingrediens ("soyasaus").
+  for (const component of ingredients.components) {
+    const name = norm(component.name)
+    if (!name) continue
+    for (let i = text.indexOf(name); i !== -1; i = text.indexOf(name, i + 1)) {
+      if (i === 0 || !isWordChar(text[i - 1])) claimed.add(i)
+    }
+  }
+
+  const mentioned = new Map<RecipeComponent, IngredientItem[]>()
+  for (const component of ingredients.components) {
+    if (!mentionsAtWordStart(text, component.name)) continue
+    const named = claim(component.ingredients)
+    mentioned.set(component, named.length > 0 ? named : component.ingredients)
+  }
 
   const groups: StepIngredientGroup[] = []
+  const looseItems = claim(ingredients.loose)
   if (looseItems.length > 0) groups.push({ componentName: null, items: looseItems })
 
   for (const component of ingredients.components) {
-    const items = mentioned.has(component)
-      ? mentioned.get(component)!
-      : component.ingredients.filter((i) => mentionsAtWordStart(text, i.name) && !handled.has(norm(i.name)))
+    const items = mentioned.get(component) ?? claim(component.ingredients)
     if (items.length > 0) groups.push({ componentName: component.name, items })
   }
 
