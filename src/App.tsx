@@ -12,12 +12,14 @@ import { FamiliePage } from './pages/FamiliePage'
 import { UkesmenyPage } from './pages/UkesmenyPage'
 import { HandlelistePage } from './pages/HandlelistePage'
 import { FasteVarerPage } from './pages/FasteVarerPage'
+import { UpdateBanner } from './components/UpdateBanner'
 import './App.css'
 import './recipe-components.css'
 
 function App() {
   return (
     <AppProvider>
+      <UpdateBanner />
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<HjemPage />} />
