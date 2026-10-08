@@ -14,11 +14,8 @@ import {
 import { listStandingItems } from '../lib/standingItems'
 import type { MenuDay } from '../types'
 
-const DOT_COLORS = [
-  'var(--color-accent-200)',
-  'var(--color-accent-2-200)',
-  'var(--color-neutral-300)',
-]
+// Antall fargevarianter for samlingskort uten bilde (.hjem-collection-cover-N).
+const COVER_TINTS = 3
 
 function getGreeting() {
   const hour = new Date().getHours()
@@ -72,14 +69,19 @@ export function HjemPage() {
   }, [recipes, availableTags])
 
   const collections = useMemo(() => {
-    const tagged = tagsWithRecipes.map((tag) => ({
+    // Kortet viser bildet til den første oppskriften i samlingen som har et.
+    const summarize = (tag: string, label: string, inCollection: typeof recipes) => ({
       tag,
-      label: tag,
-      count: recipes.filter((recipe) => recipe.tags.includes(tag)).length,
-    }))
-    const untaggedCount = recipes.filter((recipe) => recipe.tags.length === 0).length
-    return untaggedCount > 0
-      ? [...tagged, { tag: UNTAGGED_TAG, label: UNTAGGED_LABEL, count: untaggedCount }]
+      label,
+      count: inCollection.length,
+      coverUrl: inCollection.find((recipe) => recipe.image_url)?.image_url ?? null,
+    })
+    const tagged = tagsWithRecipes.map((tag) =>
+      summarize(tag, tag, recipes.filter((recipe) => recipe.tags.includes(tag)))
+    )
+    const untagged = recipes.filter((recipe) => recipe.tags.length === 0)
+    return untagged.length > 0
+      ? [...tagged, summarize(UNTAGGED_TAG, UNTAGGED_LABEL, untagged)]
       : tagged
   }, [tagsWithRecipes, recipes])
 
@@ -145,9 +147,11 @@ export function HjemPage() {
 
       {cookingSession && cookingRecipe && (
         <div className="hjem-sist-brukt">
-          <p className="hjem-sist-brukt-kicker">Sist brukt</p>
-          <h2 className="hjem-sist-brukt-title">{cookingRecipe.title}</h2>
-          <p className="hjem-sist-brukt-meta">Du stoppet på steg {cookingSession.stepIndex + 1}</p>
+          <div className="hjem-sist-brukt-text">
+            <p className="hjem-sist-brukt-kicker">Sist brukt</p>
+            <h2 className="hjem-sist-brukt-title">{cookingRecipe.title}</h2>
+            <p className="hjem-sist-brukt-meta">Du stoppet på steg {cookingSession.stepIndex + 1}</p>
+          </div>
           <button
             type="button"
             className="hjem-sist-brukt-cta"
@@ -171,31 +175,33 @@ export function HjemPage() {
             </button>
           </div>
           <div className="hjem-grid">
-            {collections.map(({ tag, label, count }, index) => {
-              const isUntagged = tag === UNTAGGED_TAG
-              return (
-                <button
-                  type="button"
-                  key={tag}
-                  className="hjem-collection-card"
-                  onClick={() => navigate(`/samling/${encodeURIComponent(tag)}`)}
-                >
+            {collections.map(({ tag, label, count, coverUrl }, index) => (
+              <button
+                type="button"
+                key={tag}
+                className="hjem-collection-card"
+                onClick={() => navigate(`/samling/${encodeURIComponent(tag)}`)}
+              >
+                {coverUrl ? (
+                  <span className="hjem-collection-cover" aria-hidden="true">
+                    <img src={coverUrl} alt="" loading="lazy" />
+                  </span>
+                ) : (
                   <span
-                    className="hjem-collection-dot"
-                    style={{
-                      background: isUntagged
-                        ? 'var(--color-neutral-400)'
-                        : DOT_COLORS[index % DOT_COLORS.length],
-                    }}
+                    className={`hjem-collection-cover hjem-collection-cover-${index % COVER_TINTS}`}
                     aria-hidden="true"
-                  />
+                  >
+                    {label.charAt(0).toUpperCase()}
+                  </span>
+                )}
+                <span className="hjem-collection-body">
                   <span className="hjem-collection-name">{label}</span>
                   <span className="hjem-collection-count">
                     {count} {count === 1 ? 'oppskrift' : 'oppskrifter'}
                   </span>
-                </button>
-              )
-            })}
+                </span>
+              </button>
+            ))}
           </div>
         </>
       )}
