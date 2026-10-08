@@ -7,7 +7,9 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'prompt': a new version waits until the user taps the update banner
+      // (src/components/UpdateBanner.tsx) instead of activating silently.
+      registerType: 'prompt',
       includeAssets: ['favicon-32.png', 'apple-touch-icon-180.png'],
       manifest: {
         name: 'Kokeboka',
