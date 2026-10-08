@@ -3,14 +3,20 @@ import { Check, Plus } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { UNITS } from '../lib/units'
 import { CustomUnitDialog } from './CustomUnitDialog'
-import type { IngredientItem } from '../types'
+import type { IngredientItem, RecipeIngredients } from '../types'
 
 interface IngredientRow {
   amount: string
   unit: string
   customUnit: string
   name: string
-  isHeading: boolean
+}
+
+// Gruppe 0 er alltid de løse ingrediensene (name = null). Gruppe 1 og
+// utover er komponenter (f.eks. Marinade) med eget navn og egne ingredienser.
+interface IngredientGroup {
+  name: string | null
+  rows: IngredientRow[]
 }
 
 const emptyIngredientRow = (): IngredientRow => ({
@@ -18,16 +24,15 @@ const emptyIngredientRow = (): IngredientRow => ({
   unit: UNITS[0],
   customUnit: '',
   name: '',
-  isHeading: false,
 })
 
-const emptyHeadingRow = (): IngredientRow => ({
-  amount: '',
-  unit: UNITS[0],
-  customUnit: '',
-  name: '',
-  isHeading: true,
-})
+function toItem(row: IngredientRow): IngredientItem {
+  return {
+    amount: row.amount.trim() === '' ? null : Number(row.amount),
+    unit: row.unit === 'annet' ? row.customUnit.trim() : row.unit,
+    name: row.name.trim(),
+  }
+}
 
 function moveItem<T>(items: T[], index: number, direction: -1 | 1): T[] {
   const target = index + direction
@@ -44,14 +49,25 @@ function toIngredientRow(item: IngredientItem): IngredientRow {
     unit: isKnownUnit ? item.unit : 'annet',
     customUnit: isKnownUnit ? '' : item.unit,
     name: item.name,
-    isHeading: item.isHeading ?? false,
   }
+}
+
+function toGroups(ingredients: RecipeIngredients | undefined): IngredientGroup[] {
+  const loose = ingredients?.loose ?? []
+  const components = ingredients?.components ?? []
+  const looseRows = loose.map(toIngredientRow)
+  // Et helt tomt skjema starter med én tom løs ingrediensrad, som før.
+  const startRows = looseRows.length === 0 && components.length === 0 ? [emptyIngredientRow()] : looseRows
+  return [
+    { name: null, rows: startRows },
+    ...components.map((c) => ({ name: c.name, rows: c.ingredients.map(toIngredientRow) })),
+  ]
 }
 
 export interface RecipeFormValues {
   title: string
   description: string | null
-  ingredients: IngredientItem[]
+  ingredients: RecipeIngredients
   steps: string[]
   image_url: string | null
   tags: string[]
@@ -63,7 +79,7 @@ interface Props {
   initial?: {
     title: string
     description?: string | null
-    ingredients: IngredientItem[]
+    ingredients: RecipeIngredients
     steps: string[]
     image_url: string | null
     tags: string[]
@@ -91,9 +107,7 @@ export function RecipeForm({
 }: Props) {
   const [title, setTitle] = useState(initial?.title ?? '')
   const [description, setDescription] = useState(initial?.description ?? '')
-  const [ingredientRows, setIngredientRows] = useState<IngredientRow[]>(
-    initial && initial.ingredients.length > 0 ? initial.ingredients.map(toIngredientRow) : [emptyIngredientRow()]
-  )
+  const [groups, setGroups] = useState<IngredientGroup[]>(() => toGroups(initial?.ingredients))
   const [steps, setSteps] = useState<string[]>(initial && initial.steps.length > 0 ? initial.steps : [''])
   const [servingsInput, setServingsInput] = useState(
     initial?.servings != null ? String(initial.servings) : ''
@@ -104,7 +118,7 @@ export function RecipeForm({
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [customUnitRowIndex, setCustomUnitRowIndex] = useState<number | null>(null)
+  const [customUnitTarget, setCustomUnitTarget] = useState<{ group: number; row: number } | null>(null)
 
   const tagOptions = [...new Set([...availableTags, ...customTagOptions])]
 
@@ -120,24 +134,49 @@ export function RecipeForm({
     setCustomTagInput('')
   }
 
-  function updateIngredientRow(index: number, patch: Partial<IngredientRow>) {
-    setIngredientRows((rows) => rows.map((row, i) => (i === index ? { ...row, ...patch } : row)))
+  function updateGroup(groupIndex: number, patch: (group: IngredientGroup) => IngredientGroup) {
+    setGroups((current) => current.map((group, i) => (i === groupIndex ? patch(group) : group)))
   }
 
-  function addIngredientRow() {
-    setIngredientRows((rows) => [...rows, emptyIngredientRow()])
+  function updateIngredientRow(groupIndex: number, rowIndex: number, patch: Partial<IngredientRow>) {
+    updateGroup(groupIndex, (group) => ({
+      ...group,
+      rows: group.rows.map((row, i) => (i === rowIndex ? { ...row, ...patch } : row)),
+    }))
   }
 
-  function addHeadingRow() {
-    setIngredientRows((rows) => [...rows, emptyHeadingRow()])
+  function addIngredientRow(groupIndex: number) {
+    updateGroup(groupIndex, (group) => ({ ...group, rows: [...group.rows, emptyIngredientRow()] }))
   }
 
-  function removeIngredientRow(index: number) {
-    setIngredientRows((rows) => rows.filter((_, i) => i !== index))
+  function removeIngredientRow(groupIndex: number, rowIndex: number) {
+    updateGroup(groupIndex, (group) => ({ ...group, rows: group.rows.filter((_, i) => i !== rowIndex) }))
   }
 
-  function moveIngredientRow(index: number, direction: -1 | 1) {
-    setIngredientRows((rows) => moveItem(rows, index, direction))
+  function moveIngredientRow(groupIndex: number, rowIndex: number, direction: -1 | 1) {
+    updateGroup(groupIndex, (group) => ({ ...group, rows: moveItem(group.rows, rowIndex, direction) }))
+  }
+
+  function addComponent() {
+    setGroups((current) => [...current, { name: '', rows: [emptyIngredientRow()] }])
+  }
+
+  function renameComponent(groupIndex: number, name: string) {
+    updateGroup(groupIndex, (group) => ({ ...group, name }))
+  }
+
+  function removeComponent(groupIndex: number) {
+    setGroups((current) => current.filter((_, i) => i !== groupIndex))
+  }
+
+  // Gruppe 0 (løse ingredienser) ligger fast øverst, så komponenter kan
+  // bare flyttes innbyrdes (indeks 1 og oppover).
+  function moveComponent(groupIndex: number, direction: -1 | 1) {
+    setGroups((current) => {
+      const target = groupIndex + direction
+      if (target < 1 || target >= current.length) return current
+      return moveItem(current, groupIndex, direction)
+    })
   }
 
   function updateStep(index: number, value: string) {
@@ -175,6 +214,17 @@ export function RecipeForm({
       servings = Math.round(parsed * 10) / 10
     }
 
+    const totalRows = groups.reduce((sum, group) => sum + group.rows.length, 0)
+    if (totalRows === 0) {
+      setError('Legg til minst én ingrediens')
+      return
+    }
+    const emptyComponent = groups.slice(1).find((group) => group.rows.length === 0)
+    if (emptyComponent) {
+      setError(`Komponenten «${emptyComponent.name?.trim() || 'uten navn'}» trenger minst én ingrediens`)
+      return
+    }
+
     setSaving(true)
 
     try {
@@ -197,15 +247,13 @@ export function RecipeForm({
         imageUrl = data.publicUrl
       }
 
-      const ingredients = ingredientRows.map((row) =>
-        row.isHeading
-          ? { amount: null, unit: '', name: row.name.trim(), isHeading: true }
-          : {
-              amount: row.amount.trim() === '' ? null : Number(row.amount),
-              unit: row.unit === 'annet' ? row.customUnit.trim() : row.unit,
-              name: row.name.trim(),
-            }
-      )
+      const ingredients: RecipeIngredients = {
+        loose: groups[0].rows.map(toItem),
+        components: groups.slice(1).map((group) => ({
+          name: (group.name ?? '').trim(),
+          ingredients: group.rows.map(toItem),
+        })),
+      }
 
       await onSubmit({
         title,
@@ -223,7 +271,87 @@ export function RecipeForm({
     }
   }
 
-  const customUnitRow = customUnitRowIndex === null ? null : ingredientRows[customUnitRowIndex]
+  const customUnitRow = customUnitTarget === null ? null : groups[customUnitTarget.group]?.rows[customUnitTarget.row]
+
+  function renderIngredientRow(groupIndex: number, rowIndex: number, row: IngredientRow) {
+    const rowCount = groups[groupIndex].rows.length
+    return (
+      <div className="ingredient-row" key={rowIndex}>
+        <input
+          className="ingredient-name"
+          required
+          placeholder="Ingrediens, f.eks. løk"
+          value={row.name}
+          onChange={(e) => updateIngredientRow(groupIndex, rowIndex, { name: e.target.value })}
+        />
+        <input
+          className="ingredient-amount"
+          type="number"
+          min="0"
+          step="any"
+          placeholder="Mengde"
+          value={row.amount}
+          onChange={(e) => updateIngredientRow(groupIndex, rowIndex, { amount: e.target.value })}
+        />
+        {row.unit === 'annet' ? (
+          <button
+            type="button"
+            className="ingredient-unit-chip"
+            aria-label="Rediger egendefinert enhet"
+            onClick={() => setCustomUnitTarget({ group: groupIndex, row: rowIndex })}
+          >
+            <span className="ingredient-unit-chip-text">{row.customUnit || '–'}</span>
+            <span aria-hidden="true">›</span>
+          </button>
+        ) : (
+          <select
+            className="ingredient-unit"
+            value={row.unit}
+            onChange={(e) =>
+              e.target.value === 'annet'
+                ? setCustomUnitTarget({ group: groupIndex, row: rowIndex })
+                : updateIngredientRow(groupIndex, rowIndex, { unit: e.target.value })
+            }
+          >
+            {UNITS.map((unit) => (
+              <option key={unit} value={unit}>
+                {unit}
+              </option>
+            ))}
+            <option value="annet">annet</option>
+          </select>
+        )}
+        <div className="row-actions">
+          <button
+            type="button"
+            className="row-move"
+            aria-label="Flytt ingrediens opp"
+            onClick={() => moveIngredientRow(groupIndex, rowIndex, -1)}
+            disabled={rowIndex === 0}
+          >
+            ↑
+          </button>
+          <button
+            type="button"
+            className="row-move"
+            aria-label="Flytt ingrediens ned"
+            onClick={() => moveIngredientRow(groupIndex, rowIndex, 1)}
+            disabled={rowIndex === rowCount - 1}
+          >
+            ↓
+          </button>
+          <button
+            type="button"
+            className="row-remove"
+            aria-label="Fjern ingrediens"
+            onClick={() => removeIngredientRow(groupIndex, rowIndex)}
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <>
@@ -259,105 +387,71 @@ export function RecipeForm({
       />
 
       <label>Ingredienser</label>
-      <div className="ingredient-rows">
-        {ingredientRows.map((row, index) => (
-          <div className={row.isHeading ? 'ingredient-row ingredient-row-heading' : 'ingredient-row'} key={index}>
-            {row.isHeading ? (
+      {groups[0].rows.length > 0 && (
+        <div className="ingredient-rows">
+          {groups[0].rows.map((row, rowIndex) => renderIngredientRow(0, rowIndex, row))}
+        </div>
+      )}
+      <div className="row-add-group">
+        <button type="button" className="row-add" onClick={() => addIngredientRow(0)}>
+          + Legg til ingrediens
+        </button>
+        <button type="button" className="row-add" onClick={addComponent}>
+          + Legg til komponent
+        </button>
+      </div>
+
+      {groups.slice(1).map((group, offset) => {
+        const groupIndex = offset + 1
+        return (
+          <div className="component-card" key={groupIndex}>
+            <div className="component-card-header">
               <input
                 className="ingredient-heading-input"
                 required
-                placeholder="Overskrift, f.eks. Til marinaden"
-                value={row.name}
-                onChange={(e) => updateIngredientRow(index, { name: e.target.value })}
+                aria-label="Navn på komponent"
+                placeholder="Komponent, f.eks. Marinade"
+                value={group.name ?? ''}
+                onChange={(e) => renameComponent(groupIndex, e.target.value)}
               />
-            ) : (
-              <>
-                <input
-                  className="ingredient-name"
-                  required
-                  placeholder="Ingrediens, f.eks. løk"
-                  value={row.name}
-                  onChange={(e) => updateIngredientRow(index, { name: e.target.value })}
-                />
-                <input
-                  className="ingredient-amount"
-                  type="number"
-                  min="0"
-                  step="any"
-                  placeholder="Mengde"
-                  value={row.amount}
-                  onChange={(e) => updateIngredientRow(index, { amount: e.target.value })}
-                />
-                {row.unit === 'annet' ? (
-                  <button
-                    type="button"
-                    className="ingredient-unit-chip"
-                    aria-label="Rediger egendefinert enhet"
-                    onClick={() => setCustomUnitRowIndex(index)}
-                  >
-                    <span className="ingredient-unit-chip-text">{row.customUnit || '–'}</span>
-                    <span aria-hidden="true">›</span>
-                  </button>
-                ) : (
-                  <select
-                    className="ingredient-unit"
-                    value={row.unit}
-                    onChange={(e) =>
-                      e.target.value === 'annet'
-                        ? setCustomUnitRowIndex(index)
-                        : updateIngredientRow(index, { unit: e.target.value })
-                    }
-                  >
-                    {UNITS.map((unit) => (
-                      <option key={unit} value={unit}>
-                        {unit}
-                      </option>
-                    ))}
-                    <option value="annet">annet</option>
-                  </select>
-                )}
-              </>
-            )}
-            <div className="row-actions">
-              <button
-                type="button"
-                className="row-move"
-                aria-label="Flytt ingrediens opp"
-                onClick={() => moveIngredientRow(index, -1)}
-                disabled={index === 0}
-              >
-                ↑
-              </button>
-              <button
-                type="button"
-                className="row-move"
-                aria-label="Flytt ingrediens ned"
-                onClick={() => moveIngredientRow(index, 1)}
-                disabled={index === ingredientRows.length - 1}
-              >
-                ↓
-              </button>
-              <button
-                type="button"
-                className="row-remove"
-                aria-label="Fjern ingrediens"
-                onClick={() => removeIngredientRow(index)}
-                disabled={ingredientRows.length === 1}
-              >
-                ✕
-              </button>
+              <div className="row-actions">
+                <button
+                  type="button"
+                  className="row-move"
+                  aria-label="Flytt komponent opp"
+                  onClick={() => moveComponent(groupIndex, -1)}
+                  disabled={groupIndex === 1}
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  className="row-move"
+                  aria-label="Flytt komponent ned"
+                  onClick={() => moveComponent(groupIndex, 1)}
+                  disabled={groupIndex === groups.length - 1}
+                >
+                  ↓
+                </button>
+                <button
+                  type="button"
+                  className="row-remove"
+                  aria-label="Fjern komponent"
+                  onClick={() => removeComponent(groupIndex)}
+                >
+                  ✕
+                </button>
+              </div>
             </div>
+            <div className="ingredient-rows">
+              {group.rows.map((row, rowIndex) => renderIngredientRow(groupIndex, rowIndex, row))}
+            </div>
+            <button type="button" className="row-add" onClick={() => addIngredientRow(groupIndex)}>
+              + Legg til ingrediens i {group.name?.trim() || 'komponenten'}
+            </button>
           </div>
-        ))}
-      </div>
-      <div className="row-add-group">
-        <button type="button" className="row-add" onClick={addIngredientRow}>
-          + Legg til ingrediens
-        </button>
-        <button type="button" className="row-add" onClick={addHeadingRow}>
-          + Legg til overskrift
-        </button>
-      </div>
+        )
+      })}
 
       <label>Fremgangsmåte</label>
       <div className="step-rows">
@@ -491,22 +585,22 @@ export function RecipeForm({
       )}
     </form>
 
-    {customUnitRowIndex !== null && customUnitRow && (
+    {customUnitTarget !== null && customUnitRow && (
       <CustomUnitDialog
         initialValue={customUnitRow.unit === 'annet' ? customUnitRow.customUnit : ''}
         onConfirm={(unit) => {
-          updateIngredientRow(customUnitRowIndex, { unit: 'annet', customUnit: unit })
-          setCustomUnitRowIndex(null)
+          updateIngredientRow(customUnitTarget.group, customUnitTarget.row, { unit: 'annet', customUnit: unit })
+          setCustomUnitTarget(null)
         }}
         onUseStandard={
           customUnitRow.unit === 'annet'
             ? () => {
-                updateIngredientRow(customUnitRowIndex, { unit: UNITS[0], customUnit: '' })
-                setCustomUnitRowIndex(null)
+                updateIngredientRow(customUnitTarget.group, customUnitTarget.row, { unit: UNITS[0], customUnit: '' })
+                setCustomUnitTarget(null)
               }
             : undefined
         }
-        onClose={() => setCustomUnitRowIndex(null)}
+        onClose={() => setCustomUnitTarget(null)}
       />
     )}
     </>

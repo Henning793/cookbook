@@ -13,6 +13,7 @@ import { UkesmenyPage } from './pages/UkesmenyPage'
 import { HandlelistePage } from './pages/HandlelistePage'
 import { FasteVarerPage } from './pages/FasteVarerPage'
 import './App.css'
+import './recipe-components.css'
 
 function App() {
   return (

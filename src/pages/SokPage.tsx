@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronLeft, Search } from 'lucide-react'
 import { useApp } from '../context/AppContext'
+import { allIngredients } from '../lib/recipeIngredients'
 import type { Recipe } from '../types'
 
 interface Match {
@@ -17,7 +18,7 @@ function findMatch(recipe: Recipe, query: string): Match | null {
     return { text: recipe.title, index: titleIndex }
   }
 
-  for (const ingredient of recipe.ingredients) {
+  for (const ingredient of allIngredients(recipe.ingredients)) {
     const index = ingredient.name.toLowerCase().indexOf(lowerQuery)
     if (index !== -1) {
       return { text: ingredient.name, index }

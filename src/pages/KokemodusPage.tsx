@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
 import { useApp } from '../context/AppContext'
+import { formatScaledAmount, ingredientsForStep } from '../lib/recipeIngredients'
 
 const SWIPE_THRESHOLD = 50
 
@@ -11,6 +12,16 @@ export function KokemodusPage() {
   const { recipes, cookingSession, setCookingSession, loading } = useApp()
 
   const recipe = recipes.find((r) => r.id === id)
+
+  // Porsjonstallet kommer fra oppskriftssiden (?porsjoner=) eller fra den
+  // lagrede kokeøkten ("Fortsett" på forsiden). Ugyldig verdi = ingen skalering.
+  const [searchParams] = useSearchParams()
+  const [servings] = useState<number | null>(() => {
+    const fromUrl = Number(searchParams.get('porsjoner'))
+    if (Number.isFinite(fromUrl) && fromUrl > 0) return fromUrl
+    const fromSession = cookingSession && cookingSession.recipeId === id ? cookingSession.servings : undefined
+    return fromSession != null && Number.isFinite(fromSession) && fromSession > 0 ? fromSession : null
+  })
 
   const [stepIndex, setStepIndex] = useState(() =>
     cookingSession && cookingSession.recipeId === id ? cookingSession.stepIndex : 0
@@ -63,7 +74,7 @@ export function KokemodusPage() {
   // Persist cooking session on every step change.
   useEffect(() => {
     if (!id) return
-    setCookingSession({ recipeId: id, stepIndex })
+    setCookingSession({ recipeId: id, stepIndex, ...(servings != null ? { servings } : {}) })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, stepIndex])
 
@@ -83,10 +94,8 @@ export function KokemodusPage() {
   const isFirstStep = stepIndex === 0
   const isLastStep = stepIndex === totalSteps - 1
 
-  const neededIngredients = recipe.ingredients
-    .filter((i) => !i.isHeading)
-    .filter((i) => currentStep.toLowerCase().includes(i.name.toLowerCase()))
-    .map((i) => i.name)
+  const neededGroups = ingredientsForStep(currentStep, recipe.ingredients)
+  const scaleFactor = servings != null ? servings / (recipe.servings ?? 1) : 1
 
   function goToStep(index: number) {
     setStepIndex(Math.max(0, Math.min(totalSteps - 1, index)))
@@ -165,10 +174,24 @@ export function KokemodusPage() {
         </p>
         <p className="kokemodus-step-text">{currentStep}</p>
 
-        {neededIngredients.length > 0 && (
+        {neededGroups.length > 0 && (
           <div className="kokemodus-need-panel">
             <p className="kokemodus-need-label">Du trenger nå</p>
-            <p className="kokemodus-need-contents">{neededIngredients.join(' · ')}</p>
+            {neededGroups.map((group, groupIndex) => (
+              <div className="kokemodus-need-group" key={groupIndex}>
+                {group.componentName && (
+                  <p className="kokemodus-need-component">{group.componentName}</p>
+                )}
+                <ul className="kokemodus-need-list">
+                  {group.items.map((item, itemIndex) => (
+                    <li key={itemIndex}>
+                      <span>{item.name}</span>
+                      <span className="kokemodus-need-amount">{formatScaledAmount(item, scaleFactor)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
         )}
       </div>

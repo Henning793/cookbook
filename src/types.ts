@@ -2,14 +2,27 @@ export interface IngredientItem {
   amount: number | null
   unit: string
   name: string
-  isHeading?: boolean
+}
+
+// En komponent er en navngitt gruppe ingredienser i en oppskrift, f.eks.
+// "Marinade" eller "Saus". Ingen nøsting, og ingen egne steg.
+export interface RecipeComponent {
+  name: string
+  ingredients: IngredientItem[]
+}
+
+// Lagres som jsonb i recipes.ingredients. Eldre rader er en flat liste med
+// overskriftsrader (isHeading) og tolkes av normalizeIngredients ved lesing.
+export interface RecipeIngredients {
+  loose: IngredientItem[]
+  components: RecipeComponent[]
 }
 
 export interface Recipe {
   id: string
   created_at: string
   title: string
-  ingredients: IngredientItem[]
+  ingredients: RecipeIngredients
   steps: string[]
   image_url: string | null
   owner_id: string
