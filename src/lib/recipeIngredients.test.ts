@@ -116,6 +116,8 @@ const bananbrod: RecipeIngredients = {
   loose: [
     { amount: 3.5, unit: 'dl', name: 'hvetemel' },
     { amount: 2, unit: 'stk', name: 'egg' },
+    { amount: 1.5, unit: 'dl', name: 'nøytral olje' },
+    { amount: 3, unit: 'stk', name: 'modne bananer' },
   ],
   components: [
     {
@@ -172,6 +174,46 @@ test('componentSuggestions matches the start of component names', () => {
     ['Støving av form']
   )
   assert.deepEqual(componentSuggestions('x', bananbrod), [])
+})
+
+test('short or inflected words in the step match the fuller name in the list', () => {
+  assert.deepEqual(summarizeBanan('Sikt melet.'), ['-: 3.5 dl hvetemel'])
+  assert.deepEqual(summarizeBanan('Tilsett oljen i en tynn stråle.'), ['-: 1.5 dl nøytral olje'])
+  assert.deepEqual(summarizeBanan('Mos bananene.'), ['-: 3 stk modne bananer'])
+})
+
+test('a short word matching both a loose ingredient and an unmentioned component goes to the loose one', () => {
+  assert.deepEqual(summarizeBanan('Bland mel og egg.'), ['-: 3.5 dl hvetemel, 2 stk egg'])
+})
+
+test('@component also matches shortened ingredient names', () => {
+  const recipe: RecipeIngredients = {
+    loose: [{ amount: 3, unit: 'dl', name: 'Hvetemel' }],
+    components: [{ name: 'Topping', ingredients: [{ amount: 1, unit: 'dl', name: 'Hvetemel' }, { amount: 50, unit: 'g', name: 'Smør' }] }],
+  }
+  assert.deepEqual(
+    ingredientsForStep('Smuldre mel og smør @Topping', recipe).map((g) => `${g.componentName}: ${g.items.map((i) => i.name).join(', ')}`),
+    ['Topping: Hvetemel, Smør']
+  )
+})
+
+test('an exact name wins over a looser match for the same word', () => {
+  const recipe: RecipeIngredients = {
+    loose: [
+      { amount: 2, unit: 'ts', name: 'vaniljesukker' },
+      { amount: 3, unit: 'dl', name: 'sukker' },
+    ],
+    components: [],
+  }
+  assert.deepEqual(
+    ingredientsForStep('Pisk sukker og egg.', recipe).flatMap((g) => g.items.map((i) => i.name)),
+    ['sukker']
+  )
+})
+
+test('common short words do not match ingredient endings', () => {
+  // "med" er slutten av ingen ingrediens her, men "den" ville truffet f.eks. "ruccoladen" uten stoppord.
+  assert.deepEqual(summarizeBanan('Stek den i ovnen med lokk.'), [])
 })
 
 test('formatScaledAmount scales, rounds to one decimal and uses comma', () => {
