@@ -7,6 +7,7 @@ import { RecipeForm, type RecipeFormValues } from '../components/RecipeForm'
 import { DelTilFamilieDialog } from '../components/DelTilFamilieDialog'
 import { canEditRecipe, isSharedIn } from '../lib/recipePermissions'
 import { getFamilyName } from '../lib/families'
+import { StepText } from '../components/StepText'
 
 const TAG_TINTS = [
   { bg: 'var(--color-accent-100)', text: 'var(--color-accent-700)' },
@@ -280,7 +281,9 @@ export function OppskriftPage() {
         {recipe.steps.map((step, index) => (
           <li key={index} className="oppskrift-step-row">
             <span className="oppskrift-step-badge">{index + 1}</span>
-            <span className="oppskrift-step-text">{step}</span>
+            <span className="oppskrift-step-text">
+              <StepText text={step} ingredients={recipe.ingredients} />
+            </span>
           </li>
         ))}
       </ol>
