@@ -3,12 +3,16 @@ import assert from 'node:assert/strict'
 import { aggregateIngredients } from './shoppingAggregate.ts'
 import type { MenuDay, Recipe } from '../types.ts'
 
-function recipe(id: string, ingredients: Recipe['ingredients']): Recipe {
+function recipe(
+  id: string,
+  loose: Recipe['ingredients']['loose'],
+  components: Recipe['ingredients']['components'] = []
+): Recipe {
   return {
     id,
     created_at: '',
     title: id,
-    ingredients,
+    ingredients: { loose, components },
     steps: [],
     image_url: null,
     owner_id: 'u1',
@@ -63,12 +67,13 @@ test('treats differently-worded names as separate rows', () => {
   assert.equal(result.length, 2)
 })
 
-test('excludes heading rows and freetext days', () => {
+test('flattens component ingredients into the list and skips freetext days', () => {
   const recipes = [
-    recipe('r1', [
-      { amount: null, unit: '', name: 'Til sausen', isHeading: true },
-      { amount: 1, unit: 'stk', name: 'Løk' },
-    ]),
+    recipe(
+      'r1',
+      [{ amount: 1, unit: 'stk', name: 'Løk' }],
+      [{ name: 'Sausen', ingredients: [{ amount: 2, unit: 'stk', name: 'løk' }] }]
+    ),
   ]
   const days: MenuDay[] = [
     menuDay(0, 'r1'),
@@ -86,6 +91,7 @@ test('excludes heading rows and freetext days', () => {
   const result = aggregateIngredients(days, recipes)
   assert.equal(result.length, 1)
   assert.equal(result[0].normalizedName, 'løk')
+  assert.equal(result[0].amount, 3)
 })
 
 test('same recipe on multiple days is counted once per day (not deduplicated)', () => {

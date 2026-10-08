@@ -1,0 +1,49 @@
+/* Komponenter i oppskrifter (marinade, saus osv.): redigeringsskjema og kokemodus. */
+
+.component-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 10px;
+  background: var(--color-surface);
+  border-radius: 10px;
+}
+
+.component-card-header {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.kokemodus-need-group {
+  margin-top: 12px;
+}
+
+.kokemodus-need-component {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  opacity: 0.8;
+}
+
+.kokemodus-need-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 17px;
+  line-height: 1.5;
+}
+
+.kokemodus-need-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.kokemodus-need-amount {
+  white-space: nowrap;
+  opacity: 0.75;
+}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ChevronLeft, Pencil, Share2 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
@@ -248,22 +248,31 @@ export function OppskriftPage() {
 
       <h2 className="section-kicker">Ingredienser</h2>
       <ul className="oppskrift-ingredients">
-        {recipe.ingredients.map((ingredient, index) =>
-          ingredient.isHeading ? (
-            <li key={index} className="oppskrift-ingredient-heading">
-              {ingredient.name}
-            </li>
-          ) : (
-            <li key={index} className="oppskrift-ingredient-row">
-              <span>{ingredient.name}</span>
-              {ingredient.amount != null && (
-                <span className="oppskrift-ingredient-amount">
-                  {formatNumber(Math.round(ingredient.amount * scaleFactor * 10) / 10)} {ingredient.unit}
-                </span>
-              )}
-            </li>
-          )
-        )}
+        {recipe.ingredients.loose.map((ingredient, index) => (
+          <li key={`l${index}`} className="oppskrift-ingredient-row">
+            <span>{ingredient.name}</span>
+            {ingredient.amount != null && (
+              <span className="oppskrift-ingredient-amount">
+                {formatNumber(Math.round(ingredient.amount * scaleFactor * 10) / 10)} {ingredient.unit}
+              </span>
+            )}
+          </li>
+        ))}
+        {recipe.ingredients.components.map((component, componentIndex) => (
+          <Fragment key={`c${componentIndex}`}>
+            <li className="oppskrift-ingredient-heading">{component.name}</li>
+            {component.ingredients.map((ingredient, index) => (
+              <li key={index} className="oppskrift-ingredient-row">
+                <span>{ingredient.name}</span>
+                {ingredient.amount != null && (
+                  <span className="oppskrift-ingredient-amount">
+                    {formatNumber(Math.round(ingredient.amount * scaleFactor * 10) / 10)} {ingredient.unit}
+                  </span>
+                )}
+              </li>
+            ))}
+          </Fragment>
+        ))}
       </ul>
 
       <h2 className="section-kicker section-kicker-steps">Fremgangsmåte</h2>
@@ -281,7 +290,13 @@ export function OppskriftPage() {
           type="button"
           className="cta-button"
           disabled={recipe.steps.length === 0}
-          onClick={() => navigate(`/oppskrift/${recipe.id}/kok`)}
+          onClick={() =>
+            // Valgt antall porsjoner følger med inn i kokemodus, slik at mengdene der er skalert.
+            navigate(
+              `/oppskrift/${recipe.id}/kok` +
+                (Number.isFinite(parsedTarget) && parsedTarget > 0 ? `?porsjoner=${parsedTarget}` : '')
+            )
+          }
         >
           Start kokemodus
         </button>

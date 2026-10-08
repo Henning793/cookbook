@@ -1,4 +1,5 @@
 import type { MenuDay, Recipe } from '../types.ts'
+import { allIngredients } from './recipeIngredients.ts'
 
 export interface AggregatedIngredient {
   normalizedName: string
@@ -22,7 +23,8 @@ export function ingredientKey(normalizedName: string, unit: string): string {
 
 // Summerer ingredienser fra alle oppskrift-dager i menuDays (kun
 // entry_type 'recipe' — fritekst-dager bidrar ikke). Matcher kun rader med
-// samme normalisert navn OG samme enhet; isHeading-rader ekskluderes.
+// samme normalisert navn OG samme enhet. Komponenter flates ut: ingrediensene
+// i f.eks. en marinade summeres med løse ingredienser som alle andre.
 // Ingen porsjons-skalering — mengder brukes as-is uansett recipes.servings.
 // Ren funksjon (ingen supabase-import) slik at den kan enhetstestes med
 // vanlig `node --test`, uten Vite sin import.meta.env.
@@ -35,8 +37,7 @@ export function aggregateIngredients(menuDays: MenuDay[], recipes: Recipe[]): Ag
     const recipe = recipesById.get(day.recipe_id)
     if (!recipe) continue
 
-    for (const ingredient of recipe.ingredients) {
-      if (ingredient.isHeading) continue
+    for (const ingredient of allIngredients(recipe.ingredients)) {
       const normalizedName = normalize(ingredient.name)
       const unit = ingredient.unit
       const key = ingredientKey(normalizedName, unit)

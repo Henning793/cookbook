@@ -11,6 +11,7 @@ import {
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabaseClient'
 import { TAGS } from '../lib/tags'
+import { normalizeIngredients } from '../lib/recipeIngredients'
 import { getMyMembership, getMyFamily, listMembers } from '../lib/families'
 import { listIncomingShares, listOutgoingShares } from '../lib/shares'
 import type { Family, FamilyMember, FamilyRole, FamilyShare, Profile, Recipe } from '../types'
@@ -23,6 +24,9 @@ interface Filters {
 interface CookingSession {
   recipeId: string
   stepIndex: number
+  // Valgt antall porsjoner fra oppskriftssiden, slik at "Fortsett" på
+  // forsiden viser samme skalerte mengder.
+  servings?: number
 }
 
 interface AppContextValue {
@@ -73,7 +77,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!error && data) {
       // Fallback til [] hvis databasen ikke har fått tags-kolonnen ennå
       // (schema.sql ikke kjørt på nytt), slik at appen ikke krasjer.
-      setRecipes(data.map((recipe) => ({ ...recipe, tags: recipe.tags ?? [] })))
+      // ingredients tolkes av normalizeIngredients, slik at eldre rader (flat
+      // liste med overskrifter) vises som komponenter uten databaseendring.
+      setRecipes(
+        data.map((recipe) => ({
+          ...recipe,
+          tags: recipe.tags ?? [],
+          ingredients: normalizeIngredients(recipe.ingredients),
+        }))
+      )
     }
     setLoading(false)
   }, [])
