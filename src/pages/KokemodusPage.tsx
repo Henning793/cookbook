@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { formatScaledAmount, ingredientsForStep } from '../lib/recipeIngredients'
+import { StepText } from '../components/StepText'
 
 const SWIPE_THRESHOLD = 50
 
@@ -172,7 +173,9 @@ export function KokemodusPage() {
         <p className="kokemodus-step-kicker">
           Steg {stepIndex + 1} av {totalSteps}
         </p>
-        <p className="kokemodus-step-text">{currentStep}</p>
+        <p className="kokemodus-step-text">
+          <StepText text={currentStep} ingredients={recipe.ingredients} />
+        </p>
 
         {neededGroups.length > 0 && (
           <div className="kokemodus-need-panel">

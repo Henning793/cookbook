@@ -80,7 +80,8 @@ function norm(value: string): string {
 
 // Treffer navnet bare i begynnelsen av et ord, slik at "marinaden" treffer
 // komponenten "Marinade" mens "soyasaus" ikke treffer komponenten "Saus".
-function mentionsComponent(textLower: string, name: string): boolean {
+// Gjelder også ingrediensnavn, så "hvetemel" ikke treffer ingrediensen "Mel".
+function mentionsAtWordStart(textLower: string, name: string): boolean {
   const needle = norm(name)
   if (!needle) return false
   let from = 0
@@ -92,10 +93,66 @@ function mentionsComponent(textLower: string, name: string): boolean {
   }
 }
 
-// Ingrediensnavn matches som før: nevnt hvor som helst i stegteksten.
-function isNamed(textLower: string, name: string): boolean {
-  const needle = norm(name)
-  return needle !== '' && textLower.includes(needle)
+// Koblinger i stegtekst: "@Komponent", f.eks. "støv formen med mel fra
+// @Støving av form". Teksten forblir en vanlig streng, så det trengs ingen
+// skjemaendring. Lengste navn vinner, så "@Saus til servering" ikke tolkes
+// som "@Saus" når begge finnes.
+export type StepSegment = { text: string; component: RecipeComponent | null }
+
+function isWordChar(char: string | undefined): boolean {
+  return char !== undefined && /[\p{L}\p{N}]/u.test(char)
+}
+
+function componentAt(stepText: string, index: number, ingredients: RecipeIngredients): RecipeComponent | null {
+  const rest = stepText.slice(index).toLowerCase()
+  let best: RecipeComponent | null = null
+  for (const component of ingredients.components) {
+    const name = norm(component.name)
+    if (!name || !rest.startsWith(name) || isWordChar(rest[name.length])) continue
+    if (!best || name.length > norm(best.name).length) best = component
+  }
+  return best
+}
+
+// Deler stegteksten i vanlig tekst og @-koblinger. Ukjente @-ord blir
+// stående som tekst.
+export function parseStep(stepText: string, ingredients: RecipeIngredients): StepSegment[] {
+  const segments: StepSegment[] = []
+  let last = 0
+  let at = stepText.indexOf('@')
+  while (at !== -1) {
+    const component = isWordChar(stepText[at - 1]) ? null : componentAt(stepText, at + 1, ingredients)
+    if (component) {
+      if (at > last) segments.push({ text: stepText.slice(last, at), component: null })
+      const end = at + 1 + component.name.trim().length
+      segments.push({ text: stepText.slice(at + 1, end), component })
+      last = end
+    }
+    at = stepText.indexOf('@', component ? last : at + 1)
+  }
+  if (last < stepText.length) segments.push({ text: stepText.slice(last), component: null })
+  return segments
+}
+
+// Stegteksten slik den leses: @-koblinger er bare for kokemodus og fjernes,
+// sammen med mellomrommet de etterlater.
+export function stepDisplayText(stepText: string, ingredients: RecipeIngredients): string {
+  return parseStep(stepText, ingredients)
+    .filter((s) => !s.component)
+    .map((s) => s.text)
+    .join('')
+    .replace(/\(\s*\)/g, '')
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/ +([.,;:!?)])/g, '$1')
+    .replace(/\( +/g, '(')
+    .trim()
+}
+
+// Forslag til autocomplete: komponenter der navnet begynner med det som er
+// skrevet etter "@".
+export function componentSuggestions(query: string, ingredients: RecipeIngredients): RecipeComponent[] {
+  const q = query.toLowerCase().trimStart()
+  return ingredients.components.filter((c) => norm(c.name) !== '' && norm(c.name).startsWith(q))
 }
 
 export interface StepIngredientGroup {
@@ -104,7 +161,10 @@ export interface StepIngredientGroup {
   items: IngredientItem[]
 }
 
-// Finner hva kokemodus skal vise under "Du trenger nå" for ett steg:
+// Finner hva kokemodus skal vise under "Du trenger nå" for ett steg.
+// Har steget @-koblinger, hentes ingrediensene bare fra de koblede
+// komponentene: de som er nevnt ved navn i teksten, eller hele komponenten
+// hvis ingen er nevnt. Løse ingredienser vises da ikke. Ellers gjettes det:
 // 1. Nevner steget en komponent, vises ingrediensene fra den som steget
 //    også nevner ved navn. Nevner det ingen av dem, vises alle i komponenten.
 // 2. Ingrediensnavn i teksten vises fra de løse ingrediensene. Har en
@@ -113,21 +173,35 @@ export interface StepIngredientGroup {
 //    vises den likevel (under komponentnavnet).
 // Rekkefølge: løse først, så komponentene i oppskriftens rekkefølge.
 export function ingredientsForStep(stepText: string, ingredients: RecipeIngredients): StepIngredientGroup[] {
+  const segments = parseStep(stepText, ingredients)
+  const linked = new Set(segments.flatMap((s) => (s.component ? [s.component] : [])))
+  if (linked.size > 0) {
+    // Komponentnavnet selv skal ikke telle som at en ingrediens er nevnt.
+    const plain = segments.filter((s) => !s.component).map((s) => s.text).join(' ').toLowerCase()
+    return ingredients.components
+      .filter((c) => linked.has(c))
+      .map((c) => {
+        const named = c.ingredients.filter((i) => mentionsAtWordStart(plain, i.name))
+        return { componentName: c.name, items: named.length > 0 ? named : c.ingredients }
+      })
+      .filter((g) => g.items.length > 0)
+  }
+
   const text = stepText.toLowerCase()
 
   const mentioned = new Map<RecipeComponent, IngredientItem[]>()
   const shownInMentioned = new Set<string>()
 
   for (const component of ingredients.components) {
-    if (!mentionsComponent(text, component.name)) continue
-    const named = component.ingredients.filter((i) => isNamed(text, i.name))
+    if (!mentionsAtWordStart(text, component.name)) continue
+    const named = component.ingredients.filter((i) => mentionsAtWordStart(text, i.name))
     const items = named.length > 0 ? named : component.ingredients
     mentioned.set(component, items)
     for (const item of items) shownInMentioned.add(norm(item.name))
   }
 
   const looseItems = ingredients.loose.filter(
-    (i) => isNamed(text, i.name) && !shownInMentioned.has(norm(i.name))
+    (i) => mentionsAtWordStart(text, i.name) && !shownInMentioned.has(norm(i.name))
   )
 
   const handled = new Set([...shownInMentioned, ...looseItems.map((i) => norm(i.name))])
@@ -138,7 +212,7 @@ export function ingredientsForStep(stepText: string, ingredients: RecipeIngredie
   for (const component of ingredients.components) {
     const items = mentioned.has(component)
       ? mentioned.get(component)!
-      : component.ingredients.filter((i) => isNamed(text, i.name) && !handled.has(norm(i.name)))
+      : component.ingredients.filter((i) => mentionsAtWordStart(text, i.name) && !handled.has(norm(i.name)))
     if (items.length > 0) groups.push({ componentName: component.name, items })
   }
 

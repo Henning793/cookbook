@@ -5,6 +5,8 @@ import {
   formatScaledAmount,
   ingredientsForStep,
   normalizeIngredients,
+  stepDisplayText,
+  componentSuggestions,
 } from './recipeIngredients.ts'
 import type { RecipeIngredients } from '../types.ts'
 
@@ -108,6 +110,68 @@ test('component mentioned in inflected form', () => {
 
 test('step with nothing relevant gives no groups', () => {
   assert.deepEqual(summarize('Stek i ovnen i 20 minutter.'), [])
+})
+
+const bananbrod: RecipeIngredients = {
+  loose: [
+    { amount: 3.5, unit: 'dl', name: 'hvetemel' },
+    { amount: 2, unit: 'stk', name: 'egg' },
+  ],
+  components: [
+    {
+      name: 'Støving av form',
+      ingredients: [
+        { amount: 2, unit: 'ss', name: 'Smør' },
+        { amount: 2, unit: 'ss', name: 'Mel' },
+      ],
+    },
+  ],
+}
+
+function summarizeBanan(stepText: string): string[] {
+  return ingredientsForStep(stepText, bananbrod).map(
+    (g) => `${g.componentName ?? '-'}: ${g.items.map((i) => `${i.amount} ${i.unit} ${i.name}`).join(', ')}`
+  )
+}
+
+test('ingredient names only match at the start of a word ("hvetemel" is not "Mel")', () => {
+  assert.deepEqual(summarizeBanan('Støv formen med hvetemel.'), ['-: 3.5 dl hvetemel'])
+})
+
+test('@component: only ingredients named in the step, taken from that component', () => {
+  assert.deepEqual(summarizeBanan('Smør formen og støv den med mel fra @Støving av form.'), [
+    'Støving av form: 2 ss Smør, 2 ss Mel',
+  ])
+  assert.deepEqual(summarizeBanan('Støv formen med mel (@støving av form).'), ['Støving av form: 2 ss Mel'])
+})
+
+test('@component with no ingredient named shows the whole component, never loose items', () => {
+  assert.deepEqual(summarizeBanan('Gjør klar @Støving av form og pisk egg.'), [
+    'Støving av form: 2 ss Smør, 2 ss Mel',
+  ])
+})
+
+test('unknown @ words are plain text and fall back to guessing', () => {
+  assert.deepEqual(summarizeBanan('Bland @noe og egg.'), ['-: 2 stk egg'])
+})
+
+test('stepDisplayText hides links but keeps unknown @ words', () => {
+  assert.equal(
+    stepDisplayText('Bland sammen ingrediensene til marinaden. @Støving av form', bananbrod),
+    'Bland sammen ingrediensene til marinaden.'
+  )
+  assert.equal(stepDisplayText('Støv den med mel @Støving av form. @ukjent', bananbrod), 'Støv den med mel. @ukjent')
+  assert.equal(stepDisplayText('Støv med mel (@Støving av form).', bananbrod), 'Støv med mel.')
+  // Midt i et ord (f.eks. en e-postadresse) er @ ikke en kobling.
+  assert.equal(stepDisplayText('ola@Støving av form', bananbrod), 'ola@Støving av form')
+})
+
+test('componentSuggestions matches the start of component names', () => {
+  assert.deepEqual(
+    componentSuggestions('stø', bananbrod).map((c) => c.name),
+    ['Støving av form']
+  )
+  assert.deepEqual(componentSuggestions('x', bananbrod), [])
 })
 
 test('formatScaledAmount scales, rounds to one decimal and uses comma', () => {

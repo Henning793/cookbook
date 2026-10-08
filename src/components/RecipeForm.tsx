@@ -1,7 +1,8 @@
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { Check, Plus } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { UNITS } from '../lib/units'
+import { componentSuggestions } from '../lib/recipeIngredients'
 import { CustomUnitDialog } from './CustomUnitDialog'
 import type { IngredientItem, RecipeIngredients } from '../types'
 
@@ -118,6 +119,10 @@ export function RecipeForm({
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const stepRefs = useRef<(HTMLTextAreaElement | null)[]>([])
+  // Åpen @-autocomplete: hvilket steg, hvor "@" står og hva som er skrevet etter.
+  const [mention, setMention] = useState<{ step: number; start: number; end: number; query: string } | null>(null)
+  const [mentionActive, setMentionActive] = useState(0)
   const [customUnitTarget, setCustomUnitTarget] = useState<{ group: number; row: number } | null>(null)
 
   const tagOptions = [...new Set([...availableTags, ...customTagOptions])]
@@ -181,6 +186,54 @@ export function RecipeForm({
 
   function updateStep(index: number, value: string) {
     setSteps((current) => current.map((step, i) => (i === index ? value : step)))
+  }
+
+  // Ser etter et "@" foran markøren (først i et ord, samme linje) og åpner
+  // autocomplete med komponentene som begynner med det som er skrevet.
+  function detectMention(index: number, text: string, caret: number) {
+    const before = text.slice(0, caret)
+    const at = before.lastIndexOf('@')
+    const query = at === -1 ? '' : before.slice(at + 1)
+    const startsWord = at === 0 || (at > 0 && !/[\p{L}\p{N}]/u.test(before[at - 1]))
+    if (at === -1 || !startsWord || query.includes('\n') || query.length > 40) {
+      setMention(null)
+      return
+    }
+    setMention((current) => {
+      if (!current || current.step !== index || current.start !== at) setMentionActive(0)
+      return { step: index, start: at, end: caret, query }
+    })
+  }
+
+  function chooseMention(index: number, name: string) {
+    if (!mention) return
+    const current = steps[index] ?? ''
+    const after = current.slice(mention.end)
+    const inserted = '@' + name + (after === '' || /^[\s.,;:!?)]/.test(after) ? '' : ' ')
+    const next = current.slice(0, mention.start) + inserted + (after === '' ? ' ' : after)
+    updateStep(index, next)
+    setMention(null)
+    const caret = mention.start + inserted.length + (after === '' ? 1 : 0)
+    const textarea = stepRefs.current[index]
+    requestAnimationFrame(() => {
+      textarea?.focus()
+      textarea?.setSelectionRange(caret, caret)
+    })
+  }
+
+  function handleStepKeyDown(index: number, e: KeyboardEvent<HTMLTextAreaElement>) {
+    if (!mention || mention.step !== index || mentionOptions.length === 0) return
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault()
+      const delta = e.key === 'ArrowDown' ? 1 : -1
+      setMentionActive((i) => (i + delta + mentionOptions.length) % mentionOptions.length)
+    } else if (e.key === 'Enter' || e.key === 'Tab') {
+      e.preventDefault()
+      chooseMention(index, mentionOptions[Math.min(mentionActive, mentionOptions.length - 1)])
+    } else if (e.key === 'Escape') {
+      e.preventDefault()
+      setMention(null)
+    }
   }
 
   function addStep() {
@@ -270,6 +323,14 @@ export function RecipeForm({
       setSaving(false)
     }
   }
+
+  const componentNames = groups
+    .slice(1)
+    .map((group) => ({ name: (group.name ?? '').trim(), ingredients: [] }))
+    .filter((component) => component.name !== '')
+  const mentionOptions = mention
+    ? componentSuggestions(mention.query, { loose: [], components: componentNames }).map((c) => c.name)
+    : []
 
   const customUnitRow = customUnitTarget === null ? null : groups[customUnitTarget.group]?.rows[customUnitTarget.row]
 
@@ -454,16 +515,53 @@ export function RecipeForm({
       })}
 
       <label>Fremgangsmåte</label>
+      {componentNames.length > 0 && (
+        <p className="step-mention-hint">
+          Skriv @ for å koble et steg til en komponent. Da hentes ingrediensene bare derfra.
+        </p>
+      )}
       <div className="step-rows">
         {steps.map((step, index) => (
           <div className="step-row" key={index}>
             <span className="step-number">{index + 1}.</span>
-            <textarea
-              required
-              rows={2}
-              value={step}
-              onChange={(e) => updateStep(index, e.target.value)}
-            />
+            <div className="step-input">
+              <textarea
+                required
+                rows={2}
+                value={step}
+                ref={(element) => {
+                  stepRefs.current[index] = element
+                }}
+                onChange={(e) => {
+                  updateStep(index, e.target.value)
+                  detectMention(index, e.target.value, e.target.selectionStart)
+                }}
+                onKeyDown={(e) => handleStepKeyDown(index, e)}
+                onBlur={() => setMention(null)}
+              />
+              {mention?.step === index && mentionOptions.length > 0 && (
+                <ul className="step-mention-list" role="listbox" aria-label="Komponenter">
+                  {mentionOptions.map((name, optionIndex) => (
+                    <li key={name} role="option" aria-selected={optionIndex === mentionActive}>
+                      <button
+                        type="button"
+                        className={
+                          'step-mention-option' +
+                          (optionIndex === mentionActive ? ' step-mention-option-active' : '')
+                        }
+                        // mousedown i stedet for click, så tekstfeltet ikke mister fokus først
+                        onMouseDown={(e) => {
+                          e.preventDefault()
+                          chooseMention(index, name)
+                        }}
+                      >
+                        {name}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
             <div className="row-actions">
               <button
                 type="button"

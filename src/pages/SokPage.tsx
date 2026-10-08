@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronLeft, Search } from 'lucide-react'
 import { useApp } from '../context/AppContext'
-import { allIngredients } from '../lib/recipeIngredients'
+import { allIngredients, stepDisplayText } from '../lib/recipeIngredients'
 import type { Recipe } from '../types'
 
 interface Match {
@@ -25,7 +25,8 @@ function findMatch(recipe: Recipe, query: string): Match | null {
     }
   }
 
-  for (const step of recipe.steps) {
+  for (const rawStep of recipe.steps) {
+    const step = stepDisplayText(rawStep, recipe.ingredients)
     const index = step.toLowerCase().indexOf(lowerQuery)
     if (index !== -1) {
       return { text: step, index }
