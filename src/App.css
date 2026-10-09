@@ -162,6 +162,38 @@
   cursor: not-allowed;
 }
 
+.password-field {
+  position: relative;
+  display: flex;
+}
+
+.login-form .password-field input {
+  flex: 1;
+  min-width: 0;
+  padding-right: 48px;
+}
+
+.login-form .password-field .password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  box-shadow: none;
+  color: var(--color-neutral-700);
+}
+
+.login-form .password-field .password-toggle:hover {
+  color: var(--color-text);
+}
+
 .add-recipe-toggle {
   width: 100%;
   margin-bottom: 24px;
