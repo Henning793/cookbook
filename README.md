@@ -41,14 +41,17 @@ cache, slik at tidligere sette oppskrifter også vises uten nett.
    samling manuelt — det gjør man ved å sette etiketter på oppskriften.
 
    Nye brukere lagd manuelt i Supabase Dashboard får ikke en familie til
-   de logger inn i appen. Ved første innlogging ser de en
-   onboarding-skjerm hvor de kan opprette en ny familiegruppe eller bli
-   med i en eksisterende ved å skrive inn invitasjonskoden fra et
-   familiemedlem. Invitasjonskoden brukes både for å bli medlem av
-   familien og for å dele oppskrifter, samlinger, eller hele familiens
-   bok mellom familier. All familieadministrasjon — medlemmer,
-   invitasjonskode, delinger — skjer via "Familie"-lenken på profilsiden
-   (`/familie`).
+   de logger inn i appen. De kan opprette en ny familiegruppe under
+   "Familie" på profilsiden (`/familie`), eller bli med i en eksisterende
+   ved å åpne en invitasjonslenke fra et familiemedlem.
+
+   Kjør også [`supabase/migration_invitasjonslenker.sql`](supabase/migration_invitasjonslenker.sql).
+   Den legger til invitasjons- og delingslenker som varer i 24 timer:
+   "Inviter" på familiesiden lager en lenke (`/bli-med/<kode>`) man sender
+   på f.eks. SMS, og "Del" på en oppskrift, en samling eller hele boken
+   lager en delingslenke (`/del/<kode>`) som mottakeren godtar. Den gamle
+   faste invitasjonskoden (`families.invite_code`) brukes ikke lenger av
+   appen.
 6. Gå til **Project settings -> API**. Du trenger to verdier derfra:
    - **Project URL**
    - **anon public key**

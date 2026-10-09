@@ -96,3 +96,24 @@ export interface FamilyShare {
   created_at: string
   responded_at: string | null
 }
+
+export interface FamilyInvitePreview {
+  family_id: string
+  family_name: string
+  invited_by: string | null
+  member_count: number
+  already_member: boolean
+  // Satt når man allerede er medlem av en annen familie enn den man inviteres til.
+  current_family_name: string | null
+}
+
+export interface ShareLinkPreview {
+  share_type: ShareType
+  recipe_id: string | null
+  collection_id: string | null
+  title: string | null
+  from_family_name: string
+  shared_by: string | null
+  has_family: boolean
+  own_family: boolean
+}
