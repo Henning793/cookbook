@@ -93,7 +93,7 @@ export function BliMedPage() {
   if (!session) {
     return (
       <div className="page familie-page">
-        <h1 className="oppskrift-title">Du er invitert til en familie</h1>
+        <h1 className="oppskrift-title">Du er invitert til en gruppe</h1>
         <p className="oppskrift-description">
           Logg inn eller opprett konto, så kan du bli med med ett trykk.
         </p>
@@ -148,12 +148,12 @@ export function BliMedPage() {
       <div className="page familie-page">
         <h1 className="oppskrift-title">Bli med i {preview.family_name}</h1>
         <p className="oppskrift-description">
-          Du er allerede medlem av {preview.current_family_name}, og man kan bare være med i én familie om
+          Du er allerede medlem av {preview.current_family_name}, og man kan bare være med i én gruppe om
           gangen. Forlat {preview.current_family_name} først, og åpne invitasjonslenken på nytt.
         </p>
         <div className="familie-footer">
           <button type="button" className="cta-button" onClick={() => navigate('/familie')}>
-            Gå til familien min
+            Gå til gruppen min
           </button>
           <button type="button" className="familie-leave-button" onClick={() => leave('/')}>
             Ikke nå
@@ -170,7 +170,7 @@ export function BliMedPage() {
       <h1 className="oppskrift-title">Bli med i {preview.family_name}</h1>
       <p className="oppskrift-description">
         {preview.invited_by ? `${preview.invited_by} har invitert deg. ` : ''}
-        {others} I en familie deler dere oppskrifter, ukesmeny og handleliste.
+        {others} I en gruppe deler dere oppskrifter, ukesmeny og handleliste.
       </p>
 
       {error && <p className="status-message">{error}</p>}
@@ -189,8 +189,8 @@ export function BliMedPage() {
           <div className="del-dialog-sheet" onClick={(e) => e.stopPropagation()}>
             <h2 className="del-dialog-title">Forkast personlig ukesmeny?</h2>
             <p className="del-dialog-body">
-              Du har en aktiv personlig ukesmeny, handleliste og/eller faste varer. Å bli med i en familie sletter
-              disse (inkludert egne varer) — de erstattes av familiens felles ukesmeny og handleliste.
+              Du har en aktiv personlig ukesmeny, handleliste og/eller faste varer. Å bli med i en gruppe sletter
+              disse (inkludert egne varer) — de erstattes av gruppens felles ukesmeny og handleliste.
               Dette kan ikke angres.
             </p>
             <div className="del-dialog-actions">

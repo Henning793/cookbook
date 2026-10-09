@@ -3,10 +3,10 @@
 Enkel kokebok-app: en nettside du legger som snarvei på telefonens
 hjemskjerm. Alle oppretter sin egen konto (e-post og passord) og kan legge
 til egne oppskrifter med en gang — helt uavhengig av andre. Å bli med i
-eller opprette en familiegruppe er valgfritt, og trengs først når du vil
-dele oppskrifter med noen andre: medlemmer av samme familie ser hverandres
-oppskrifter, og familier kan dele enkeltoppskrifter, samlinger eller hele
-boken med hverandre. Man kan aldri legge til, endre eller slette
+eller opprette en gruppe er valgfritt, og trengs først når du vil
+dele oppskrifter med noen andre: medlemmer av samme gruppe ser hverandres
+oppskrifter, og grupper kan dele enkeltoppskrifter, samlinger eller hele
+kokeboka med hverandre. Man kan aldri legge til, endre eller slette
 oppskrifter som tilhører noen andre.
 
 Bygget med Vite + React + TypeScript, Supabase (database, innlogging,
@@ -28,30 +28,35 @@ cache, slik at tidligere sette oppskrifter også vises uten nett.
    oppskrift-siden når de finnes — ingen skjema i appen lar deg sette dem
    ennå, så dette er trygt å kjøre nå og ta i bruk senere.
 5. Kjør i tillegg innholdet i [`supabase/migration_family_groups.sql`](supabase/migration_family_groups.sql)
-   i samme SQL Editor. Den oppretter tabeller for familiegrupper,
+   i samme SQL Editor. Den oppretter tabeller for grupper,
    invitasjonskoder (8 tegn), roller (admin/medlem), samlinger av
-   oppskrifter, og deling mellom familier. Eksisterende brukere blir
+   oppskrifter, og deling mellom grupper. Eksisterende brukere blir
    automatisk lagt til i en "Default-familie" som admin.
 
    Samlinger opprettes og fylles automatisk fra etikettene på oppskriftene
    (en trigger på `recipes` — se `sync_recipe_tags_to_collections` i samme
-   fil): den første familie-oppskriften med etiketten "Middag" oppretter
+   fil): den første gruppe-oppskriften med etiketten "Middag" oppretter
    samlingen "Middag", og senere oppskrifter med samme etikett i samme
-   familie kobles automatisk til den. Man oppretter eller fyller aldri en
+   gruppe kobles automatisk til den. Man oppretter eller fyller aldri en
    samling manuelt — det gjør man ved å sette etiketter på oppskriften.
 
-   Nye brukere lagd manuelt i Supabase Dashboard får ikke en familie til
-   de logger inn i appen. De kan opprette en ny familiegruppe under
-   "Familie" på profilsiden (`/familie`), eller bli med i en eksisterende
-   ved å åpne en invitasjonslenke fra et familiemedlem.
+   Nye brukere lagd manuelt i Supabase Dashboard får ikke en gruppe til
+   de logger inn i appen. De kan opprette en ny gruppe under
+   "Gruppe" på profilsiden (`/familie`), eller bli med i en eksisterende
+   ved å åpne en invitasjonslenke fra et gruppemedlem.
 
    Kjør også [`supabase/migration_invitasjonslenker.sql`](supabase/migration_invitasjonslenker.sql).
    Den legger til invitasjons- og delingslenker som varer i 24 timer:
    "Inviter" på familiesiden lager en lenke (`/bli-med/<kode>`) man sender
-   på f.eks. SMS, og "Del" på en oppskrift, en samling eller hele boken
+   på f.eks. SMS, og "Del" på en oppskrift, en samling eller hele kokeboka
    lager en delingslenke (`/del/<kode>`) som mottakeren godtar. Den gamle
    faste invitasjonskoden (`families.invite_code`) brukes ikke lenger av
    appen.
+
+   Kjør til slutt [`supabase/migration_gruppe_tekster.sql`](supabase/migration_gruppe_tekster.sql).
+   Appen sier «gruppe» der den før sa «familie», og denne filen bytter ordet
+   i feilmeldingene fra databasefunksjonene. Tabeller, kolonner og
+   funksjoner heter fortsatt `family_*`.
 6. Gå til **Project settings -> API**. Du trenger to verdier derfra:
    - **Project URL**
    - **anon public key**
@@ -101,26 +106,26 @@ Du kan fortsatt opprette brukere manuelt i Supabase Dashboard i stedet for
 Uten en rad i `profiles` vises brukerens oppskrifter i appen med navnet
 "Ukjent".
 
-### Eier- og familie-modellen
+### Eier- og gruppe-modellen
 
-- En oppskrift uten familie (`family_id` er tom) er **personlig** — kun
+- En oppskrift uten gruppe (`family_id` er tom) er **personlig** — kun
   synlig og redigerbar for den som opprettet den.
-- Når en bruker **oppretter eller blir med i en familie**, blir alle deres
-  personlige oppskrifter automatisk med inn i familien og synlige for alle
+- Når en bruker **oppretter eller blir med i en gruppe**, blir alle deres
+  personlige oppskrifter automatisk med inn i gruppen og synlige for alle
   medlemmene (`create_family`/`join_family_by_code` i
   [`supabase/migration_family_groups.sql`](supabase/migration_family_groups.sql)).
   Dette skjer kun i det øyeblikket man blir medlem — oppskrifter man legger
-  til etter det, mens man allerede er medlem, tilhører automatisk familien
+  til etter det, mens man allerede er medlem, tilhører automatisk gruppen
   fra starten av.
-- En oppskrift som tilhører en familie er synlig for alle medlemmer av den
-  familien, men kan fortsatt kun **endres eller slettes** av den som
-  opprettet den (med mindre oppretteren ikke lenger er medlem av familien —
+- En oppskrift som tilhører en gruppe er synlig for alle medlemmer av den
+  gruppen, men kan fortsatt kun **endres eller slettes** av den som
+  opprettet den (med mindre oppretteren ikke lenger er medlem av gruppen —
   da kan alle nåværende medlemmer redigere den i stedet for at den låses).
-- Familie er alltid valgfritt: en innlogget bruker kan legge til, endre og
+- Gruppe er alltid valgfritt: en innlogget bruker kan legge til, endre og
   slette sine egne oppskrifter uten noen gang å opprette eller bli med i en
-  familie. "Familie"-lenken på profilsiden (`/familie`) er der for den som
-  vil opprette eller bli med i en familie senere, for å dele med andre —
-  merk at dette da gjør alle ens egne oppskrifter synlige for hele familien,
+  gruppe. "Gruppe"-lenken på profilsiden (`/familie`) er der for den som
+  vil opprette eller bli med i en gruppe senere, for å dele med andre —
+  merk at dette da gjør alle ens egne oppskrifter synlige for hele gruppen,
   se punktet over.
 - Alt dette håndheves av databasens tilgangsregler (RLS) — ikke bare av
   appens grensesnitt — så det er ikke mulig å omgå ved å prøve seg fram i
@@ -240,7 +245,7 @@ docker exec -i supabase_db_cookingapp psql -U postgres -d postgres -c \
 ```
 
 Gjenta for flere testbrukere (f.eks. `testb@example.com`) hvis du vil
-teste flere familier/deling mellom dem.
+teste flere grupper/deling mellom dem.
 
 **6. Kjør appen og logg inn:**
 

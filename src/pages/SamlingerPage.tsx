@@ -33,7 +33,7 @@ export function SamlingerPage() {
       <p className="oppskrift-description">
         Samlinger følger etikettene dine automatisk — legg en etikett på en oppskrift for å
         plassere den i den tilsvarende samlingen.
-        {!family && ' Uten familie er samlingene dine personlige, kun synlige for deg.'}
+        {!family && ' Uten gruppe er samlingene dine personlige, kun synlige for deg.'}
       </p>
 
       {loading ? (
