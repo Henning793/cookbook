@@ -1,7 +1,7 @@
 import { useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { StepTimerField } from './StepTimerField'
-import { stripTimerMarker, timerOverride, withTimerOverride } from '../lib/stepTimer'
-import { Check, Plus } from 'lucide-react'
+import { guessStepSeconds, stepTimerSeconds, stripTimerMarker, timerOverride, withTimerOverride } from '../lib/stepTimer'
+import { Check, Plus, Timer } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { UNITS } from '../lib/units'
 import { componentSuggestions } from '../lib/recipeIngredients'
@@ -35,6 +35,11 @@ function toItem(row: IngredientRow): IngredientItem {
     unit: row.unit === 'annet' ? row.customUnit.trim() : row.unit,
     name: row.name.trim(),
   }
+}
+
+// Steg med tid viser en brikke (StepTimerField) i stedet for klokkeknappen.
+function hasTimerChip(step: string): boolean {
+  return stepTimerSeconds(step) != null || (timerOverride(step) === null && guessStepSeconds(step) != null)
 }
 
 function moveItem<T>(items: T[], index: number, direction: -1 | 1): T[] {
@@ -125,6 +130,7 @@ export function RecipeForm({
   // Åpen @-autocomplete: hvilket steg, hvor "@" står og hva som er skrevet etter.
   const [mention, setMention] = useState<{ step: number; start: number; end: number; query: string } | null>(null)
   const [mentionActive, setMentionActive] = useState(0)
+  const [openTimer, setOpenTimer] = useState<number | null>(null)
   const [customUnitTarget, setCustomUnitTarget] = useState<{ group: number; row: number } | null>(null)
 
   const tagOptions = [...new Set([...availableTags, ...customTagOptions])]
@@ -568,14 +574,34 @@ export function RecipeForm({
                   ))}
                 </ul>
               )}
-              <StepTimerField step={step} onChange={(minutes) => setStepTimer(index, minutes)} />
+              <StepTimerField
+                step={step}
+                open={openTimer === index}
+                onOpen={() => setOpenTimer(index)}
+                onClose={() => setOpenTimer(null)}
+                onChange={(minutes) => setStepTimer(index, minutes)}
+              />
             </div>
             <div className="row-actions">
+              {!hasTimerChip(step) && (
+                <button
+                  type="button"
+                  className="row-move row-timer"
+                  aria-label="Nedtelling for steget"
+                  aria-expanded={openTimer === index}
+                  onClick={() => setOpenTimer(openTimer === index ? null : index)}
+                >
+                  <Timer size={16} aria-hidden="true" />
+                </button>
+              )}
               <button
                 type="button"
                 className="row-move"
                 aria-label="Flytt steg opp"
-                onClick={() => moveStep(index, -1)}
+                onClick={() => {
+                  setOpenTimer(null)
+                  moveStep(index, -1)
+                }}
                 disabled={index === 0}
               >
                 ↑
@@ -584,7 +610,10 @@ export function RecipeForm({
                 type="button"
                 className="row-move"
                 aria-label="Flytt steg ned"
-                onClick={() => moveStep(index, 1)}
+                onClick={() => {
+                  setOpenTimer(null)
+                  moveStep(index, 1)
+                }}
                 disabled={index === steps.length - 1}
               >
                 ↓
@@ -593,7 +622,10 @@ export function RecipeForm({
                 type="button"
                 className="row-remove"
                 aria-label="Fjern steg"
-                onClick={() => removeStep(index)}
+                onClick={() => {
+                  setOpenTimer(null)
+                  removeStep(index)
+                }}
                 disabled={steps.length === 1}
               >
                 ✕

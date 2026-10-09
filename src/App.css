@@ -2626,3 +2626,56 @@ body.has-timer-tray {
   text-underline-offset: 3px;
   cursor: pointer;
 }
+
+/* Liten brikke under steget når det har en nedtelling, og klokkeknappen
+   ved siden av steg uten tid. */
+.add-recipe-form .step-timer-chip {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  padding: 3px 10px;
+  border: 1px solid var(--color-divider);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-soft);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.add-recipe-form .step-timer-chip-off {
+  border-style: dashed;
+  font-weight: 400;
+}
+
+.add-recipe-form .row-timer {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0;
+  opacity: 0.55;
+}
+
+.add-recipe-form .row-timer:hover {
+  opacity: 1;
+}
+
+.add-recipe-form .step-timer-link {
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  color: var(--color-accent);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.add-recipe-form .row-timer[aria-expanded='true'] {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  opacity: 1;
+}
