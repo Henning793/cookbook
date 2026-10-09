@@ -1,5 +1,5 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import { AppProvider } from './context/AppContext'
+import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom'
+import { AppProvider, useApp } from './context/AppContext'
 import { HjemPage } from './pages/HjemPage'
 import { SamlingPage } from './pages/SamlingPage'
 import { SamlingerPage } from './pages/SamlingerPage'
@@ -12,11 +12,23 @@ import { FamiliePage } from './pages/FamiliePage'
 import { UkesmenyPage } from './pages/UkesmenyPage'
 import { HandlelistePage } from './pages/HandlelistePage'
 import { FasteVarerPage } from './pages/FasteVarerPage'
+import { BliMedPage } from './pages/BliMedPage'
+import { DelingPage } from './pages/DelingPage'
+import { pendingLink } from './lib/inviteLinks'
 import { UpdateBanner } from './components/UpdateBanner'
 import { TimerProvider } from './context/TimerContext'
 import { TimerTray } from './components/CookingTimers'
 import './App.css'
 import './recipe-components.css'
+
+// Forsiden sender en innlogget bruker videre til en invitasjons- eller
+// delingslenke som ble åpnet før innlogging, f.eks. når e-postbekreftelsen
+// etter registrering åpner appen på nytt uten lenken i adressen.
+function Home() {
+  const { session } = useApp()
+  const pending = session ? pendingLink() : null
+  return pending ? <Navigate to={pending} replace /> : <HjemPage />
+}
 
 function App() {
   return (
@@ -26,7 +38,7 @@ function App() {
         <BrowserRouter>
           <TimerTray />
           <Routes>
-            <Route path="/" element={<HjemPage />} />
+            <Route path="/" element={<Home />} />
             <Route path="/samling/:tag" element={<SamlingPage />} />
             <Route path="/samlinger" element={<SamlingerPage />} />
             <Route path="/samlinger/:id" element={<SamlingPage />} />
@@ -39,6 +51,8 @@ function App() {
             <Route path="/ukesmeny" element={<UkesmenyPage />} />
             <Route path="/handleliste" element={<HandlelistePage />} />
             <Route path="/handleliste/faste" element={<FasteVarerPage />} />
+            <Route path="/bli-med/:token" element={<BliMedPage />} />
+            <Route path="/del/:token" element={<DelingPage />} />
             <Route path="*" element={<HjemPage />} />
           </Routes>
         </BrowserRouter>

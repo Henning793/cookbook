@@ -1,18 +1,29 @@
 import { supabase } from './supabaseClient'
-import type { FamilyShare, ShareType } from '../types'
+import type { FamilyShare, ShareLinkPreview, ShareType } from '../types'
 
-export async function startShare(
-  code: string,
+export async function createShareLink(
   shareType: ShareType,
   recipeId: string | null,
   collectionId: string | null
 ): Promise<string> {
-  const { data, error } = await supabase.rpc('start_family_share', {
-    p_code: code,
+  const { data, error } = await supabase.rpc('create_share_link', {
     p_share_type: shareType,
     p_recipe_id: recipeId,
     p_collection_id: collectionId,
   })
+  if (error) throw error
+  return data as string
+}
+
+/** null = lenken er ugyldig eller utløpt. */
+export async function getShareLinkPreview(token: string): Promise<ShareLinkPreview | null> {
+  const { data, error } = await supabase.rpc('share_link_preview', { p_token: token })
+  if (error) throw error
+  return (data as ShareLinkPreview[] | null)?.[0] ?? null
+}
+
+export async function acceptShareLink(token: string): Promise<string> {
+  const { data, error } = await supabase.rpc('accept_share_link', { p_token: token })
   if (error) throw error
   return data as string
 }

@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient'
-import type { Family, FamilyMember } from '../types'
+import type { Family, FamilyInvitePreview, FamilyMember } from '../types'
 
 export async function getMyMembership(): Promise<FamilyMember | null> {
   const { data: userData } = await supabase.auth.getUser()
@@ -36,8 +36,21 @@ export async function createFamily(name: string): Promise<string> {
   return data as string
 }
 
-export async function joinFamilyByCode(code: string): Promise<string> {
-  const { data, error } = await supabase.rpc('join_family_by_code', { p_code: code })
+export async function createFamilyInvite(): Promise<string> {
+  const { data, error } = await supabase.rpc('create_family_invite')
+  if (error) throw error
+  return data as string
+}
+
+/** null = lenken er ugyldig eller utløpt. */
+export async function getFamilyInvitePreview(token: string): Promise<FamilyInvitePreview | null> {
+  const { data, error } = await supabase.rpc('family_invite_preview', { p_token: token })
+  if (error) throw error
+  return (data as FamilyInvitePreview[] | null)?.[0] ?? null
+}
+
+export async function joinFamilyByInvite(token: string): Promise<string> {
+  const { data, error } = await supabase.rpc('join_family_by_invite', { p_token: token })
   if (error) throw error
   return data as string
 }

@@ -7,16 +7,13 @@ import {
   leaveFamily,
   getFamilyName,
   createFamily,
-  joinFamilyByCode,
+  createFamilyInvite,
 } from '../lib/families'
-import { revokeShare, respondToShare } from '../lib/shares'
-import { DelTilFamilieDialog } from '../components/DelTilFamilieDialog'
-import { listMenuDays, resetMenu } from '../lib/menuDays'
-import { deleteAllManualItems, listManualItems } from '../lib/shoppingList'
-import { deleteAllStandingItems, listStandingItems } from '../lib/standingItems'
+import { revokeShare, respondToShare, createShareLink } from '../lib/shares'
+import { DelLenkeDialog } from '../components/DelLenkeDialog'
+import { pendingLink } from '../lib/inviteLinks'
+import { discardPersonalMenuData, hasPersonalMenuData } from '../lib/personalMenuData'
 import type { ShareType } from '../types'
-
-type PendingOnboardingAction = { type: 'create'; name: string } | { type: 'join'; code: string }
 
 function shareTypeLabel(shareType: ShareType): string {
   switch (shareType) {
@@ -45,18 +42,16 @@ export function FamiliePage() {
     reloadFamily,
     reload,
   } = useApp()
-  const [codeCopied, setCodeCopied] = useState(false)
+  const [showInviteDialog, setShowInviteDialog] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showWholeFamilyDialog, setShowWholeFamilyDialog] = useState(false)
   const [familyNames, setFamilyNames] = useState<Record<string, string>>({})
 
-  const [onboardingMode, setOnboardingMode] = useState<'create' | 'join'>('create')
   const [newFamilyName, setNewFamilyName] = useState('')
-  const [joinCode, setJoinCode] = useState('')
   const [onboardingBusy, setOnboardingBusy] = useState(false)
   const [onboardingError, setOnboardingError] = useState<string | null>(null)
-  const [pendingOnboardingAction, setPendingOnboardingAction] = useState<PendingOnboardingAction | null>(null)
+  const [confirmDiscard, setConfirmDiscard] = useState(false)
 
   useEffect(() => {
     const ids = new Set<string>()
@@ -81,62 +76,41 @@ export function FamiliePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [incomingShares, outgoingShares])
 
-  async function hasPersonalMenuData(): Promise<boolean> {
-    const [days, manual, alwaysHome, weekly] = await Promise.all([
-      listMenuDays(null),
-      listManualItems(null),
-      listStandingItems(null, 'always_home'),
-      listStandingItems(null, 'weekly'),
-    ])
-    return days.length > 0 || manual.length > 0 || alwaysHome.length > 0 || weekly.length > 0
-  }
-
-  async function runOnboardingAction(action: PendingOnboardingAction) {
+  async function runCreateFamily() {
     setOnboardingError(null)
     setOnboardingBusy(true)
     try {
-      if (action.type === 'create') {
-        await createFamily(action.name)
-      } else {
-        await joinFamilyByCode(action.code)
-      }
+      await createFamily(newFamilyName.trim())
       // Bli medlem av en familie forkaster en eventuell aktiv personlig
       // ukesmeny/handleliste (inkludert egne varer) i stedet for å slå den
       // sammen med familiens - se advarselsdialogen under.
-      await Promise.all([resetMenu(null), deleteAllManualItems(null), deleteAllStandingItems(null)])
-      // Å opprette/bli med i en familie absorberer også alle våre
-      // personlige oppskrifter inn i den (se create_family/join_family_by_code
-      // i migration_family_groups.sql) - må laste oppskriftene på nytt også,
-      // ikke bare familien, ellers viser UI-et fortsatt den gamle
-      // (personlige) family_id for dem til man laster siden på nytt.
+      await discardPersonalMenuData()
+      // Å opprette en familie absorberer også alle våre personlige
+      // oppskrifter inn i den (se create_family i migration_family_groups.sql)
+      // - må laste oppskriftene på nytt også, ikke bare familien, ellers
+      // viser UI-et fortsatt den gamle (personlige) family_id for dem til
+      // man laster siden på nytt.
       reloadFamily()
       reload()
+      // Kom man hit fra en delingslenke for å opprette en familie å ta imot
+      // delingen i, går man tilbake dit for å godta.
+      const pending = pendingLink()
+      if (pending) navigate(pending, { replace: true })
     } catch (err) {
       setOnboardingError(err instanceof Error ? err.message : 'Noe gikk feil.')
     } finally {
       setOnboardingBusy(false)
-      setPendingOnboardingAction(null)
+      setConfirmDiscard(false)
     }
   }
 
   async function handleCreateFamily(event: React.FormEvent) {
     event.preventDefault()
-    const action: PendingOnboardingAction = { type: 'create', name: newFamilyName.trim() }
     if (await hasPersonalMenuData()) {
-      setPendingOnboardingAction(action)
+      setConfirmDiscard(true)
       return
     }
-    await runOnboardingAction(action)
-  }
-
-  async function handleJoinFamily(event: React.FormEvent) {
-    event.preventDefault()
-    const action: PendingOnboardingAction = { type: 'join', code: joinCode.trim() }
-    if (await hasPersonalMenuData()) {
-      setPendingOnboardingAction(action)
-      return
-    }
-    await runOnboardingAction(action)
+    await runCreateFamily()
   }
 
   if (familyLoading) {
@@ -163,60 +137,29 @@ export function FamiliePage() {
           bruke egne oppskrifter uten å opprette eller bli med i en familie. Familie trengs først
           når du vil dele oppskrifter med andre.
         </p>
+        <p className="oppskrift-description">
+          Vil du bli med i en familie som finnes fra før? Be et medlem sende deg en invitasjonslenke,
+          og åpne den.
+        </p>
 
-        <div className="familie-onboarding-tabs">
-          <button
-            type="button"
-            className={`owner-tab${onboardingMode === 'create' ? ' owner-tab-active' : ''}`}
-            onClick={() => setOnboardingMode('create')}
-            disabled={onboardingMode === 'create'}
-          >
-            Opprett familie
+        <form className="add-recipe-form" onSubmit={handleCreateFamily}>
+          <label htmlFor="familie-navn">Familiens navn</label>
+          <input
+            id="familie-navn"
+            type="text"
+            required
+            value={newFamilyName}
+            onChange={(e) => setNewFamilyName(e.target.value)}
+          />
+          <button type="submit" className="cta-button" disabled={onboardingBusy}>
+            {onboardingBusy ? 'Oppretter...' : 'Opprett familie'}
           </button>
-          <button
-            type="button"
-            className={`owner-tab${onboardingMode === 'join' ? ' owner-tab-active' : ''}`}
-            onClick={() => setOnboardingMode('join')}
-            disabled={onboardingMode === 'join'}
-          >
-            Bli med med kode
-          </button>
-        </div>
-
-        {onboardingMode === 'create' ? (
-          <form className="add-recipe-form" onSubmit={handleCreateFamily}>
-            <label htmlFor="familie-navn">Familiens navn</label>
-            <input
-              id="familie-navn"
-              type="text"
-              required
-              value={newFamilyName}
-              onChange={(e) => setNewFamilyName(e.target.value)}
-            />
-            <button type="submit" className="cta-button" disabled={onboardingBusy}>
-              {onboardingBusy ? 'Oppretter...' : 'Opprett familie'}
-            </button>
-          </form>
-        ) : (
-          <form className="add-recipe-form" onSubmit={handleJoinFamily}>
-            <label htmlFor="familie-kode">Familiekode</label>
-            <input
-              id="familie-kode"
-              type="text"
-              required
-              value={joinCode}
-              onChange={(e) => setJoinCode(e.target.value)}
-            />
-            <button type="submit" className="cta-button" disabled={onboardingBusy}>
-              {onboardingBusy ? 'Blir med...' : 'Bli med i familien'}
-            </button>
-          </form>
-        )}
+        </form>
 
         {onboardingError && <p className="status-message">{onboardingError}</p>}
 
-        {pendingOnboardingAction && (
-          <div className="del-dialog-backdrop" onClick={() => !onboardingBusy && setPendingOnboardingAction(null)}>
+        {confirmDiscard && (
+          <div className="del-dialog-backdrop" onClick={() => !onboardingBusy && setConfirmDiscard(false)}>
             <div className="del-dialog-sheet" onClick={(e) => e.stopPropagation()}>
               <h2 className="del-dialog-title">Forkast personlig ukesmeny?</h2>
               <p className="del-dialog-body">
@@ -228,7 +171,7 @@ export function FamiliePage() {
                 <button
                   type="button"
                   className="del-dialog-cancel"
-                  onClick={() => setPendingOnboardingAction(null)}
+                  onClick={() => setConfirmDiscard(false)}
                   disabled={onboardingBusy}
                 >
                   Avbryt
@@ -237,7 +180,7 @@ export function FamiliePage() {
                   type="button"
                   className="del-dialog-submit"
                   disabled={onboardingBusy}
-                  onClick={() => runOnboardingAction(pendingOnboardingAction)}
+                  onClick={runCreateFamily}
                 >
                   {onboardingBusy ? 'Fortsetter...' : 'Fortsett og forkast'}
                 </button>
@@ -252,17 +195,6 @@ export function FamiliePage() {
   function nameFor(userId: string) {
     return profiles.find((p) => p.id === userId)?.display_name ?? 'Ukjent'
   }
-
-  async function copyCode() {
-    try {
-      await navigator.clipboard.writeText(family!.invite_code)
-      setCodeCopied(true)
-      setTimeout(() => setCodeCopied(false), 1500)
-    } catch {
-      // Utklippstavle utilgjengelig - ingen bekreftelse å vise, men ikke krasj.
-    }
-  }
-
 
   async function handleRemove(userId: string) {
     setBusy(true)
@@ -282,7 +214,7 @@ export function FamiliePage() {
     setError(null)
     try {
       await leaveFamily()
-      // Samme grunn som i handleCreateFamily/handleJoinFamily - hvilke
+      // Samme grunn som i runCreateFamily - hvilke
       // oppskrifter man har tilgang til endrer seg når familiemedlemskapet
       // endrer seg, ikke bare familien selv.
       reloadFamily()
@@ -337,16 +269,13 @@ export function FamiliePage() {
       {error && <p className="status-message">{error}</p>}
 
       <div className="familie-section">
-        <h2 className="section-kicker">Invitasjonskode</h2>
+        <h2 className="section-kicker">Inviter</h2>
         <p className="oppskrift-description">
-          Del denne koden med noen for å invitere dem til familien, eller for å starte en deling med en annen familie.
+          Send en invitasjonslenke til den du vil ha med i familien, for eksempel på SMS.
         </p>
-        <div className="familie-invite-row">
-          <span className="familie-invite-code">{family.invite_code}</span>
-          <button type="button" className="familie-invite-copy" onClick={copyCode}>
-            {codeCopied ? 'Kopiert!' : 'Kopier'}
-          </button>
-        </div>
+        <button type="button" className="cta-button" onClick={() => setShowInviteDialog(true)}>
+          Inviter til {family.name}
+        </button>
       </div>
 
       <div className="familie-section">
@@ -373,12 +302,13 @@ export function FamiliePage() {
         </div>
       </div>
 
+      {/* Delinger godtas nå fra delingslenken. Denne delen vises bare for
+          eventuelle eldre forespørsler som ble sendt med familiekode. */}
+      {incomingShares.some((s) => s.status === 'pending') && (
       <div className="familie-section">
         <h2 className="section-kicker">Innkommende delinger</h2>
         {myRole !== 'admin' ? (
           <p className="status-message">Kun admin kan godta eller avslå delinger.</p>
-        ) : incomingShares.filter((s) => s.status === 'pending').length === 0 ? (
-          <p className="status-message">Ingen ventende forespørsler.</p>
         ) : (
           <div>
             {incomingShares
@@ -411,6 +341,7 @@ export function FamiliePage() {
           </div>
         )}
       </div>
+      )}
 
       <div className="familie-section">
         <h2 className="section-kicker">Utgående delinger</h2>
@@ -424,7 +355,7 @@ export function FamiliePage() {
                 <div className="familie-share-card" key={share.id}>
                   <span>
                     {shareTypeLabel(share.share_type)} til {familyNames[share.to_family_id] ?? '…'} —{' '}
-                    {share.status}
+                    {share.status === 'accepted' ? 'godtatt' : 'venter'}
                   </span>
                   <div className="familie-share-actions">
                     <button
@@ -442,8 +373,26 @@ export function FamiliePage() {
         )}
       </div>
 
+      {showInviteDialog && (
+        <DelLenkeDialog
+          kind="invite"
+          title={`Inviter til ${family.name}`}
+          body="Alle som har lenken kan bli med i familien."
+          shareText={`Bli med i ${family.name} i Kokeboka:`}
+          createToken={createFamilyInvite}
+          onClose={() => setShowInviteDialog(false)}
+        />
+      )}
+
       {showWholeFamilyDialog && (
-        <DelTilFamilieDialog shareType="whole_family" onClose={() => setShowWholeFamilyDialog(false)} />
+        <DelLenkeDialog
+          kind="share"
+          title="Del hele boken"
+          body="Den som åpner lenken og godtar, får se alle oppskriftene og samlingene til familien."
+          shareText={`${family.name} vil dele kokeboka si med deg:`}
+          createToken={() => createShareLink('whole_family', null, null)}
+          onClose={() => setShowWholeFamilyDialog(false)}
+        />
       )}
 
       <div className="familie-footer">

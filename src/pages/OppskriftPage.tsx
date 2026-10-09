@@ -4,7 +4,8 @@ import { ChevronLeft, Pencil, Share2 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useApp } from '../context/AppContext'
 import { RecipeForm, type RecipeFormValues } from '../components/RecipeForm'
-import { DelTilFamilieDialog } from '../components/DelTilFamilieDialog'
+import { DelLenkeDialog } from '../components/DelLenkeDialog'
+import { createShareLink } from '../lib/shares'
 import { canEditRecipe, isSharedIn } from '../lib/recipePermissions'
 import { getFamilyName } from '../lib/families'
 import { StepText } from '../components/StepText'
@@ -185,9 +186,12 @@ export function OppskriftPage() {
       </div>
 
       {showFamilyShareDialog && (
-        <DelTilFamilieDialog
-          shareType="recipe"
-          recipeId={recipe.id}
+        <DelLenkeDialog
+          kind="share"
+          title="Del oppskriften"
+          body="Den som åpner lenken og godtar, får se oppskriften i sin kokebok."
+          shareText={`Jeg vil dele oppskriften «${recipe.title}» med deg:`}
+          createToken={() => createShareLink('recipe', recipe.id, null)}
           onClose={() => setShowFamilyShareDialog(false)}
         />
       )}

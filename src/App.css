@@ -2035,6 +2035,16 @@
   color: var(--color-text);
 }
 
+.del-dialog-link {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--color-neutral-700);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .del-dialog-actions {
   display: flex;
   gap: 10px;

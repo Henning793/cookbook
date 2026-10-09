@@ -4,7 +4,8 @@ import { ChevronLeft, Share2 } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { UNTAGGED_TAG, UNTAGGED_LABEL } from '../lib/tags'
 import { listRecipeIdsInCollection, getCollection } from '../lib/collections'
-import { DelTilFamilieDialog } from '../components/DelTilFamilieDialog'
+import { DelLenkeDialog } from '../components/DelLenkeDialog'
+import { createShareLink } from '../lib/shares'
 import { isSharedIn } from '../lib/recipePermissions'
 import type { Collection } from '../types'
 
@@ -98,9 +99,12 @@ export function SamlingPage() {
         )}
 
         {showFamilyShareDialog && family && collectionId && (
-          <DelTilFamilieDialog
-            shareType="collection"
-            collectionId={collectionId}
+          <DelLenkeDialog
+            kind="share"
+            title="Del samlingen"
+            body="Den som åpner lenken og godtar, får se oppskriftene i samlingen."
+            shareText={`Jeg vil dele samlingen «${collection?.name ?? ''}» med deg:`}
+            createToken={() => createShareLink('collection', null, collectionId)}
             onClose={() => setShowFamilyShareDialog(false)}
           />
         )}
