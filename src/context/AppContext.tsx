@@ -31,6 +31,9 @@ interface CookingSession {
 
 interface AppContextValue {
   session: Session | null
+  // Sann til den lagrede innloggingen er lest, så forsiden ikke rekker å
+  // vise landingssiden til en som allerede er innlogget.
+  sessionLoading: boolean
   recipes: Recipe[]
   profiles: Profile[]
   loading: boolean
@@ -53,15 +56,20 @@ const AppContext = createContext<AppContextValue | null>(null)
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
+  const [sessionLoading, setSessionLoading] = useState(true)
   const [recipes, setRecipes] = useState<Recipe[]>([])
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session))
+    supabase.auth
+      .getSession()
+      .then(({ data }) => setSession(data.session))
+      .finally(() => setSessionLoading(false))
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession)
+      setSessionLoading(false)
     })
 
     return () => listener.subscription.unsubscribe()
@@ -200,6 +208,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const value: AppContextValue = {
     session,
+    sessionLoading,
     recipes,
     profiles,
     loading,

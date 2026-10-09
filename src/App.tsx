@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom'
 import { AppProvider, useApp } from './context/AppContext'
 import { HjemPage } from './pages/HjemPage'
+import { LandingPage } from './pages/LandingPage'
 import { SamlingPage } from './pages/SamlingPage'
 import { SamlingerPage } from './pages/SamlingerPage'
 import { OppskriftPage } from './pages/OppskriftPage'
@@ -21,12 +22,15 @@ import { TimerTray } from './components/CookingTimers'
 import './App.css'
 import './recipe-components.css'
 
-// Forsiden sender en innlogget bruker videre til en invitasjons- eller
-// delingslenke som ble åpnet før innlogging, f.eks. når e-postbekreftelsen
-// etter registrering åpner appen på nytt uten lenken i adressen.
+// Forsiden er en landingsside med innlogging for den som ikke er logget inn.
+// En innlogget bruker sendes videre til en invitasjons- eller delingslenke
+// som ble åpnet før innlogging, f.eks. når e-postbekreftelsen etter
+// registrering åpner appen på nytt uten lenken i adressen.
 function Home() {
-  const { session } = useApp()
-  const pending = session ? pendingLink() : null
+  const { session, sessionLoading } = useApp()
+  if (sessionLoading) return null
+  if (!session) return <LandingPage />
+  const pending = pendingLink()
   return pending ? <Navigate to={pending} replace /> : <HjemPage />
 }
 
@@ -53,7 +57,7 @@ function App() {
             <Route path="/handleliste/faste" element={<FasteVarerPage />} />
             <Route path="/bli-med/:token" element={<BliMedPage />} />
             <Route path="/del/:token" element={<DelingPage />} />
-            <Route path="*" element={<HjemPage />} />
+            <Route path="*" element={<Home />} />
           </Routes>
         </BrowserRouter>
       </TimerProvider>
