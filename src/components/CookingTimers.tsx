@@ -1,14 +1,14 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Bell, Minus, Pause, Play, Plus, X } from 'lucide-react'
+import { Bell, ChevronDown, Minus, Pause, Play, Plus, Timer, X } from 'lucide-react'
 import { useTimers } from '../context/TimerContext'
-import { remainingMs, timerLabel, type CookingTimer } from '../lib/cookingTimers'
+import { remainingMs, timerLabel, timerSummary, type CookingTimer } from '../lib/cookingTimers'
 import { formatClock } from '../lib/stepTimer'
 
 const MINUTE = 60_000
 
 // Én klokke med navn, gjenstående tid og knapper for −1/+1 min, pause og avbryt.
-// "large" brukes på steget i kokemodus, ellers den kompakte varianten i stripen.
+// "large" brukes på steget i kokemodus, ellers den kompakte varianten i klokkelisten.
 export function TimerCard({ timer, large = false, showLabel = true }: { timer: CookingTimer; large?: boolean; showLabel?: boolean }) {
   const { now, pause, resume, adjust, remove } = useTimers()
   const paused = timer.endsAt === null && !timer.ringing
@@ -71,28 +71,98 @@ export function TimerCard({ timer, large = false, showLabel = true }: { timer: C
   )
 }
 
-// Stripe øverst på skjermen med alle klokker som går, så de synes på alle
-// sider. I kokemodus vises de der i stedet (se KokemodusPage).
+// Utenfor kokemodus ligger klokkene bak en rund klokkeknapp nede til venstre,
+// så de aldri dekker tilbakeknappen eller annen navigasjon øverst. Tallet på
+// knappen sier hvor mange som går, og et trykk åpner listen med alle klokkene.
+// Når en klokke ringer, åpnes listen av seg selv så man ser hvilket steg det
+// gjelder. I kokemodus vises klokkene der i stedet (se KokemodusPage).
 export function TimerTray() {
-  const { timers, pushState } = useTimers()
+  const { timers, now, pushState } = useTimers()
   const location = useLocation()
+  const [open, setOpen] = useState(false)
   const inCookingMode = /^\/oppskrift\/[^/]+\/kok$/.test(location.pathname)
   const visible = timers.length > 0 && !inCookingMode
+  const { count, ringing, next } = timerSummary(timers, now)
 
   useEffect(() => {
-    document.body.classList.toggle('has-timer-tray', visible)
-    return () => document.body.classList.remove('has-timer-tray')
+    document.body.classList.toggle('has-timer-button', visible)
+    return () => document.body.classList.remove('has-timer-button')
   }, [visible])
+
+  // Åpne listen når en ny klokke begynner å ringe.
+  const ringingCount = ringing.length
+  const previousRinging = useRef(ringingCount)
+  useEffect(() => {
+    if (ringingCount > previousRinging.current) setOpen(true)
+    previousRinging.current = ringingCount
+  }, [ringingCount])
+
+  useEffect(() => {
+    if (!visible) setOpen(false)
+  }, [visible])
+
+  useEffect(() => {
+    if (!open) return
+    function onKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [open])
 
   if (!visible) return null
 
+  const label =
+    ringingCount > 0
+      ? `Tiden er ute: ${ringing.map(timerLabel).join(', ')}`
+      : count === 1
+        ? 'Én nedtelling går. Vis nedtellingen'
+        : `${count} nedtellinger går. Vis nedtellingene`
+
   return (
-    <div className="timer-tray" aria-label="Nedtellinger">
-      {timers.map((timer) => (
-        <TimerCard key={timer.id} timer={timer} />
-      ))}
-      <PushHint state={pushState} />
-    </div>
+    <>
+      <button
+        type="button"
+        className={'timer-fab' + (ringingCount > 0 ? ' timer-fab-ringing' : '')}
+        onClick={() => setOpen((o) => !o)}
+        aria-label={label}
+        aria-expanded={open}
+        aria-controls="timer-panel"
+      >
+        {ringingCount > 0 ? (
+          <Bell size={24} strokeWidth={2.5} aria-hidden="true" />
+        ) : (
+          <Timer size={24} strokeWidth={2.5} aria-hidden="true" />
+        )}
+        {!open && ringingCount === 0 && next && (
+          <span className="timer-fab-time">{formatClock(remainingMs(next, now))}</span>
+        )}
+        {count > 1 && <span className="timer-fab-badge">{count}</span>}
+      </button>
+
+      {open && (
+        <div className="timer-panel-backdrop" onClick={() => setOpen(false)}>
+          <div
+            id="timer-panel"
+            className="timer-panel"
+            role="dialog"
+            aria-label="Nedtellinger"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="timer-panel-header">
+              <h2>Nedtellinger</h2>
+              <button type="button" className="cooking-timer-button" onClick={() => setOpen(false)} aria-label="Lukk">
+                <ChevronDown size={20} strokeWidth={2.5} aria-hidden="true" />
+              </button>
+            </div>
+            {timers.map((timer) => (
+              <TimerCard key={timer.id} timer={timer} />
+            ))}
+            <PushHint state={pushState} />
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 

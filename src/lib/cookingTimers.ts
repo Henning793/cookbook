@@ -77,6 +77,22 @@ export function markDue(timers: CookingTimer[], now: number): { timers: CookingT
   return { timers: due.length > 0 ? next : timers, due }
 }
 
+// Det klokkeikonet utenfor kokemodus trenger: antall klokker, hvilke som
+// ringer, og den som går ut først (for tiden ved ikonet).
+export function timerSummary(timers: CookingTimer[], now: number): {
+  count: number
+  ringing: CookingTimer[]
+  next: CookingTimer | null
+} {
+  const ringing = timers.filter((t) => t.ringing)
+  let next: CookingTimer | null = null
+  for (const timer of timers) {
+    if (!isRunning(timer)) continue
+    if (next === null || remainingMs(timer, now) < remainingMs(next, now)) next = timer
+  }
+  return { count: timers.length, ringing, next }
+}
+
 // Navnet som vises på klokka og i varselet, så man ser hvilken som ringer.
 export function timerLabel(timer: Pick<CookingTimer, 'stepIndex' | 'stepText'>): string {
   const text = timer.stepText.trim()
