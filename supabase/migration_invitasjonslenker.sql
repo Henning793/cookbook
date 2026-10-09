@@ -282,12 +282,38 @@ begin
 end;
 $$;
 
+-- Mottakerfamilien fjerner noe som er delt med den («Delt med oss» på
+-- familiesiden). Alle medlemmer kan fjerne, på samme måte som alle kan
+-- godta. Avsenderen bruker fortsatt revoke_family_share.
+create or replace function remove_incoming_family_share(p_share_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_to_family_id uuid;
+begin
+  select to_family_id into v_to_family_id from family_shares where id = p_share_id;
+  if v_to_family_id is null or not exists (
+    select 1 from family_members where family_id = v_to_family_id and user_id = auth.uid()
+  ) then
+    raise exception 'Kun mottakerfamilien kan fjerne en deling.';
+  end if;
+
+  update family_shares set status = 'rejected', responded_at = now()
+  where id = p_share_id and status in ('pending', 'accepted');
+end;
+$$;
+
 -- Funksjonene skal bare kunne kalles av innloggede brukere.
 revoke execute on function
   create_family_invite(), family_invite_preview(text), join_family_by_invite(text),
-  create_share_link(text, uuid, uuid), share_link_preview(text), accept_share_link(text)
+  create_share_link(text, uuid, uuid), share_link_preview(text), accept_share_link(text),
+  remove_incoming_family_share(uuid)
 from public, anon;
 grant execute on function
   create_family_invite(), family_invite_preview(text), join_family_by_invite(text),
-  create_share_link(text, uuid, uuid), share_link_preview(text), accept_share_link(text)
+  create_share_link(text, uuid, uuid), share_link_preview(text), accept_share_link(text),
+  remove_incoming_family_share(uuid)
 to authenticated;

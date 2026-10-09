@@ -41,6 +41,12 @@ export async function revokeShare(shareId: string): Promise<void> {
   if (error) throw error
 }
 
+/** Mottakerfamilien fjerner noe som er delt med den. */
+export async function removeIncomingShare(shareId: string): Promise<void> {
+  const { error } = await supabase.rpc('remove_incoming_family_share', { p_share_id: shareId })
+  if (error) throw error
+}
+
 export async function listIncomingShares(familyId: string): Promise<FamilyShare[]> {
   const { data, error } = await supabase
     .from('family_shares')

@@ -9,24 +9,13 @@ import {
   createFamily,
   createFamilyInvite,
 } from '../lib/families'
-import { revokeShare, respondToShare, createShareLink } from '../lib/shares'
+import { revokeShare, respondToShare, createShareLink, removeIncomingShare } from '../lib/shares'
+import { getCollection } from '../lib/collections'
 import { DelLenkeDialog } from '../components/DelLenkeDialog'
 import { pendingLink } from '../lib/inviteLinks'
+import { errorMessage } from '../lib/errorMessage'
 import { discardPersonalMenuData, hasPersonalMenuData } from '../lib/personalMenuData'
-import type { ShareType } from '../types'
-
-function shareTypeLabel(shareType: ShareType): string {
-  switch (shareType) {
-    case 'recipe':
-      return 'Oppskrift'
-    case 'collection':
-      return 'Samling'
-    case 'whole_family':
-      return 'Hele boken'
-    default:
-      return shareType
-  }
-}
+import type { FamilyShare } from '../types'
 
 export function FamiliePage() {
   const navigate = useNavigate()
@@ -37,6 +26,7 @@ export function FamiliePage() {
     myRole,
     profiles,
     session,
+    recipes,
     incomingShares,
     outgoingShares,
     reloadFamily,
@@ -47,6 +37,7 @@ export function FamiliePage() {
   const [error, setError] = useState<string | null>(null)
   const [showWholeFamilyDialog, setShowWholeFamilyDialog] = useState(false)
   const [familyNames, setFamilyNames] = useState<Record<string, string>>({})
+  const [collectionNames, setCollectionNames] = useState<Record<string, string>>({})
 
   const [newFamilyName, setNewFamilyName] = useState('')
   const [onboardingBusy, setOnboardingBusy] = useState(false)
@@ -76,6 +67,47 @@ export function FamiliePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [incomingShares, outgoingShares])
 
+  useEffect(() => {
+    const ids = new Set<string>()
+    for (const share of [...incomingShares, ...outgoingShares]) {
+      if (share.collection_id) ids.add(share.collection_id)
+    }
+    const idsToFetch = [...ids].filter((id) => !(id in collectionNames))
+    if (idsToFetch.length === 0) return
+    let cancelled = false
+    Promise.all(
+      idsToFetch.map((id) =>
+        getCollection(id)
+          .then((collection) => [id, collection?.name ?? ''] as const)
+          .catch(() => [id, ''] as const)
+      )
+    ).then((entries) => {
+      if (cancelled) return
+      setCollectionNames((current) => {
+        const next = { ...current }
+        for (const [id, name] of entries) next[id] = name
+        return next
+      })
+    })
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incomingShares, outgoingShares])
+
+  // Hva en deling gjelder, med navnet på oppskriften eller samlingen når vi kjenner det.
+  function shareLabel(share: FamilyShare): string {
+    if (share.share_type === 'recipe') {
+      const title = recipes.find((r) => r.id === share.recipe_id)?.title
+      return title ? `Oppskriften «${title}»` : 'Oppskrift'
+    }
+    if (share.share_type === 'collection') {
+      const name = share.collection_id ? collectionNames[share.collection_id] : ''
+      return name ? `Samlingen «${name}»` : 'Samling'
+    }
+    return 'Hele boken'
+  }
+
   async function runCreateFamily() {
     setOnboardingError(null)
     setOnboardingBusy(true)
@@ -97,7 +129,7 @@ export function FamiliePage() {
       const pending = pendingLink()
       if (pending) navigate(pending, { replace: true })
     } catch (err) {
-      setOnboardingError(err instanceof Error ? err.message : 'Noe gikk feil.')
+      setOnboardingError(errorMessage(err))
     } finally {
       setOnboardingBusy(false)
       setConfirmDiscard(false)
@@ -203,7 +235,7 @@ export function FamiliePage() {
       await removeMember(family!.id, userId)
       reloadFamily()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Noe gikk feil.')
+      setError(errorMessage(err))
     } finally {
       setBusy(false)
     }
@@ -221,7 +253,7 @@ export function FamiliePage() {
       reload()
       navigate('/')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Noe gikk feil.')
+      setError(errorMessage(err))
     } finally {
       setBusy(false)
     }
@@ -235,7 +267,21 @@ export function FamiliePage() {
       reloadFamily()
       reload()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Noe gikk feil.')
+      setError(errorMessage(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleRemoveIncoming(shareId: string) {
+    setBusy(true)
+    setError(null)
+    try {
+      await removeIncomingShare(shareId)
+      reloadFamily()
+      reload()
+    } catch (err) {
+      setError(errorMessage(err))
     } finally {
       setBusy(false)
     }
@@ -249,7 +295,7 @@ export function FamiliePage() {
       reloadFamily()
       reload()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Noe gikk feil.')
+      setError(errorMessage(err))
     } finally {
       setBusy(false)
     }
@@ -316,7 +362,7 @@ export function FamiliePage() {
               .map((share) => (
                 <div className="familie-share-card" key={share.id}>
                   <span>
-                    {shareTypeLabel(share.share_type)} fra {familyNames[share.from_family_id] ?? '…'}
+                    {shareLabel(share)} fra {familyNames[share.from_family_id] ?? '…'}
                   </span>
                   <div className="familie-share-actions">
                     <button
@@ -344,6 +390,35 @@ export function FamiliePage() {
       )}
 
       <div className="familie-section">
+        <h2 className="section-kicker">Delt med oss</h2>
+        {incomingShares.filter((s) => s.status === 'accepted').length === 0 ? (
+          <p className="status-message">Ingen har delt noe med dere ennå.</p>
+        ) : (
+          <div>
+            {incomingShares
+              .filter((s) => s.status === 'accepted')
+              .map((share) => (
+                <div className="familie-share-card" key={share.id}>
+                  <span>
+                    {shareLabel(share)} fra {familyNames[share.from_family_id] ?? '…'}
+                  </span>
+                  <div className="familie-share-actions">
+                    <button
+                      type="button"
+                      className="familie-share-revoke"
+                      onClick={() => handleRemoveIncoming(share.id)}
+                      disabled={busy}
+                    >
+                      Fjern
+                    </button>
+                  </div>
+                </div>
+              ))}
+          </div>
+        )}
+      </div>
+
+      <div className="familie-section">
         <h2 className="section-kicker">Utgående delinger</h2>
         {outgoingShares.filter((s) => s.status === 'accepted' || s.status === 'pending').length === 0 ? (
           <p className="status-message">Ingen aktive delinger.</p>
@@ -354,7 +429,7 @@ export function FamiliePage() {
               .map((share) => (
                 <div className="familie-share-card" key={share.id}>
                   <span>
-                    {shareTypeLabel(share.share_type)} til {familyNames[share.to_family_id] ?? '…'} —{' '}
+                    {shareLabel(share)} til {familyNames[share.to_family_id] ?? '…'} —{' '}
                     {share.status === 'accepted' ? 'godtatt' : 'venter'}
                   </span>
                   <div className="familie-share-actions">
