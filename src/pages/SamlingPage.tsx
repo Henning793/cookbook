@@ -57,7 +57,7 @@ export function SamlingPage() {
           {canShareCollection && (
             <button type="button" className="nav-link" onClick={() => setShowFamilyShareDialog(true)}>
               <Share2 size={14} strokeWidth={2.75} aria-hidden="true" />
-              Del med en familie
+              Del
             </button>
           )}
         </nav>
