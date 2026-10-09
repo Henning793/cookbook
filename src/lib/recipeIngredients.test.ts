@@ -221,3 +221,12 @@ test('formatScaledAmount scales, rounds to one decimal and uses comma', () => {
   assert.equal(formatScaledAmount({ amount: 3, unit: 'stk', name: 'x' }, 1), '3 stk')
   assert.equal(formatScaledAmount({ amount: null, unit: '', name: 'x' }, 2), '')
 })
+
+test('the hidden timer marker is removed like @-links and does not affect ingredients', () => {
+  const step = 'Pensle med @Saus og la hvile i 20–30 min. {tid:25}'
+  assert.equal(stepDisplayText(step, ingredients), 'Pensle med og la hvile i 20–30 min.')
+  assert.deepEqual(
+    ingredientsForStep(step, ingredients),
+    ingredientsForStep('Pensle med @Saus og la hvile i 20–30 min.', ingredients)
+  )
+})

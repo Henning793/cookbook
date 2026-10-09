@@ -1,0 +1,86 @@
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import {
+  adjustTimer,
+  markDue,
+  parseStoredTimers,
+  pauseTimer,
+  remainingMs,
+  resumeTimer,
+  startTimer,
+  timerLabel,
+} from './cookingTimers.ts'
+
+const MIN = 60_000
+const base = {
+  id: 'a',
+  recipeId: 'r1',
+  recipeTitle: 'Brød',
+  stepIndex: 2,
+  stepText: 'La hvile i 20–30 min.',
+  durationMs: 20 * MIN,
+}
+
+test('a running timer counts down from its end time', () => {
+  const timer = startTimer(base, 1_000)
+  assert.equal(timer.endsAt, 1_000 + 20 * MIN)
+  assert.equal(remainingMs(timer, 1_000 + 5 * MIN), 15 * MIN)
+  assert.equal(remainingMs(timer, 1_000 + 25 * MIN), 0)
+})
+
+test('pause keeps the remaining time and resume sets a new end time', () => {
+  const paused = pauseTimer(startTimer(base, 0), 5 * MIN)
+  assert.equal(paused.endsAt, null)
+  assert.equal(remainingMs(paused, 50 * MIN), 15 * MIN)
+
+  const resumed = resumeTimer(paused, 50 * MIN)
+  assert.equal(resumed.endsAt, 65 * MIN)
+})
+
+test('adjust adds and removes time, never below zero', () => {
+  const timer = startTimer(base, 0)
+  assert.equal(remainingMs(adjustTimer(timer, MIN, 0), 0), 21 * MIN)
+  assert.equal(remainingMs(adjustTimer(timer, -MIN, 0), 0), 19 * MIN)
+  assert.equal(remainingMs(adjustTimer(timer, -30 * MIN, 0), 0), 0)
+
+  const paused = pauseTimer(timer, 10 * MIN)
+  assert.equal(adjustTimer(paused, MIN, 99 * MIN).remainingMs, 11 * MIN)
+})
+
+test('adding time to a ringing timer restarts it', () => {
+  const { timers } = markDue([startTimer(base, 0)], 20 * MIN)
+  const snoozed = adjustTimer(timers[0], MIN, 20 * MIN)
+  assert.equal(snoozed.ringing, false)
+  assert.equal(snoozed.endsAt, 21 * MIN)
+  assert.equal(adjustTimer(timers[0], -MIN, 20 * MIN), timers[0])
+})
+
+test('markDue rings only running timers that have ended', () => {
+  const ended = startTimer(base, 0)
+  const later = startTimer({ ...base, id: 'b', durationMs: 40 * MIN }, 0)
+  const paused = pauseTimer(startTimer({ ...base, id: 'c' }, 0), MIN)
+
+  const first = markDue([ended, later, paused], 20 * MIN)
+  assert.deepEqual(first.due.map((t) => t.id), ['a'])
+  assert.equal(first.timers[0].ringing, true)
+  assert.equal(first.timers[2].ringing, false)
+
+  const again = markDue(first.timers, 21 * MIN)
+  assert.equal(again.due.length, 0)
+  assert.equal(again.timers, first.timers)
+})
+
+test('timerLabel names the step so it is clear which timer rings', () => {
+  assert.equal(timerLabel(base), 'Steg 3: La hvile i 20–30 min.')
+  assert.equal(timerLabel({ stepIndex: 0, stepText: '' }), 'Steg 1')
+  const long = timerLabel({ stepIndex: 0, stepText: 'x'.repeat(80) })
+  assert.ok(long.endsWith('…'))
+  assert.ok(long.length < 60)
+})
+
+test('parseStoredTimers tolerates junk', () => {
+  const timer = startTimer(base, 0)
+  assert.deepEqual(parseStoredTimers(JSON.stringify([timer, { id: 1 }, null])), [timer])
+  assert.deepEqual(parseStoredTimers('ikke json'), [])
+  assert.deepEqual(parseStoredTimers(null), [])
+})

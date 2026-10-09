@@ -1,4 +1,6 @@
 import { useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { StepTimerField } from './StepTimerField'
+import { stripTimerMarker, timerOverride, withTimerOverride } from '../lib/stepTimer'
 import { Check, Plus } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { UNITS } from '../lib/units'
@@ -184,8 +186,13 @@ export function RecipeForm({
     })
   }
 
+  // Tekstfeltet viser steget uten tidsmarkøren; markøren beholdes ved endring.
   function updateStep(index: number, value: string) {
-    setSteps((current) => current.map((step, i) => (i === index ? value : step)))
+    setSteps((current) => current.map((step, i) => (i === index ? withTimerOverride(value, timerOverride(step)) : step)))
+  }
+
+  function setStepTimer(index: number, minutes: number | null | undefined) {
+    setSteps((current) => current.map((step, i) => (i === index ? withTimerOverride(step, minutes) : step)))
   }
 
   // Ser etter et "@" foran markøren (først i et ord, samme linje) og åpner
@@ -207,7 +214,7 @@ export function RecipeForm({
 
   function chooseMention(index: number, name: string) {
     if (!mention) return
-    const current = steps[index] ?? ''
+    const current = stripTimerMarker(steps[index] ?? '')
     const after = current.slice(mention.end)
     const inserted = '@' + name + (after === '' || /^[\s.,;:!?)]/.test(after) ? '' : ' ')
     const next = current.slice(0, mention.start) + inserted + (after === '' ? ' ' : after)
@@ -528,7 +535,7 @@ export function RecipeForm({
               <textarea
                 required
                 rows={2}
-                value={step}
+                value={stripTimerMarker(step)}
                 ref={(element) => {
                   stepRefs.current[index] = element
                 }}
@@ -561,6 +568,7 @@ export function RecipeForm({
                   ))}
                 </ul>
               )}
+              <StepTimerField step={step} onChange={(minutes) => setStepTimer(index, minutes)} />
             </div>
             <div className="row-actions">
               <button

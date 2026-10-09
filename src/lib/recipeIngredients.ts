@@ -1,4 +1,5 @@
 import type { IngredientItem, RecipeComponent, RecipeIngredients } from '../types.ts'
+import { stripTimerMarker } from './stepTimer.ts'
 
 // Ren modul (ingen supabase-/Vite-import) slik at den kan enhetstestes med
 // vanlig `node --test`, på samme måte som shoppingAggregate.ts.
@@ -205,9 +206,10 @@ export function parseStep(stepText: string, ingredients: RecipeIngredients): Ste
 }
 
 // Stegteksten slik den leses: @-koblinger er bare for kokemodus og fjernes,
-// sammen med mellomrommet de etterlater.
+// sammen med mellomrommet de etterlater. Det samme gjelder tidsmarkøren
+// ("{tid:25}") fra redigeringsskjemaet.
 export function stepDisplayText(stepText: string, ingredients: RecipeIngredients): string {
-  return parseStep(stepText, ingredients)
+  return parseStep(stripTimerMarker(stepText), ingredients)
     .filter((s) => !s.component)
     .map((s) => s.text)
     .join('')
@@ -242,7 +244,8 @@ export interface StepIngredientGroup {
 // 3. Finnes en nevnt ingrediens bare inne i en komponent som ikke er nevnt,
 //    vises den likevel (under komponentnavnet).
 // Rekkefølge: løse først, så komponentene i oppskriftens rekkefølge.
-export function ingredientsForStep(stepText: string, ingredients: RecipeIngredients): StepIngredientGroup[] {
+export function ingredientsForStep(rawStepText: string, ingredients: RecipeIngredients): StepIngredientGroup[] {
+  const stepText = stripTimerMarker(rawStepText)
   const segments = parseStep(stepText, ingredients)
   const linked = new Set(segments.flatMap((s) => (s.component ? [s.component] : [])))
   if (linked.size > 0) {
