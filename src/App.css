@@ -2917,3 +2917,34 @@ body.has-timer-button {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+
+/* Landingssiden for den som ikke er logget inn. */
+.landing-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 32px 6px 8px;
+}
+
+.landing-icon {
+  border-radius: 18px;
+  box-shadow: var(--shadow-md);
+  margin-bottom: 16px;
+}
+
+.landing-tagline {
+  font: italic 400 17px/1.35 var(--font-heading);
+  color: var(--color-accent);
+  margin: 8px 0 0;
+  max-width: 280px;
+}
+
+/* Byttet mellom innlogging og registrering er et sekundært valg her. */
+.landing-page .login-form .nav-link {
+  justify-content: center;
+  background: transparent;
+  color: var(--color-accent);
+  border: 1.5px solid var(--color-accent);
+  box-shadow: none;
+}

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Plus, User } from 'lucide-react'
+import { Search, Plus } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { UNTAGGED_TAG, UNTAGGED_LABEL } from '../lib/tags'
 import { collectionIcon } from '../lib/collectionIcon'
@@ -112,7 +112,7 @@ export function HjemPage() {
           aria-label="Profil"
           onClick={() => navigate('/meg')}
         >
-          {session ? initial : <User size={16} strokeWidth={2.75} aria-hidden="true" />}
+          {initial}
         </button>
       </div>
 
@@ -169,7 +169,7 @@ export function HjemPage() {
       {loading ? (
         <p className="status-message">Laster oppskrifter...</p>
       ) : recipes.length === 0 ? (
-        <p className="status-message">Ingen oppskrifter enda. Legg til den første!</p>
+        <p className="status-message">Kokeboka di er tom. Trykk på + for å legge inn en oppskrift.</p>
       ) : (
         <>
           <div className="hjem-section-head">
