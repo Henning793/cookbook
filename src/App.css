@@ -2396,6 +2396,103 @@
   overflow-wrap: anywhere;
 }
 
+/* --- Installer appen (se InstallApp.tsx) --- */
+/* Banneret ligger i sideflyten på forsiden, så det aldri dekker knapper. */
+
+.install-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 10px 4px 10px 12px;
+  border-radius: 14px;
+  background: var(--color-card);
+  border: 1px solid var(--color-line);
+}
+
+.install-banner-icon {
+  flex: none;
+  border-radius: 10px;
+}
+
+.install-banner-title {
+  flex: 1;
+  min-width: 0;
+  font: 600 16px/1.2 var(--font-heading);
+  margin: 0;
+}
+
+.install-banner-cta {
+  flex: none;
+  border: none;
+  border-radius: 999px;
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font: 700 14px var(--font-body);
+  padding: 9px 16px;
+  cursor: pointer;
+}
+
+.install-banner-close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: var(--color-text-soft);
+  cursor: pointer;
+}
+
+/* Arket går helt ned til skjermkanten, så det må gi plass til hjemstreken. */
+.install-guide {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 34px);
+}
+
+.install-guide-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.install-guide-steps li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.install-guide-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  color: var(--color-accent);
+}
+
+.install-guide-icon-text {
+  font: 600 17px var(--font-heading);
+}
+
+.install-guide-url {
+  margin: 0;
+  padding: 13px 18px;
+  border-radius: 999px;
+  background: var(--color-surface);
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
 /* Banner shown when a new app version is waiting (see UpdateBanner.tsx). */
 .update-banner {
   position: fixed;

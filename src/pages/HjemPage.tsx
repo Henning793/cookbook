@@ -13,6 +13,7 @@ import {
   removeAlwaysHome,
 } from '../lib/shoppingList'
 import { listStandingItems } from '../lib/standingItems'
+import { InstallBanner } from '../components/InstallApp'
 import type { MenuDay } from '../types'
 
 // Antall fargevarianter for samlingskort uten bilde (.hjem-collection-cover-N).
@@ -114,6 +115,8 @@ export function HjemPage() {
           {session ? initial : <User size={16} strokeWidth={2.75} aria-hidden="true" />}
         </button>
       </div>
+
+      <InstallBanner />
 
       <div className="search-field" onClick={() => navigate('/sok')}>
         <Search size={15} strokeWidth={2.5} aria-hidden="true" />
