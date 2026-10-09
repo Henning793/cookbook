@@ -5,7 +5,8 @@ import { useApp } from '../context/AppContext'
 import { formatScaledAmount, ingredientsForStep, stepDisplayText } from '../lib/recipeIngredients'
 import { formatDuration, stepTimerSeconds } from '../lib/stepTimer'
 import { useTimers } from '../context/TimerContext'
-import { PushHint, TimerCard } from '../components/CookingTimers'
+import { KokemodusBell, PushHint, TimerCard, TimerPanel, TimerPill } from '../components/CookingTimers'
+import { cookingModeTimers } from '../lib/cookingTimers'
 import { StepText } from '../components/StepText'
 
 const SWIPE_THRESHOLD = 50
@@ -14,7 +15,7 @@ export function KokemodusPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { recipes, cookingSession, setCookingSession, loading } = useApp()
-  const { timers, start: startTimer, pushState } = useTimers()
+  const { timers, now, start: startTimer, pushState } = useTimers()
 
   const recipe = recipes.find((r) => r.id === id)
 
@@ -31,6 +32,7 @@ export function KokemodusPage() {
   const [stepIndex, setStepIndex] = useState(() =>
     cookingSession && cookingSession.recipeId === id ? cookingSession.stepIndex : 0
   )
+  const [timerPanelOpen, setTimerPanelOpen] = useState(false)
   const [wakeLockHeld, setWakeLockHeld] = useState(false)
   const wakeLockSupported = typeof navigator !== 'undefined' && 'wakeLock' in navigator
   const wakeLockRef = useRef<WakeLockSentinel | null>(null)
@@ -103,10 +105,13 @@ export function KokemodusPage() {
   const scaleFactor = servings != null ? servings / (recipe.servings ?? 1) : 1
 
   // Nedtelling: tiden er overstyrt i skjemaet eller gjettet fra stegteksten.
-  // Klokker for andre steg (eller andre oppskrifter) vises øverst.
+  // Klokker for andre steg eller oppskrifter ligger bak bjella øverst. Er det
+  // ett minutt eller mindre igjen, dukker de opp som en pille, og ringer de,
+  // vises de som vanlig kort over steget.
   const stepSeconds = stepTimerSeconds(currentStep)
   const stepTimers = timers.filter((t) => t.recipeId === recipe.id && t.stepIndex === stepIndex)
   const otherTimers = timers.filter((t) => !stepTimers.includes(t))
+  const { ringing: ringingOthers, soon: soonOthers, inBell } = cookingModeTimers(otherTimers, now)
 
   function handleStartTimer(seconds: number) {
     if (!recipe) return
@@ -169,9 +174,12 @@ export function KokemodusPage() {
         >
           Avslutt
         </button>
-        {wakeLockSupported && wakeLockHeld && (
-          <span className="kokemodus-wakelock-label">Skjermen står på</span>
-        )}
+        <div className="kokemodus-nav-right">
+          {wakeLockSupported && wakeLockHeld && (
+            <span className="kokemodus-wakelock-label">Skjermen står på</span>
+          )}
+          <KokemodusBell count={inBell.length} open={timerPanelOpen} onToggle={() => setTimerPanelOpen((o) => !o)} />
+        </div>
       </nav>
 
       <div className="kokemodus-progress">
@@ -186,12 +194,23 @@ export function KokemodusPage() {
         ))}
       </div>
 
-      {otherTimers.length > 0 && (
+      {(ringingOthers.length > 0 || soonOthers.length > 0) && (
         <div className="kokemodus-timers">
-          {otherTimers.map((timer) => (
+          {ringingOthers.map((timer) => (
             <TimerCard key={timer.id} timer={timer} />
           ))}
+          {soonOthers.length > 0 && (
+            <div className="kokemodus-timer-pills">
+              {soonOthers.map((timer) => (
+                <TimerPill key={timer.id} timer={timer} onOpen={() => setTimerPanelOpen(true)} />
+              ))}
+            </div>
+          )}
         </div>
+      )}
+
+      {timerPanelOpen && inBell.length > 0 && (
+        <TimerPanel timers={inBell} pushState={pushState} onClose={() => setTimerPanelOpen(false)} />
       )}
 
       <div

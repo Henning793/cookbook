@@ -93,6 +93,26 @@ export function timerSummary(timers: CookingTimer[], now: number): {
   return { count: timers.length, ringing, next }
 }
 
+// Når en klokke fra et annet steg eller en annen oppskrift har så kort tid
+// igjen, dukker den opp som en pille i kokemodus.
+export const PILL_THRESHOLD_MS = 60_000
+
+// Hvordan klokker som ikke hører til steget man står på, vises i kokemodus:
+// ringende får fullt kort, de som snart er ferdige får en pille (den som går
+// ut først øverst), og alle som ikke ringer ligger bak bjella.
+export function cookingModeTimers(others: CookingTimer[], now: number): {
+  ringing: CookingTimer[]
+  soon: CookingTimer[]
+  inBell: CookingTimer[]
+} {
+  const ringing = others.filter((t) => t.ringing)
+  const soon = others
+    .filter((t) => isRunning(t) && remainingMs(t, now) <= PILL_THRESHOLD_MS)
+    .sort((a, b) => remainingMs(a, now) - remainingMs(b, now))
+  const inBell = others.filter((t) => !t.ringing)
+  return { ringing, soon, inBell }
+}
+
 // Navnet som vises på klokka og i varselet, så man ser hvilken som ringer.
 export function timerLabel(timer: Pick<CookingTimer, 'stepIndex' | 'stepText'>): string {
   const text = timer.stepText.trim()

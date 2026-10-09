@@ -101,15 +101,6 @@ export function TimerTray() {
     if (!visible) setOpen(false)
   }, [visible])
 
-  useEffect(() => {
-    if (!open) return
-    function onKey(event: KeyboardEvent) {
-      if (event.key === 'Escape') setOpen(false)
-    }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [open])
-
   if (!visible) return null
 
   const label =
@@ -140,29 +131,72 @@ export function TimerTray() {
         {count > 1 && <span className="timer-fab-badge">{count}</span>}
       </button>
 
-      {open && (
-        <div className="timer-panel-backdrop" onClick={() => setOpen(false)}>
-          <div
-            id="timer-panel"
-            className="timer-panel"
-            role="dialog"
-            aria-label="Nedtellinger"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="timer-panel-header">
-              <h2>Nedtellinger</h2>
-              <button type="button" className="cooking-timer-button" onClick={() => setOpen(false)} aria-label="Lukk">
-                <ChevronDown size={20} strokeWidth={2.5} aria-hidden="true" />
-              </button>
-            </div>
-            {timers.map((timer) => (
-              <TimerCard key={timer.id} timer={timer} />
-            ))}
-            <PushHint state={pushState} />
-          </div>
-        </div>
-      )}
+      {open && <TimerPanel timers={timers} pushState={pushState} onClose={() => setOpen(false)} />}
     </>
+  )
+}
+
+// Listen med klokker som åpnes fra bjella, både utenfor og i kokemodus.
+export function TimerPanel({ timers, pushState, onClose }: { timers: CookingTimer[]; pushState: string; onClose: () => void }) {
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  return (
+    <div className="timer-panel-backdrop" onClick={onClose}>
+      <div
+        id="timer-panel"
+        className="timer-panel"
+        role="dialog"
+        aria-label="Nedtellinger"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="timer-panel-header">
+          <h2>Nedtellinger</h2>
+          <button type="button" className="cooking-timer-button" onClick={onClose} aria-label="Lukk">
+            <ChevronDown size={20} strokeWidth={2.5} aria-hidden="true" />
+          </button>
+        </div>
+        {timers.map((timer) => (
+          <TimerCard key={timer.id} timer={timer} />
+        ))}
+        <PushHint state={pushState} />
+      </div>
+    </div>
+  )
+}
+
+// I kokemodus ligger klokker fra tidligere steg og andre oppskrifter bak en
+// liten bjelle øverst. Tallet sier hvor mange som går.
+export function KokemodusBell({ count, open, onToggle }: { count: number; open: boolean; onToggle: () => void }) {
+  if (count === 0) return null
+  return (
+    <button
+      type="button"
+      className="kokemodus-bell"
+      onClick={onToggle}
+      aria-label={count === 1 ? 'Én nedtelling går. Vis nedtellingen' : `${count} nedtellinger går. Vis nedtellingene`}
+      aria-expanded={open}
+      aria-controls="timer-panel"
+    >
+      <Bell size={18} strokeWidth={2.5} aria-hidden="true" />
+      {count > 1 && <span className="kokemodus-bell-badge">{count}</span>}
+    </button>
+  )
+}
+
+// Dukker opp i kokemodus når en klokke har ett minutt eller mindre igjen.
+export function TimerPill({ timer, onOpen }: { timer: CookingTimer; onOpen: () => void }) {
+  const { now } = useTimers()
+  return (
+    <button type="button" className="kokemodus-timer-pill" onClick={onOpen} aria-label={`${timer.recipeTitle || timerLabel(timer)}: ${formatClock(remainingMs(timer, now))} igjen. Vis nedtellingene`}>
+      <span className="kokemodus-timer-pill-name">{timer.recipeTitle || `Steg ${timer.stepIndex + 1}`}</span>
+      <span className="kokemodus-timer-pill-clock">{formatClock(remainingMs(timer, now))}</span>
+    </button>
   )
 }
 

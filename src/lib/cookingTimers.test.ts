@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   adjustTimer,
+  cookingModeTimers,
   markDue,
   parseStoredTimers,
   pauseTimer,
@@ -107,4 +108,31 @@ test('the timer button summary lists ringing timers by name', () => {
 
 test('the timer button summary is empty without timers', () => {
   assert.deepEqual(timerSummary([], 0), { count: 0, ringing: [], next: null })
+})
+
+test('cooking mode shows a pill only when a timer has a minute or less left', () => {
+  const far = startTimer({ ...base, id: 'far', durationMs: 19 * MIN }, 0)
+  const close = startTimer({ ...base, id: 'close', stepIndex: 1, durationMs: 90_000 }, 0)
+  const closer = startTimer({ ...base, id: 'closer', stepIndex: 0, durationMs: 70_000 }, 0)
+  const result = cookingModeTimers([far, close, closer], 40_000)
+  assert.deepEqual(result.soon.map((t) => t.id), ['closer', 'close'])
+  assert.deepEqual(result.inBell.map((t) => t.id), ['far', 'close', 'closer'])
+  assert.deepEqual(result.ringing, [])
+})
+
+test('cooking mode moves a ringing timer out of the bell and into its own card', () => {
+  const short = startTimer({ ...base, id: 'short', durationMs: MIN }, 0)
+  const long = startTimer({ ...base, id: 'long', durationMs: 30 * MIN }, 0)
+  const { timers } = markDue([short, long], 2 * MIN)
+  const result = cookingModeTimers(timers, 2 * MIN)
+  assert.deepEqual(result.ringing.map((t) => t.id), ['short'])
+  assert.deepEqual(result.inBell.map((t) => t.id), ['long'])
+  assert.deepEqual(result.soon, [])
+})
+
+test('cooking mode keeps paused timers in the bell but never as a pill', () => {
+  const paused = pauseTimer(startTimer({ ...base, id: 'paused', durationMs: 30_000 }, 0), 0)
+  const result = cookingModeTimers([paused], 5_000)
+  assert.deepEqual(result.soon, [])
+  assert.deepEqual(result.inBell.map((t) => t.id), ['paused'])
 })
