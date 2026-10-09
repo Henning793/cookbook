@@ -230,3 +230,31 @@ test('the hidden timer marker is removed like @-links and does not affect ingred
     ingredientsForStep('Pensle med @Saus og la hvile i 20–30 min.', ingredients)
   )
 })
+
+test('"alle ingrediensene" shows the whole component even when one ingredient is named', () => {
+  const kebab: RecipeIngredients = {
+    loose: [{ amount: 2, unit: 'fedd', name: 'hvitløk' }],
+    components: [
+      {
+        name: 'Kebbabdressing',
+        ingredients: [
+          { amount: 2, unit: 'dl', name: 'rømme' },
+          { amount: 1, unit: 'fedd', name: 'hvitløk' },
+          { amount: 1, unit: 'ts', name: 'paprikapulver' },
+        ],
+      },
+    ],
+  }
+  const names = (step: string) =>
+    ingredientsForStep(step, kebab).map((g) => `${g.componentName ?? '-'}: ${g.items.map((i) => i.name).join(', ')}`)
+  const all = ['Kebbabdressing: rømme, hvitløk, paprikapulver']
+
+  assert.deepEqual(names('Bland sammen alle ingrediensene til dressingen og press i hvitløk. @Kebbabdressing'), all)
+  assert.deepEqual(names('Rør sammen alt og smak til med hvitløk @Kebbabdressing'), all)
+  assert.deepEqual(names('Ha i resten sammen med hvitløken @Kebbabdressing'), all)
+  // Uten kobling, men med komponenten nevnt ved navn.
+  assert.deepEqual(names('Bland ingrediensene til kebbabdressingen, press i hvitløk.'), all)
+  // Uten et slikt ord vises fortsatt bare det som er nevnt.
+  assert.deepEqual(names('Press hvitløk i @Kebbabdressing'), ['Kebbabdressing: hvitløk'])
+  assert.deepEqual(names('Smak til med salt og hvitløk @Kebbabdressing'), ['Kebbabdressing: hvitløk'])
+})

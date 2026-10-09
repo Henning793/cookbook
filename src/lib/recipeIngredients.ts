@@ -170,6 +170,15 @@ function isMentioned(textLower: string, name: string): boolean {
   return exact.length + loose.length > 0
 }
 
+// Ord som betyr at steget gjelder hele komponenten, selv om bare noen av
+// ingrediensene er nevnt ved navn: "Bland sammen alle ingrediensene til
+// dressingen og press i hvitløk" skal vise hele dressingen, ikke bare hvitløk.
+const WHOLE_COMPONENT = /(^|[^\p{L}\p{N}])(ingrediens\p{L}*|alt|resten)(?![\p{L}\p{N}])/u
+
+function meansWholeComponent(textLower: string): boolean {
+  return WHOLE_COMPONENT.test(textLower)
+}
+
 function isWordChar(char: string | undefined): boolean {
   return char !== undefined && /[\p{L}\p{N}]/u.test(char)
 }
@@ -236,9 +245,11 @@ export interface StepIngredientGroup {
 // Finner hva kokemodus skal vise under "Du trenger nå" for ett steg.
 // Har steget @-koblinger, hentes ingrediensene bare fra de koblede
 // komponentene: de som er nevnt ved navn i teksten, eller hele komponenten
-// hvis ingen er nevnt. Løse ingredienser vises da ikke. Ellers gjettes det:
+// hvis ingen er nevnt eller steget sier "ingrediensene", "alt" eller "resten".
+// Løse ingredienser vises da ikke. Ellers gjettes det:
 // 1. Nevner steget en komponent, vises ingrediensene fra den som steget
-//    også nevner ved navn. Nevner det ingen av dem, vises alle i komponenten.
+//    også nevner ved navn. Nevner det ingen av dem, eller sier steget
+//    "ingrediensene", "alt" eller "resten", vises alle i komponenten.
 // 2. Ingrediensnavn i teksten vises fra de løse ingrediensene. Har en
 //    nevnt komponent en ingrediens med samme navn, vinner komponentens.
 // 3. Finnes en nevnt ingrediens bare inne i en komponent som ikke er nevnt,
@@ -251,11 +262,12 @@ export function ingredientsForStep(rawStepText: string, ingredients: RecipeIngre
   if (linked.size > 0) {
     // Komponentnavnet selv skal ikke telle som at en ingrediens er nevnt.
     const plain = segments.filter((s) => !s.component).map((s) => s.text).join(' ').toLowerCase()
+    const whole = meansWholeComponent(plain)
     return ingredients.components
       .filter((c) => linked.has(c))
       .map((c) => {
         const named = c.ingredients.filter((i) => isMentioned(plain, i.name))
-        return { componentName: c.name, items: named.length > 0 ? named : c.ingredients }
+        return { componentName: c.name, items: named.length > 0 && !whole ? named : c.ingredients }
       })
       .filter((g) => g.items.length > 0)
   }
@@ -295,11 +307,12 @@ export function ingredientsForStep(rawStepText: string, ingredients: RecipeIngre
     }
   }
 
+  const whole = meansWholeComponent(text)
   const mentioned = new Map<RecipeComponent, IngredientItem[]>()
   for (const component of ingredients.components) {
     if (!mentionsAtWordStart(text, component.name)) continue
     const named = claim(component.ingredients)
-    mentioned.set(component, named.length > 0 ? named : component.ingredients)
+    mentioned.set(component, named.length > 0 && !whole ? named : component.ingredients)
   }
 
   const groups: StepIngredientGroup[] = []
