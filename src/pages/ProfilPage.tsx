@@ -4,11 +4,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { supabase } from '../lib/supabaseClient'
 import { Login } from '../components/Login'
-
-// vite-plugin-pwa's `beforeinstallprompt` isn't part of lib.dom.d.ts yet.
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>
-}
+import { useInstallApp } from '../components/InstallApp'
 
 const OFFLINE_CACHE_NAME = 'supabase-cache'
 
@@ -17,7 +13,10 @@ export function ProfilPage() {
   const { session, recipes, profiles, availableTags, members } = useApp()
 
   const [offlineCount, setOfflineCount] = useState(0)
-  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null)
+  // Raden «Installer appen» vises bare når appen kjører i en nettleser som
+  // kan installere den (se lib/installApp.ts), også etter at banneret på
+  // forsiden er lukket.
+  const { method: installMethod, install, guide: installGuide } = useInstallApp()
 
   // Best-effort count of recipe images already cached for offline use. Falls
   // back to 0 rather than crashing if the Cache API is unavailable or the
@@ -45,26 +44,6 @@ export function ProfilPage() {
       cancelled = true
     }
   }, [recipes])
-
-  // Capture the install prompt so we can trigger it from our own button.
-  // Never fires on browsers that don't support it (e.g. iOS Safari) or once
-  // the app is already installed, so the row below only renders when we
-  // actually have a captured event.
-  useEffect(() => {
-    function handleBeforeInstallPrompt(event: Event) {
-      event.preventDefault()
-      setInstallPrompt(event as BeforeInstallPromptEvent)
-    }
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
-    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
-  }, [])
-
-  async function handleInstallClick() {
-    if (!installPrompt) return
-    await installPrompt.prompt()
-    setInstallPrompt(null)
-  }
 
   async function handleLogout() {
     await supabase.auth.signOut()
@@ -144,9 +123,9 @@ export function ProfilPage() {
             {offlineCount} av {recipes.length}
           </span>
         </div>
-        {installPrompt && (
-          <button type="button" className="profil-row profil-row-button" onClick={handleInstallClick}>
-            <span>Legg til på hjemskjerm</span>
+        {installMethod !== 'none' && (
+          <button type="button" className="profil-row profil-row-button" onClick={install}>
+            <span>Installer appen</span>
             <span className="profil-row-chevron" aria-hidden="true">
               <ChevronRight size={14} strokeWidth={2.75} />
             </span>
@@ -157,6 +136,8 @@ export function ProfilPage() {
       <button type="button" className="profil-logout" onClick={handleLogout}>
         Logg ut
       </button>
+
+      {installGuide}
     </div>
   )
 }
