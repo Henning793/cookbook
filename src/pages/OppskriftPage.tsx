@@ -23,7 +23,6 @@ export function OppskriftPage() {
 
   const [editing, setEditing] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
-  const [shareCopied, setShareCopied] = useState(false)
   const [showFamilyShareDialog, setShowFamilyShareDialog] = useState(false)
 
   const fromTag = (location.state as { fromTag?: string } | null)?.fromTag
@@ -92,17 +91,6 @@ export function OppskriftPage() {
     if (!error) {
       reload()
       navigate('/')
-    }
-  }
-
-  async function handleShare() {
-    const url = `${window.location.origin}/oppskrift/${recipe!.id}`
-    try {
-      await navigator.clipboard.writeText(url)
-      setShareCopied(true)
-      setTimeout(() => setShareCopied(false), 1500)
-    } catch {
-      // Utklippstavle utilgjengelig - ingen bekreftelse å vise, men ikke krasj.
     }
   }
 
@@ -180,13 +168,10 @@ export function OppskriftPage() {
             <span>{backLabel}</span>
           </button>
           <div className="oppskrift-bar-actions">
-            <button type="button" className="pill-button" onClick={handleShare}>
-              <Share2 size={14} strokeWidth={2.5} aria-hidden="true" />
-              {shareCopied ? 'Kopiert!' : 'Del'}
-            </button>
             {canEdit && recipe.family_id && family && (
               <button type="button" className="pill-button" onClick={() => setShowFamilyShareDialog(true)}>
-                Del med en familie
+                <Share2 size={14} strokeWidth={2.5} aria-hidden="true" />
+                Del
               </button>
             )}
             {canEdit && (

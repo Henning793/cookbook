@@ -1856,22 +1856,6 @@
   margin-top: 2px;
 }
 
-.samling-footer {
-  margin-top: 28px;
-}
-
-.samling-copy-link {
-  width: 100%;
-  border: 1px solid var(--color-neutral-400);
-  border-radius: 999px;
-  background: none;
-  color: var(--color-text);
-  padding: 14px;
-  font-size: 14px;
-  text-align: center;
-  cursor: pointer;
-}
-
 /* --- Familie --- */
 
 .familie-invite-row {

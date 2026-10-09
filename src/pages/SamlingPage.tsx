@@ -25,7 +25,6 @@ export function SamlingPage() {
   const location = useLocation()
   const navigate = useNavigate()
   const { recipes, availableTags, loading, family, session } = useApp()
-  const [shareCopied, setShareCopied] = useState(false)
   const [collectionRecipeIds, setCollectionRecipeIds] = useState<string[] | null>(null)
   const [showFamilyShareDialog, setShowFamilyShareDialog] = useState(false)
   const [collection, setCollection] = useState<Collection | null>(null)
@@ -58,7 +57,7 @@ export function SamlingPage() {
           {canShareCollection && (
             <button type="button" className="nav-link" onClick={() => setShowFamilyShareDialog(true)}>
               <Share2 size={14} strokeWidth={2.75} aria-hidden="true" />
-              Del med en familie
+              Del
             </button>
           )}
         </nav>
@@ -133,27 +132,12 @@ export function SamlingPage() {
     [recipes, tag, isUntagged]
   )
 
-  async function copyShareLink() {
-    const url = `${window.location.origin}/samling/${encodeURIComponent(tag)}`
-    try {
-      await navigator.clipboard.writeText(url)
-      setShareCopied(true)
-      setTimeout(() => setShareCopied(false), 1500)
-    } catch {
-      // Utklippstavle utilgjengelig - ingen bekreftelse å vise, men ikke krasj.
-    }
-  }
-
   return (
     <div className="page samling-page">
       <nav className="nav-bar">
         <button type="button" className="nav-link" onClick={() => navigate('/')}>
           <ChevronLeft size={14} strokeWidth={2.75} aria-hidden="true" />
           Kokeboka
-        </button>
-        <button type="button" className="nav-link" onClick={copyShareLink}>
-          <Share2 size={14} strokeWidth={2.75} aria-hidden="true" />
-          {shareCopied ? 'Kopiert!' : 'Del'}
         </button>
       </nav>
 
@@ -198,12 +182,6 @@ export function SamlingPage() {
           })}
         </div>
       )}
-
-      <div className="samling-footer">
-        <button type="button" className="samling-copy-link" onClick={copyShareLink}>
-          {shareCopied ? 'Kopiert!' : 'Kopier lenke til samlingen'}
-        </button>
-      </div>
     </div>
   )
 }
