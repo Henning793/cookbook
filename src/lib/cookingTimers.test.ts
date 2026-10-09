@@ -9,6 +9,7 @@ import {
   resumeTimer,
   startTimer,
   timerLabel,
+  timerSummary,
 } from './cookingTimers.ts'
 
 const MIN = 60_000
@@ -83,4 +84,27 @@ test('parseStoredTimers tolerates junk', () => {
   assert.deepEqual(parseStoredTimers(JSON.stringify([timer, { id: 1 }, null])), [timer])
   assert.deepEqual(parseStoredTimers('ikke json'), [])
   assert.deepEqual(parseStoredTimers(null), [])
+})
+
+test('the timer button summary counts timers and finds the one ending first', () => {
+  const long = startTimer({ ...base, id: 'long', durationMs: 30 * MIN }, 0)
+  const short = startTimer({ ...base, id: 'short', stepIndex: 0, durationMs: 2 * MIN }, 0)
+  const paused = pauseTimer(startTimer({ ...base, id: 'paused', durationMs: MIN }, 0), 0)
+  const summary = timerSummary([long, short, paused], 10_000)
+  assert.equal(summary.count, 3)
+  assert.equal(summary.next?.id, 'short')
+  assert.deepEqual(summary.ringing, [])
+})
+
+test('the timer button summary lists ringing timers by name', () => {
+  const short = startTimer({ ...base, id: 'short', stepIndex: 0, stepText: 'Fres løk', durationMs: MIN }, 0)
+  const long = startTimer({ ...base, id: 'long', durationMs: 30 * MIN }, 0)
+  const { timers } = markDue([short, long], 2 * MIN)
+  const summary = timerSummary(timers, 2 * MIN)
+  assert.deepEqual(summary.ringing.map(timerLabel), ['Steg 1: Fres løk'])
+  assert.equal(summary.next?.id, 'long')
+})
+
+test('the timer button summary is empty without timers', () => {
+  assert.deepEqual(timerSummary([], 0), { count: 0, ringing: [], next: null })
 })
