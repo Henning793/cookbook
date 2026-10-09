@@ -1,7 +1,7 @@
 import { useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { StepTimerField } from './StepTimerField'
-import { guessStepSeconds, stepTimerSeconds, stripTimerMarker, timerOverride, withTimerOverride } from '../lib/stepTimer'
-import { Check, Plus, Timer } from 'lucide-react'
+import { stripTimerMarker, timerOverride, withTimerOverride } from '../lib/stepTimer'
+import { Check, Plus } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { UNITS } from '../lib/units'
 import { componentSuggestions } from '../lib/recipeIngredients'
@@ -35,11 +35,6 @@ function toItem(row: IngredientRow): IngredientItem {
     unit: row.unit === 'annet' ? row.customUnit.trim() : row.unit,
     name: row.name.trim(),
   }
-}
-
-// Steg med tid viser en brikke (StepTimerField) i stedet for klokkeknappen.
-function hasTimerChip(step: string): boolean {
-  return stepTimerSeconds(step) != null || (timerOverride(step) === null && guessStepSeconds(step) != null)
 }
 
 function moveItem<T>(items: T[], index: number, direction: -1 | 1): T[] {
@@ -583,17 +578,6 @@ export function RecipeForm({
               />
             </div>
             <div className="row-actions">
-              {!hasTimerChip(step) && (
-                <button
-                  type="button"
-                  className="row-move row-timer"
-                  aria-label="Nedtelling for steget"
-                  aria-expanded={openTimer === index}
-                  onClick={() => setOpenTimer(openTimer === index ? null : index)}
-                >
-                  <Timer size={16} aria-hidden="true" />
-                </button>
-              )}
               <button
                 type="button"
                 className="row-move"

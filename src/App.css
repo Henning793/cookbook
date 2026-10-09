@@ -2627,8 +2627,7 @@ body.has-timer-tray {
   cursor: pointer;
 }
 
-/* Liten brikke under steget når det har en nedtelling, og klokkeknappen
-   ved siden av steg uten tid. */
+/* Liten brikke under steget når det har en nedtelling. */
 .add-recipe-form .step-timer-chip {
   align-self: flex-start;
   display: inline-flex;
@@ -2649,18 +2648,6 @@ body.has-timer-tray {
   font-weight: 400;
 }
 
-.add-recipe-form .row-timer {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin-top: 0;
-  opacity: 0.55;
-}
-
-.add-recipe-form .row-timer:hover {
-  opacity: 1;
-}
-
 .add-recipe-form .step-timer-link {
   margin: 0;
   padding: 0;
@@ -2672,10 +2659,4 @@ body.has-timer-tray {
   font-weight: 700;
   text-decoration: underline;
   text-underline-offset: 3px;
-}
-
-.add-recipe-form .row-timer[aria-expanded='true'] {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-  opacity: 1;
 }
