@@ -8,6 +8,7 @@ import { DelTilFamilieDialog } from '../components/DelTilFamilieDialog'
 import { canEditRecipe, isSharedIn } from '../lib/recipePermissions'
 import { getFamilyName } from '../lib/families'
 import { StepText } from '../components/StepText'
+import { FROM_RECIPE_STATE } from '../lib/kokemodusExit'
 import type { IngredientItem } from '../types'
 
 function formatNumber(value: number) {
@@ -267,7 +268,8 @@ export function OppskriftPage() {
             // Valgt antall porsjoner følger med inn i kokemodus, slik at mengdene der er skalert.
             navigate(
               `/oppskrift/${recipe.id}/kok` +
-                (Number.isFinite(parsedTarget) && parsedTarget > 0 ? `?porsjoner=${parsedTarget}` : '')
+                (Number.isFinite(parsedTarget) && parsedTarget > 0 ? `?porsjoner=${parsedTarget}` : ''),
+              { state: FROM_RECIPE_STATE }
             )
           }
         >
