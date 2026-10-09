@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { Login } from '../components/Login'
 import { acceptShareLink, getShareLinkPreview } from '../lib/shares'
+import { errorMessage } from '../lib/errorMessage'
 import { forgetLink, linkPath, rememberLink } from '../lib/inviteLinks'
 import type { ShareLinkPreview } from '../types'
 
@@ -87,7 +88,7 @@ export function DelingPage() {
       reload()
       navigate(destination(preview), { replace: true })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Noe gikk feil.')
+      setError(errorMessage(err))
     } finally {
       setBusy(false)
     }

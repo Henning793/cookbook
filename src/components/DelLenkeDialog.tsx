@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Share2 } from 'lucide-react'
+import { errorMessage } from '../lib/errorMessage'
 import { linkUrl, type LinkKind } from '../lib/inviteLinks'
 
 interface Props {
@@ -30,7 +31,7 @@ export function DelLenkeDialog({ kind, title, body, shareText, createToken, onCl
         if (active) setLink(linkUrl(kind, token))
       })
       .catch((err) => {
-        if (active) setError(err instanceof Error ? err.message : 'Noe gikk feil.')
+        if (active) setError(errorMessage(err))
       })
     return () => {
       active = false

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { Login } from '../components/Login'
 import { getFamilyInvitePreview, joinFamilyByInvite } from '../lib/families'
+import { errorMessage } from '../lib/errorMessage'
 import { forgetLink, linkPath, rememberLink } from '../lib/inviteLinks'
 import { discardPersonalMenuData, hasPersonalMenuData } from '../lib/personalMenuData'
 import type { FamilyInvitePreview } from '../types'
@@ -69,7 +70,7 @@ export function BliMedPage() {
       reload()
       navigate('/', { replace: true })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Noe gikk feil.')
+      setError(errorMessage(err))
       setConfirmDiscard(false)
     } finally {
       setBusy(false)
