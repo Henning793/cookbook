@@ -1,4 +1,6 @@
 import { useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { StepTimerField } from './StepTimerField'
+import { stripTimerMarker, timerOverride, withTimerOverride } from '../lib/stepTimer'
 import { Check, Plus } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { UNITS } from '../lib/units'
@@ -123,6 +125,7 @@ export function RecipeForm({
   // Åpen @-autocomplete: hvilket steg, hvor "@" står og hva som er skrevet etter.
   const [mention, setMention] = useState<{ step: number; start: number; end: number; query: string } | null>(null)
   const [mentionActive, setMentionActive] = useState(0)
+  const [openTimer, setOpenTimer] = useState<number | null>(null)
   const [customUnitTarget, setCustomUnitTarget] = useState<{ group: number; row: number } | null>(null)
 
   const tagOptions = [...new Set([...availableTags, ...customTagOptions])]
@@ -184,8 +187,13 @@ export function RecipeForm({
     })
   }
 
+  // Tekstfeltet viser steget uten tidsmarkøren; markøren beholdes ved endring.
   function updateStep(index: number, value: string) {
-    setSteps((current) => current.map((step, i) => (i === index ? value : step)))
+    setSteps((current) => current.map((step, i) => (i === index ? withTimerOverride(value, timerOverride(step)) : step)))
+  }
+
+  function setStepTimer(index: number, minutes: number | null | undefined) {
+    setSteps((current) => current.map((step, i) => (i === index ? withTimerOverride(step, minutes) : step)))
   }
 
   // Ser etter et "@" foran markøren (først i et ord, samme linje) og åpner
@@ -207,7 +215,7 @@ export function RecipeForm({
 
   function chooseMention(index: number, name: string) {
     if (!mention) return
-    const current = steps[index] ?? ''
+    const current = stripTimerMarker(steps[index] ?? '')
     const after = current.slice(mention.end)
     const inserted = '@' + name + (after === '' || /^[\s.,;:!?)]/.test(after) ? '' : ' ')
     const next = current.slice(0, mention.start) + inserted + (after === '' ? ' ' : after)
@@ -528,7 +536,7 @@ export function RecipeForm({
               <textarea
                 required
                 rows={2}
-                value={step}
+                value={stripTimerMarker(step)}
                 ref={(element) => {
                   stepRefs.current[index] = element
                 }}
@@ -561,13 +569,23 @@ export function RecipeForm({
                   ))}
                 </ul>
               )}
+              <StepTimerField
+                step={step}
+                open={openTimer === index}
+                onOpen={() => setOpenTimer(index)}
+                onClose={() => setOpenTimer(null)}
+                onChange={(minutes) => setStepTimer(index, minutes)}
+              />
             </div>
             <div className="row-actions">
               <button
                 type="button"
                 className="row-move"
                 aria-label="Flytt steg opp"
-                onClick={() => moveStep(index, -1)}
+                onClick={() => {
+                  setOpenTimer(null)
+                  moveStep(index, -1)
+                }}
                 disabled={index === 0}
               >
                 ↑
@@ -576,7 +594,10 @@ export function RecipeForm({
                 type="button"
                 className="row-move"
                 aria-label="Flytt steg ned"
-                onClick={() => moveStep(index, 1)}
+                onClick={() => {
+                  setOpenTimer(null)
+                  moveStep(index, 1)
+                }}
                 disabled={index === steps.length - 1}
               >
                 ↓
@@ -585,7 +606,10 @@ export function RecipeForm({
                 type="button"
                 className="row-remove"
                 aria-label="Fjern steg"
-                onClick={() => removeStep(index)}
+                onClick={() => {
+                  setOpenTimer(null)
+                  removeStep(index)
+                }}
                 disabled={steps.length === 1}
               >
                 ✕

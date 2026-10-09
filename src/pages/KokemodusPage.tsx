@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ChevronLeft } from 'lucide-react'
+import { ChevronLeft, Timer } from 'lucide-react'
 import { useApp } from '../context/AppContext'
-import { formatScaledAmount, ingredientsForStep } from '../lib/recipeIngredients'
+import { formatScaledAmount, ingredientsForStep, stepDisplayText } from '../lib/recipeIngredients'
+import { formatDuration, stepTimerSeconds } from '../lib/stepTimer'
+import { useTimers } from '../context/TimerContext'
+import { PushHint, TimerCard } from '../components/CookingTimers'
 import { StepText } from '../components/StepText'
 
 const SWIPE_THRESHOLD = 50
@@ -11,6 +14,7 @@ export function KokemodusPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { recipes, cookingSession, setCookingSession, loading } = useApp()
+  const { timers, start: startTimer, pushState } = useTimers()
 
   const recipe = recipes.find((r) => r.id === id)
 
@@ -98,6 +102,23 @@ export function KokemodusPage() {
   const neededGroups = ingredientsForStep(currentStep, recipe.ingredients)
   const scaleFactor = servings != null ? servings / (recipe.servings ?? 1) : 1
 
+  // Nedtelling: tiden er overstyrt i skjemaet eller gjettet fra stegteksten.
+  // Klokker for andre steg (eller andre oppskrifter) vises øverst.
+  const stepSeconds = stepTimerSeconds(currentStep)
+  const stepTimers = timers.filter((t) => t.recipeId === recipe.id && t.stepIndex === stepIndex)
+  const otherTimers = timers.filter((t) => !stepTimers.includes(t))
+
+  function handleStartTimer(seconds: number) {
+    if (!recipe) return
+    startTimer({
+      recipeId: recipe.id,
+      recipeTitle: recipe.title,
+      stepIndex,
+      stepText: stepDisplayText(currentStep, recipe.ingredients),
+      durationMs: seconds * 1000,
+    })
+  }
+
   function goToStep(index: number) {
     setStepIndex(Math.max(0, Math.min(totalSteps - 1, index)))
   }
@@ -165,6 +186,14 @@ export function KokemodusPage() {
         ))}
       </div>
 
+      {otherTimers.length > 0 && (
+        <div className="kokemodus-timers">
+          {otherTimers.map((timer) => (
+            <TimerCard key={timer.id} timer={timer} />
+          ))}
+        </div>
+      )}
+
       <div
         className="kokemodus-step-body"
         onTouchStart={handleTouchStart}
@@ -176,6 +205,22 @@ export function KokemodusPage() {
         <p className="kokemodus-step-text">
           <StepText text={currentStep} ingredients={recipe.ingredients} />
         </p>
+
+        {stepTimers.length > 0 ? (
+          <div className="kokemodus-step-timers">
+            {stepTimers.map((timer) => (
+              <TimerCard key={timer.id} timer={timer} large showLabel={false} />
+            ))}
+            <PushHint state={pushState} />
+          </div>
+        ) : (
+          stepSeconds != null && (
+            <button type="button" className="kokemodus-timer-start" onClick={() => handleStartTimer(stepSeconds)}>
+              <Timer size={20} strokeWidth={2.5} aria-hidden="true" />
+              Start {formatDuration(stepSeconds)}
+            </button>
+          )
+        )}
 
         {neededGroups.length > 0 && (
           <div className="kokemodus-need-panel">

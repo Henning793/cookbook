@@ -2400,3 +2400,263 @@
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+
+/* --- Nedtelling i kokemodus (se CookingTimers.tsx) --- */
+/* Klokkene bruker kokemodusens koksgrå og kremhvite farger overalt, så de
+   kjennes igjen også utenfor kokemodus. */
+
+.cooking-timer {
+  --timer-bg: #2e2b25;
+  --timer-text: #f5ead8;
+  --timer-accent: #c67139;
+  --timer-accent-soft: #f6a06b;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px 10px 16px;
+  border-radius: var(--radius-md);
+  background: rgba(245, 234, 216, 0.08);
+  color: var(--timer-text);
+}
+
+.cooking-timer-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cooking-timer-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--timer-accent-soft);
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cooking-timer-clock {
+  font-family: var(--font-body);
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.cooking-timer-state {
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0.7;
+}
+
+.cooking-timer-paused .cooking-timer-clock {
+  opacity: 0.7;
+}
+
+.cooking-timer-actions {
+  display: flex;
+  gap: 6px;
+  flex: none;
+}
+
+.cooking-timer-button,
+.cooking-timer-stop {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 8px;
+  border: 1px solid rgba(245, 234, 216, 0.3);
+  border-radius: 999px;
+  background: none;
+  color: var(--timer-text);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.cooking-timer-stop {
+  padding: 0 16px;
+  border: none;
+  background: var(--timer-text);
+  color: var(--timer-bg);
+}
+
+.cooking-timer-ringing {
+  background: var(--timer-accent);
+  animation: cooking-timer-pulse 1s ease-in-out infinite alternate;
+}
+
+.cooking-timer-ringing .cooking-timer-label {
+  color: var(--timer-text);
+}
+
+@keyframes cooking-timer-pulse {
+  from { box-shadow: 0 0 0 0 rgba(198, 113, 57, 0.6); }
+  to { box-shadow: 0 0 0 8px rgba(198, 113, 57, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cooking-timer-ringing { animation: none; }
+}
+
+.cooking-timer-large {
+  padding: 16px 16px 16px 20px;
+  border-radius: var(--radius-lg);
+}
+
+.cooking-timer-large .cooking-timer-clock {
+  font-family: var(--font-heading);
+  font-size: 40px;
+  font-weight: 500;
+}
+
+/* Stripen øverst utenfor kokemodus. */
+.timer-tray {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: calc(env(safe-area-inset-top, 0px) + 8px) 12px 8px;
+  background: #2e2b25;
+  box-shadow: var(--shadow-md);
+}
+
+.timer-tray .cooking-timer {
+  max-width: 640px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+body.has-timer-tray {
+  /* Plass til stripen med én klokke; flere klokker skyver ikke innholdet mer. */
+  padding-top: calc(env(safe-area-inset-top, 0px) + 78px);
+}
+
+.timer-push-hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #f5ead8;
+  opacity: 0.6;
+  text-align: center;
+}
+
+/* I kokemodus: andre klokker over steget, og stegets egen klokke under teksten. */
+.kokemodus-timers {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 24px 0;
+}
+
+.kokemodus-step-timers {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.kokemodus-timer-start {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 24px;
+  padding: 12px 20px;
+  border: 1px solid rgba(245, 234, 216, 0.3);
+  border-radius: 999px;
+  background: rgba(245, 234, 216, 0.08);
+  color: var(--color-bg);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 17px;
+  cursor: pointer;
+}
+
+/* Tidsfeltet under hvert steg i redigeringsskjemaet. */
+.step-timer-field {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+  font-size: 13px;
+  color: var(--color-text-soft);
+}
+
+.step-timer-field .step-timer-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-soft);
+}
+
+.step-timer-field .step-timer-input {
+  width: 4.5em;
+  padding: 4px 6px;
+  font-size: 14px;
+}
+
+.step-timer-hint {
+  font-style: italic;
+}
+
+.step-timer-link {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--color-accent);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* Liten brikke under steget når det har en nedtelling. */
+.add-recipe-form .step-timer-chip {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  padding: 3px 10px;
+  border: 1px solid var(--color-divider);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-soft);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.add-recipe-form .step-timer-chip-off {
+  border-style: dashed;
+  font-weight: 400;
+}
+
+.add-recipe-form .step-timer-link {
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  color: var(--color-accent);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

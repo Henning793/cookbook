@@ -41,6 +41,8 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // Push-varsel når en nedtelling i kokemodus er ferdig (public/timer-push-sw.js).
+        importScripts: ['timer-push-sw.js'],
         // Cache the app shell + any recipe data/images fetched from Supabase,
         // so previously viewed recipes are available offline.
         runtimeCaching: [
