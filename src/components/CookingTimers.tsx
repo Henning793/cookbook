@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Bell, ChevronDown, Minus, Pause, Play, Plus, Timer, X } from 'lucide-react'
+import { Bell, BellRing, ChevronDown, Minus, Pause, Play, Plus, X } from 'lucide-react'
 import { useTimers } from '../context/TimerContext'
 import { remainingMs, timerLabel, timerSummary, type CookingTimer } from '../lib/cookingTimers'
 import { formatClock } from '../lib/stepTimer'
@@ -71,7 +71,7 @@ export function TimerCard({ timer, large = false, showLabel = true }: { timer: C
   )
 }
 
-// Utenfor kokemodus ligger klokkene bak en rund klokkeknapp nede til venstre,
+// Utenfor kokemodus ligger klokkene bak en rund bjelleknapp nede til venstre,
 // så de aldri dekker tilbakeknappen eller annen navigasjon øverst. Tallet på
 // knappen sier hvor mange som går, og et trykk åpner listen med alle klokkene.
 // Når en klokke ringer, åpnes listen av seg selv så man ser hvilket steg det
@@ -130,9 +130,9 @@ export function TimerTray() {
         aria-controls="timer-panel"
       >
         {ringingCount > 0 ? (
-          <Bell size={24} strokeWidth={2.5} aria-hidden="true" />
+          <BellRing size={24} strokeWidth={2.5} aria-hidden="true" />
         ) : (
-          <Timer size={24} strokeWidth={2.5} aria-hidden="true" />
+          <Bell size={24} strokeWidth={2.5} aria-hidden="true" />
         )}
         {!open && ringingCount === 0 && next && (
           <span className="timer-fab-time">{formatClock(remainingMs(next, now))}</span>
