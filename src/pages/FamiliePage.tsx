@@ -105,7 +105,7 @@ export function FamiliePage() {
       const name = share.collection_id ? collectionNames[share.collection_id] : ''
       return name ? `Samlingen «${name}»` : 'Samling'
     }
-    return 'Hele boken'
+    return 'Hele kokeboka'
   }
 
   async function runCreateFamily() {
@@ -148,7 +148,7 @@ export function FamiliePage() {
   if (familyLoading) {
     return (
       <div className="page familie-page">
-        <p className="status-message">Laster familie...</p>
+        <p className="status-message">Laster gruppe...</p>
       </div>
     )
   }
@@ -163,19 +163,19 @@ export function FamiliePage() {
           </button>
         </nav>
 
-        <h1 className="oppskrift-title">Familie</h1>
+        <h1 className="oppskrift-title">Gruppe</h1>
         <p className="oppskrift-description">
-          Du er ikke medlem av noen familie ennå. Dette er helt valgfritt — du kan legge til og
-          bruke egne oppskrifter uten å opprette eller bli med i en familie. Familie trengs først
+          Du er ikke medlem av noen gruppe ennå. Dette er helt valgfritt — du kan legge til og
+          bruke egne oppskrifter uten å opprette eller bli med i en gruppe. Gruppe trengs først
           når du vil dele oppskrifter med andre.
         </p>
         <p className="oppskrift-description">
-          Vil du bli med i en familie som finnes fra før? Be et medlem sende deg en invitasjonslenke,
+          Vil du bli med i en gruppe som finnes fra før? Be et medlem sende deg en invitasjonslenke,
           og åpne den.
         </p>
 
         <form className="add-recipe-form" onSubmit={handleCreateFamily}>
-          <label htmlFor="familie-navn">Familiens navn</label>
+          <label htmlFor="familie-navn">Gruppens navn</label>
           <input
             id="familie-navn"
             type="text"
@@ -184,7 +184,7 @@ export function FamiliePage() {
             onChange={(e) => setNewFamilyName(e.target.value)}
           />
           <button type="submit" className="cta-button" disabled={onboardingBusy}>
-            {onboardingBusy ? 'Oppretter...' : 'Opprett familie'}
+            {onboardingBusy ? 'Oppretter...' : 'Opprett gruppe'}
           </button>
         </form>
 
@@ -195,8 +195,8 @@ export function FamiliePage() {
             <div className="del-dialog-sheet" onClick={(e) => e.stopPropagation()}>
               <h2 className="del-dialog-title">Forkast personlig ukesmeny?</h2>
               <p className="del-dialog-body">
-                Du har en aktiv personlig ukesmeny, handleliste og/eller faste varer. Å bli med i en familie sletter
-                disse (inkludert egne varer) — de erstattes av familiens felles ukesmeny og handleliste.
+                Du har en aktiv personlig ukesmeny, handleliste og/eller faste varer. Å bli med i en gruppe sletter
+                disse (inkludert egne varer) — de erstattes av gruppens felles ukesmeny og handleliste.
                 Dette kan ikke angres.
               </p>
               <div className="del-dialog-actions">
@@ -317,7 +317,7 @@ export function FamiliePage() {
       <div className="familie-section">
         <h2 className="section-kicker">Inviter</h2>
         <p className="oppskrift-description">
-          Send en invitasjonslenke til den du vil ha med i familien, for eksempel på SMS.
+          Send en invitasjonslenke til den du vil ha med i gruppen, for eksempel på SMS.
         </p>
         <button type="button" className="cta-button" onClick={() => setShowInviteDialog(true)}>
           Inviter til {family.name}
@@ -452,7 +452,7 @@ export function FamiliePage() {
         <DelLenkeDialog
           kind="invite"
           title={`Inviter til ${family.name}`}
-          body="Alle som har lenken kan bli med i familien."
+          body="Alle som har lenken kan bli med i gruppen."
           shareText={`Bli med i ${family.name} i Kokeboka:`}
           createToken={createFamilyInvite}
           onClose={() => setShowInviteDialog(false)}
@@ -462,8 +462,8 @@ export function FamiliePage() {
       {showWholeFamilyDialog && (
         <DelLenkeDialog
           kind="share"
-          title="Del hele boken"
-          body="Den som åpner lenken og godtar, får se alle oppskriftene og samlingene til familien."
+          title="Del hele kokeboka"
+          body="Den som åpner lenken og godtar, får se alle oppskriftene og samlingene til gruppen."
           shareText={`${family.name} vil dele kokeboka si med deg:`}
           createToken={() => createShareLink('whole_family', null, null)}
           onClose={() => setShowWholeFamilyDialog(false)}
@@ -472,10 +472,10 @@ export function FamiliePage() {
 
       <div className="familie-footer">
         <button type="button" className="cta-button" onClick={() => setShowWholeFamilyDialog(true)}>
-          Del hele boken med en familie
+          Del hele kokeboka
         </button>
         <button type="button" className="familie-leave-button" onClick={handleLeave} disabled={busy}>
-          Forlat familien
+          Forlat gruppen
         </button>
       </div>
     </div>

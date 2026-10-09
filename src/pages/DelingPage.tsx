@@ -142,7 +142,7 @@ export function DelingPage() {
       <div className="page familie-page">
         <h1 className="oppskrift-title">Dette har du allerede</h1>
         <p className="oppskrift-description">
-          Lenken gjelder {describe(preview)} fra din egen familie, så du har tilgang fra før.
+          Lenken gjelder {describe(preview)} fra din egen gruppe, så du har tilgang fra før.
         </p>
         <div className="familie-footer">
           <button type="button" className="cta-button" onClick={() => leave(destination(preview))}>
@@ -159,7 +159,7 @@ export function DelingPage() {
         {preview.share_type === 'whole_family' ? `Kokeboka til ${preview.from_family_name}` : preview.title}
       </h1>
       <p className="oppskrift-description">
-        {sender} vil dele {describe(preview)} med deg. Godtar du, dukker det opp i kokeboka til familien din.
+        {sender} vil dele {describe(preview)} med deg. Godtar du, dukker det opp i kokeboka til gruppen din.
       </p>
 
       {error && <p className="status-message">{error}</p>}
@@ -176,12 +176,12 @@ export function DelingPage() {
       ) : (
         <>
           <p className="oppskrift-description">
-            Delte oppskrifter ligger i en familie. Opprett en familie først (det går fint å være alene i
+            Delte oppskrifter ligger i en gruppe. Opprett en gruppe først (det går fint å være alene i
             den), så kommer du tilbake hit for å godta.
           </p>
           <div className="familie-footer">
             <button type="button" className="cta-button" onClick={() => navigate('/familie')}>
-              Opprett familie
+              Opprett gruppe
             </button>
             <button type="button" className="familie-leave-button" onClick={() => leave('/')}>
               Ikke nå

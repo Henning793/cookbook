@@ -138,7 +138,7 @@ declare
   v_family_id uuid;
 begin
   if exists (select 1 from family_members where user_id = auth.uid()) then
-    raise exception 'Du er allerede medlem av en familie.';
+    raise exception 'Du er allerede medlem av en gruppe.';
   end if;
 
   insert into families (name, invite_code)
@@ -167,12 +167,12 @@ declare
   v_family_id uuid;
 begin
   if exists (select 1 from family_members where user_id = auth.uid()) then
-    raise exception 'Du er allerede medlem av en familie. Forlat den først.';
+    raise exception 'Du er allerede medlem av en gruppe. Forlat den først.';
   end if;
 
   select id into v_family_id from families where invite_code = trim(p_code);
   if v_family_id is null then
-    raise exception 'Fant ingen familie med denne koden.';
+    raise exception 'Fant ingen gruppe med denne koden.';
   end if;
 
   insert into family_members (family_id, user_id, role)
@@ -207,7 +207,7 @@ begin
   select count(*) into v_member_count from family_members where family_id = v_family_id;
 
   if v_role = 'admin' and v_admin_count = 1 and v_member_count > 1 then
-    raise exception 'Du er den eneste admin i familien. Fjern de andre medlemmene, eller be en admin overta, før du forlater.';
+    raise exception 'Du er den eneste admin i gruppen. Fjern de andre medlemmene, eller be en admin overta, før du forlater.';
   end if;
 
   delete from family_members where user_id = auth.uid();
@@ -237,7 +237,7 @@ begin
   select count(*) into v_member_count from family_members where family_id = p_family_id;
 
   if v_target_role = 'admin' and v_admin_count = 1 and v_member_count > 1 then
-    raise exception 'Kan ikke fjerne den eneste admin mens familien har andre medlemmer.';
+    raise exception 'Kan ikke fjerne den eneste admin mens gruppen har andre medlemmer.';
   end if;
 
   delete from family_members where family_id = p_family_id and user_id = p_user_id;
@@ -266,28 +266,28 @@ declare
 begin
   select family_id into v_from_family_id from family_members where user_id = auth.uid();
   if v_from_family_id is null then
-    raise exception 'Du må være medlem av en familie for å dele.';
+    raise exception 'Du må være medlem av en gruppe for å dele.';
   end if;
 
   select id into v_to_family_id from families where invite_code = trim(p_code);
   if v_to_family_id is null then
-    raise exception 'Fant ingen familie med denne koden.';
+    raise exception 'Fant ingen gruppe med denne koden.';
   end if;
 
   if v_to_family_id = v_from_family_id then
-    raise exception 'Kan ikke dele med sin egen familie.';
+    raise exception 'Kan ikke dele med sin egen gruppe.';
   end if;
 
   if p_share_type = 'recipe' and not exists (
     select 1 from recipes where id = p_recipe_id and family_id = v_from_family_id
   ) then
-    raise exception 'Oppskriften tilhører ikke din familie.';
+    raise exception 'Oppskriften tilhører ikke din gruppe.';
   end if;
 
   if p_share_type = 'collection' and not exists (
     select 1 from collections where id = p_collection_id and family_id = v_from_family_id
   ) then
-    raise exception 'Samlingen tilhører ikke din familie.';
+    raise exception 'Samlingen tilhører ikke din gruppe.';
   end if;
 
   insert into family_shares (from_family_id, to_family_id, share_type, recipe_id, collection_id)
@@ -316,7 +316,7 @@ begin
     select 1 from family_members
     where family_id = v_to_family_id and user_id = auth.uid() and role = 'admin'
   ) then
-    raise exception 'Kun admin i mottakerfamilien kan godta eller avslå.';
+    raise exception 'Kun admin i mottakergruppen kan godta eller avslå.';
   end if;
 
   update family_shares
@@ -343,7 +343,7 @@ begin
   if not exists (
     select 1 from family_members where family_id = v_from_family_id and user_id = auth.uid()
   ) then
-    raise exception 'Kun avsenderfamilien kan trekke tilbake en deling.';
+    raise exception 'Kun avsendergruppen kan trekke tilbake en deling.';
   end if;
 
   update family_shares set status = 'revoked', responded_at = now() where id = p_share_id;

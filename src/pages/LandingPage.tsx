@@ -9,7 +9,7 @@ export function LandingPage() {
         <img className="landing-icon" src="/icons/icon-192.png" alt="" width={72} height={72} />
         <h1 className="hjem-title">Kokeboka</h1>
         <p className="landing-tagline">
-          Familiens oppskrifter, ukesmeny og handleliste på ett sted.
+          Oppskrifter, ukesmeny og handleliste på ett sted.
         </p>
       </div>
 

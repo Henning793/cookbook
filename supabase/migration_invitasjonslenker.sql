@@ -60,7 +60,7 @@ declare
 begin
   select family_id into v_family_id from family_members where user_id = auth.uid();
   if v_family_id is null then
-    raise exception 'Du må være medlem av en familie for å invitere.';
+    raise exception 'Du må være medlem av en gruppe for å invitere.';
   end if;
 
   insert into family_invites (family_id, created_by)
@@ -128,7 +128,7 @@ begin
   end if;
 
   if exists (select 1 from family_members where user_id = auth.uid()) then
-    raise exception 'Du er allerede medlem av en familie. Forlat den først.';
+    raise exception 'Du er allerede medlem av en gruppe. Forlat den først.';
   end if;
 
   insert into family_members (family_id, user_id, role)
@@ -162,19 +162,19 @@ declare
 begin
   select family_id into v_from_family_id from family_members where user_id = auth.uid();
   if v_from_family_id is null then
-    raise exception 'Du må være medlem av en familie for å dele.';
+    raise exception 'Du må være medlem av en gruppe for å dele.';
   end if;
 
   if p_share_type = 'recipe' and not exists (
     select 1 from recipes where id = p_recipe_id and family_id = v_from_family_id
   ) then
-    raise exception 'Oppskriften tilhører ikke din familie.';
+    raise exception 'Oppskriften tilhører ikke din gruppe.';
   end if;
 
   if p_share_type = 'collection' and not exists (
     select 1 from collections where id = p_collection_id and family_id = v_from_family_id
   ) then
-    raise exception 'Samlingen tilhører ikke din familie.';
+    raise exception 'Samlingen tilhører ikke din gruppe.';
   end if;
 
   insert into share_links (from_family_id, share_type, recipe_id, collection_id, created_by)
@@ -244,11 +244,11 @@ begin
 
   select family_id into v_to_family_id from family_members where user_id = auth.uid();
   if v_to_family_id is null then
-    raise exception 'Du må være medlem av en familie for å ta imot en deling.' using hint = 'no_family';
+    raise exception 'Du må være medlem av en gruppe for å ta imot en deling.' using hint = 'no_family';
   end if;
 
   if v_to_family_id = v_link.from_family_id then
-    raise exception 'Dette er allerede en del av din egen familie.' using hint = 'own_family';
+    raise exception 'Dette er allerede en del av din egen gruppe.' using hint = 'own_family';
   end if;
 
   -- Finnes det allerede en aktiv deling av det samme mellom de samme
@@ -298,7 +298,7 @@ begin
   if v_to_family_id is null or not exists (
     select 1 from family_members where family_id = v_to_family_id and user_id = auth.uid()
   ) then
-    raise exception 'Kun mottakerfamilien kan fjerne en deling.';
+    raise exception 'Kun mottakergruppen kan fjerne en deling.';
   end if;
 
   update family_shares set status = 'rejected', responded_at = now()
