@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ChevronLeft, Timer } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { formatScaledAmount, ingredientsForStep, stepDisplayText } from '../lib/recipeIngredients'
@@ -8,12 +8,14 @@ import { useTimers } from '../context/TimerContext'
 import { KokemodusBell, PushHint, TimerCard, TimerPanel, TimerPill } from '../components/CookingTimers'
 import { cookingModeTimers } from '../lib/cookingTimers'
 import { StepText } from '../components/StepText'
+import { kokemodusExit } from '../lib/kokemodusExit'
 
 const SWIPE_THRESHOLD = 50
 
 export function KokemodusPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
   const { recipes, cookingSession, setCookingSession, loading } = useApp()
   const { timers, now, start: startTimer, pushState } = useTimers()
 
@@ -132,10 +134,17 @@ export function KokemodusPage() {
     if (!isFirstStep) goToStep(stepIndex - 1)
   }
 
+  // Tilbake til oppskriften uten at kokemodus blir liggende i historikken.
+  function exitToRecipe() {
+    const exit = kokemodusExit(id, location.state)
+    if (exit.back) navigate(-1)
+    else navigate(exit.to, { replace: true })
+  }
+
   function handleNext() {
     if (isLastStep) {
       setCookingSession(null)
-      navigate(`/oppskrift/${id}`)
+      exitToRecipe()
     } else {
       goToStep(stepIndex + 1)
     }
@@ -168,9 +177,7 @@ export function KokemodusPage() {
         <button
           type="button"
           className="nav-link kokemodus-exit"
-          onClick={() => {
-            navigate(`/oppskrift/${id}`)
-          }}
+          onClick={exitToRecipe}
         >
           Avslutt
         </button>
