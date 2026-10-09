@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Bell, BellRing, ChevronDown, Minus, Pause, Play, Plus, X } from 'lucide-react'
+import { ChevronDown, Minus, Pause, Play, Plus, Timer, X } from 'lucide-react'
 import { useTimers } from '../context/TimerContext'
 import { remainingMs, timerLabel, timerSummary, type CookingTimer } from '../lib/cookingTimers'
 import { formatClock } from '../lib/stepTimer'
@@ -42,7 +42,7 @@ export function TimerCard({ timer, large = false, showLabel = true }: { timer: C
               <Plus size={18} strokeWidth={2.5} aria-hidden="true" />1
             </button>
             <button type="button" className="cooking-timer-stop" onClick={() => remove(timer.id)}>
-              <Bell size={18} strokeWidth={2.5} aria-hidden="true" /> Stopp
+              <Timer size={18} strokeWidth={2.5} aria-hidden="true" /> Stopp
             </button>
           </>
         ) : (
@@ -71,7 +71,7 @@ export function TimerCard({ timer, large = false, showLabel = true }: { timer: C
   )
 }
 
-// Utenfor kokemodus ligger klokkene bak en rund bjelleknapp nede til venstre,
+// Utenfor kokemodus ligger klokkene bak en rund stoppeklokkeknapp nede til venstre,
 // så de aldri dekker tilbakeknappen eller annen navigasjon øverst. Tallet på
 // knappen sier hvor mange som går, og et trykk åpner listen med alle klokkene.
 // Når en klokke ringer, åpnes listen av seg selv så man ser hvilket steg det
@@ -120,11 +120,7 @@ export function TimerTray() {
         aria-expanded={open}
         aria-controls="timer-panel"
       >
-        {ringingCount > 0 ? (
-          <BellRing size={24} strokeWidth={2.5} aria-hidden="true" />
-        ) : (
-          <Bell size={24} strokeWidth={2.5} aria-hidden="true" />
-        )}
+        <Timer size={24} strokeWidth={2.5} aria-hidden="true" />
         {!open && ringingCount === 0 && next && (
           <span className="timer-fab-time">{formatClock(remainingMs(next, now))}</span>
         )}
@@ -171,7 +167,7 @@ export function TimerPanel({ timers, pushState, onClose }: { timers: CookingTime
 }
 
 // I kokemodus ligger klokker fra tidligere steg og andre oppskrifter bak en
-// liten bjelle øverst. Tallet sier hvor mange som går.
+// liten stoppeklokke øverst. Tallet sier hvor mange som går.
 export function KokemodusBell({ count, open, onToggle }: { count: number; open: boolean; onToggle: () => void }) {
   if (count === 0) return null
   return (
@@ -183,7 +179,7 @@ export function KokemodusBell({ count, open, onToggle }: { count: number; open: 
       aria-expanded={open}
       aria-controls="timer-panel"
     >
-      <Bell size={18} strokeWidth={2.5} aria-hidden="true" />
+      <Timer size={18} strokeWidth={2.5} aria-hidden="true" />
       {count > 1 && <span className="kokemodus-bell-badge">{count}</span>}
     </button>
   )
