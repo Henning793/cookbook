@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { PasswordField } from './PasswordField'
 import { TurnstileWidget } from './TurnstileWidget'
 
 type Mode = 'login' | 'signup'
@@ -9,6 +10,7 @@ export function Login() {
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [passwordConfirm, setPasswordConfirm] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [captchaToken, setCaptchaToken] = useState<string | null>(null)
   const [status, setStatus] = useState<'idle' | 'sending' | 'error'>('idle')
@@ -16,6 +18,7 @@ export function Login() {
 
   function switchMode(next: Mode) {
     setMode(next)
+    setPasswordConfirm('')
     setStatus('idle')
     setErrorMessage('')
     setCaptchaToken(null)
@@ -55,6 +58,12 @@ export function Login() {
   async function handleSignup(e: FormEvent) {
     e.preventDefault()
     setErrorMessage('')
+
+    if (password !== passwordConfirm) {
+      setStatus('error')
+      setErrorMessage('Passordene er ikke like. Skriv det samme passordet i begge feltene.')
+      return
+    }
 
     if (!captchaToken) {
       setStatus('error')
@@ -123,13 +132,22 @@ export function Login() {
           onChange={(e) => setEmail(e.target.value)}
         />
         <label htmlFor="signup-password">Passord</label>
-        <input
+        <PasswordField
           id="signup-password"
-          type="password"
           required
           minLength={6}
+          autoComplete="new-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+        />
+        <label htmlFor="signup-password-confirm">Gjenta passord</label>
+        <PasswordField
+          id="signup-password-confirm"
+          required
+          minLength={6}
+          autoComplete="new-password"
+          value={passwordConfirm}
+          onChange={(e) => setPasswordConfirm(e.target.value)}
         />
         <TurnstileWidget onVerify={setCaptchaToken} onExpire={() => setCaptchaToken(null)} />
         <button type="submit" disabled={status === 'sending'}>
@@ -155,10 +173,10 @@ export function Login() {
         onChange={(e) => setEmail(e.target.value)}
       />
       <label htmlFor="password">Passord</label>
-      <input
+      <PasswordField
         id="password"
-        type="password"
         required
+        autoComplete="current-password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
       />
