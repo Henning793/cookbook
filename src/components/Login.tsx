@@ -18,7 +18,12 @@ export function Login() {
 
   function switchMode(next: Mode) {
     setMode(next)
+    // Ingenting skal følge med fra det ene skjemaet til det andre - verken
+    // det brukeren skrev eller det nettleseren fylte inn fra lagret innlogging.
+    setEmail('')
+    setPassword('')
     setPasswordConfirm('')
+    setDisplayName('')
     setStatus('idle')
     setErrorMessage('')
     setCaptchaToken(null)
@@ -112,13 +117,14 @@ export function Login() {
 
   if (mode === 'signup') {
     return (
-      <form className="login-form" onSubmit={handleSignup}>
+      <form key="signup" className="login-form" onSubmit={handleSignup}>
         <label htmlFor="signup-name">Navn</label>
         <input
           id="signup-name"
           type="text"
           required
           placeholder="Kari"
+          autoComplete="name"
           value={displayName}
           onChange={(e) => setDisplayName(e.target.value)}
         />
@@ -127,6 +133,7 @@ export function Login() {
           id="signup-email"
           type="email"
           required
+          autoComplete="email"
           placeholder="din@epost.no"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -162,12 +169,13 @@ export function Login() {
   }
 
   return (
-    <form className="login-form" onSubmit={handleLogin}>
+    <form key="login" className="login-form" onSubmit={handleLogin}>
       <label htmlFor="email">Logg inn for å legge til oppskrifter</label>
       <input
         id="email"
         type="email"
         required
+        autoComplete="username"
         placeholder="din@epost.no"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
