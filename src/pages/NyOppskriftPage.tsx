@@ -97,12 +97,13 @@ export function NyOppskriftPage() {
     try {
       const imported = await importRecipeFromUrl(importUrl)
       setImportedValues({
-        ...imported,
-        ingredients: { loose: imported.ingredients, components: [] },
+        title: imported.title,
+        ingredients: { loose: imported.loose, components: imported.components },
+        steps: imported.steps,
         description: null,
         image_url: null,
         tags: [],
-        servings: null,
+        servings: imported.servings,
       })
       setView('form')
     } catch (err) {

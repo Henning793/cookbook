@@ -317,6 +317,13 @@ Importen fyller kun ut skjemaet — ingenting lagres før du selv trykker
 går, men sjekk gjerne gjennom før lagring siden tolkningen er
 "best effort" og ikke alltid perfekt.
 
+Har ingredienslisten på siden overskrifter (for eksempel "Marinade" eller
+"Deig"), blir hver overskrift et eget element i oppskriften, og antall
+porsjoner følger med når siden oppgir det. Overskriftene leses ut av sidens
+HTML med faste regler (ingen AI), se `netlify/functions/lib/ingredientGroups.mjs`.
+Sider som bygger ingredienslisten med JavaScript (for eksempel meny.no og
+kiwi.no) får derfor alle ingrediensene som én liste.
+
 Ingen API-nøkkel eller ekstra kostnad er nødvendig for denne funksjonen.
 
 ## Struktur

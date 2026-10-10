@@ -107,5 +107,5 @@ export default async (req) => {
     })
   }
 
-  return jsonResponse(200, normalizeRecipe(recipeNode))
+  return jsonResponse(200, normalizeRecipe(recipeNode, html))
 }

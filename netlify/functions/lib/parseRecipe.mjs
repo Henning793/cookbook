@@ -1,6 +1,8 @@
+import { decodeEntities, findIngredientGroups } from './ingredientGroups.mjs'
+
 const UNIT_ALTERNATION = 'g|kg|ml|dl|l|ss|ts|stk|boks|klype'
 const AMOUNT_PATTERN = /^\s*([\d.,/]+)/
-const UNIT_PATTERN = new RegExp(`^\\s*(${UNIT_ALTERNATION})(?![a-zæøåA-ZÆØÅ])`, 'i')
+const UNIT_PATTERN = new RegExp(`^\\s*(${UNIT_ALTERNATION})(?![a-zæøåA-ZÆØÅ])\\.?`, 'i')
 
 function parseAmount(raw) {
   if (!raw) return null
@@ -124,15 +126,44 @@ export function extractRecipeJsonLd(html) {
   return null
 }
 
-export function normalizeRecipe(jsonLdRecipe) {
-  const title = typeof jsonLdRecipe.name === 'string' ? jsonLdRecipe.name.trim() : ''
+// "4", 4, "4 porsjoner" og ["4", "4 porsjoner"] blir 4.
+export function parseServings(recipeYield) {
+  const value = Array.isArray(recipeYield) ? recipeYield[0] : recipeYield
+  const match = /\d+/.exec(typeof value === 'number' ? String(value) : typeof value === 'string' ? value : '')
+  const servings = match ? Number(match[0]) : 0
+  return servings > 0 && servings <= 1000 ? servings : null
+}
+
+// `html` er siden oppskriften ble hentet fra. Den brukes til å finne
+// overskriftene i ingredienslisten, som ikke finnes i schema.org-dataene.
+// `ingredients` er alltid hele listen flatt; `loose` og `components` er den
+// samme listen delt slik oppskriftsskjemaet vil ha den.
+export function normalizeRecipe(jsonLdRecipe, html = '') {
+  const title = typeof jsonLdRecipe.name === 'string' ? decodeEntities(jsonLdRecipe.name).trim() : ''
   const rawIngredients = Array.isArray(jsonLdRecipe.recipeIngredient) ? jsonLdRecipe.recipeIngredient : []
+  const lines = rawIngredients.filter((line) => typeof line === 'string' && line.trim())
 
-  const ingredients = rawIngredients
-    .filter((line) => typeof line === 'string' && line.trim())
-    .map(parseIngredientLine)
+  const ingredients = lines.map((line) => parseIngredientLine(decodeEntities(line)))
+  const groups = findIngredientGroups(html, lines)
 
-  const steps = normalizeSteps(jsonLdRecipe.recipeInstructions)
+  const loose = []
+  const components = []
+  ingredients.forEach((ingredient, index) => {
+    const name = groups[index]
+    if (name === null) {
+      loose.push(ingredient)
+      return
+    }
+    let component = components.find((c) => c.name.toLowerCase() === name.toLowerCase())
+    if (!component) {
+      component = { name, ingredients: [] }
+      components.push(component)
+    }
+    component.ingredients.push(ingredient)
+  })
 
-  return { title, ingredients, steps }
+  // Noen sider (coop.no) legger gruppeoverskrifter inn som egne steg.
+  const steps = normalizeSteps(jsonLdRecipe.recipeInstructions).filter((step) => !/^GROUP:/i.test(step))
+
+  return { title, ingredients, loose, components, steps, servings: parseServings(jsonLdRecipe.recipeYield) }
 }
