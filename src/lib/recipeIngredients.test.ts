@@ -318,3 +318,28 @@ test('"løk" matches rødløk but not hvitløk', () => {
   assert.deepEqual(names('Ha i hvitløken.'), ['hvitløk'])
   assert.deepEqual(names('Fres løk og hvitløk.'), ['rødløk', 'hvitløk', 'sjalottløk'])
 })
+
+test('shapes, tools and named exceptions do not pull in ingredients', () => {
+  const recipe: RecipeIngredients = {
+    loose: [
+      { amount: 9, unit: 'stk', name: 'lasagneplater' },
+      { amount: 1, unit: 'stk', name: 'buljongterning' },
+      { amount: 8, unit: 'stk', name: 'kjøttboller' },
+      { amount: 4, unit: 'stk', name: 'osteskiver' },
+      { amount: 2, unit: 'ss', name: 'karripasta' },
+      { amount: 4, unit: 'dl', name: 'kokosmelk' },
+      { amount: 2, unit: 'ss', name: 'peanøttsmør' },
+      { amount: 1, unit: 'ts', name: 'cayennepepper' },
+      { amount: 1, unit: 'klype', name: 'muskatnøtt' },
+      { amount: 2, unit: 'dl', name: 'helmelk' },
+    ],
+    components: [],
+  }
+  const names = (step: string) => ingredientsForStep(step, recipe).flatMap((g) => g.items.map((i) => i.name))
+  assert.deepEqual(names('Legg på en plate og skjær i terninger, skiver eller biter.'), [])
+  assert.deepEqual(names('Ha alt i en bolle. Kok pastaen.'), [])
+  assert.deepEqual(names('Smelt smøret, hakk nøttene og smak til med salt og pepper.'), [])
+  assert.deepEqual(names('Spe med melk.'), ['helmelk'])
+  assert.deepEqual(names('Ha i kokosmelken, karripastaen og buljongterningen.'), ['buljongterning', 'karripasta', 'kokosmelk'])
+  assert.deepEqual(names('Legg lasagneplatene i formen sammen med kjøttbollene.'), ['lasagneplater', 'kjøttboller'])
+})
