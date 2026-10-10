@@ -258,3 +258,32 @@ test('"alle ingrediensene" shows the whole component even when one ingredient is
   assert.deepEqual(names('Press hvitløk i @Kebbabdressing'), ['Kebbabdressing: hvitløk'])
   assert.deepEqual(names('Smak til med salt og hvitløk @Kebbabdressing'), ['Kebbabdressing: hvitløk'])
 })
+
+test('a word that only happens to end an ingredient name is not a mention', () => {
+  const lasagne: RecipeIngredients = {
+    loose: [{ amount: 9, unit: 'stk', name: 'lasagneplater' }],
+    components: [
+      { name: 'Kjøttsaus', ingredients: [{ amount: 150, unit: 'g', name: 'bacon eller pancetta' }] },
+      { name: 'Ostesaus', ingredients: [{ amount: 3, unit: 'ss', name: 'smør' }] },
+    ],
+  }
+  const step = 'Sett formen i stekeovn på 200° C og stek i 30-40 minutter. Kjenn etter med en pinne om pastaen er mør.'
+  assert.deepEqual(ingredientsForStep(step, lasagne), [])
+  assert.deepEqual(ingredientsForStep('Smelt smøret og stek pancettaen.', lasagne).flatMap((g) => g.items.map((i) => i.name)), [
+    'bacon eller pancetta',
+    'smør',
+  ])
+})
+
+test('the last part of a compound name still matches, also when both are inflected', () => {
+  const ingredients: RecipeIngredients = {
+    loose: [
+      { amount: 5, unit: 'dl', name: 'hvetemel' },
+      { amount: 600, unit: 'g', name: 'mandelpoteter' },
+    ],
+    components: [],
+  }
+  const names = (step: string) => ingredientsForStep(step, ingredients).flatMap((g) => g.items.map((i) => i.name))
+  assert.deepEqual(names('Rør inn melet.'), ['hvetemel'])
+  assert.deepEqual(names('Kok potetene møre.'), ['mandelpoteter'])
+})

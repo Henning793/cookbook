@@ -102,6 +102,8 @@ export type StepSegment = { text: string; component: RecipeComponent | null }
 // Korte vanlige ord som ellers kunne treffet slutten av et ingrediensnavn.
 const STOP_WORDS = new Set(['med', 'til', 'den', 'det', 'som', 'for', 'har', 'kan', 'ned', 'opp', 'inn', 'alt', 'all', 'men', 'mer', 'nok'])
 const MIN_LENGTH = 3
+const MIN_COMPOUND_PREFIX = 2
+const MIN_STEM_ENDING = 4
 const INFLECTIONS = new Set(['', 'e', 'n', 't', 'a', 'en', 'et', 'er', 'ne', 'te', 'ene', 'ane', 'ens', 'ets'])
 
 // Ordet med og uten bøyningsendelse, så "melet", "oljen" og "bananene"
@@ -122,7 +124,7 @@ function stems(word: string): string[] {
 // - hele navnet, også bøyd ("løkpulveret" treffer "løkpulver")
 // - siste ord i navnet, også bøyd ("oljen" treffer "nøytral olje", "bananene"
 //   treffer "modne bananer")
-// - et ord i teksten som er slutten av navnet ("mel" treffer "hvetemel")
+// - et ord i teksten som er siste ledd i navnet ("mel" treffer "hvetemel")
 interface Positions {
   exact: number[]
   loose: number[]
@@ -155,7 +157,7 @@ function ingredientPositions(textLower: string, name: string): Positions {
       const hit = stems(word).some(
         (w) =>
           tailStems.includes(w) ||
-          (!STOP_WORDS.has(w) && w.length >= MIN_LENGTH && tailStems.some((t) => t.endsWith(w)))
+          (!STOP_WORDS.has(w) && w.length >= MIN_LENGTH && isCompoundEnding(tail, tailStems, w))
       )
       const index = match.index ?? 0
       if (hit && !exact.has(index)) loose.add(index)
@@ -163,6 +165,15 @@ function ingredientPositions(textLower: string, name: string): Positions {
   }
 
   return { exact: [...exact], loose: [...loose] }
+}
+
+// Om `word` er siste ledd i det sammensatte ordet `tail`: "mel" i "hvetemel".
+// Leddet foran må være minst to bokstaver, så "mør" ikke treffer "smør".
+// Mot en bøyd utgave av navnet ("mandelpotet" for "mandelpoteter") må ordet
+// være lengre, så "ett" (fra "etter") ikke treffer "pancett" (fra "pancetta").
+function isCompoundEnding(tail: string, tailStems: string[], word: string): boolean {
+  const endsWith = (whole: string) => whole.endsWith(word) && whole.length - word.length >= MIN_COMPOUND_PREFIX
+  return endsWith(tail) || (word.length >= MIN_STEM_ENDING && tailStems.some(endsWith))
 }
 
 function isMentioned(textLower: string, name: string): boolean {
