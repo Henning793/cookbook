@@ -1902,20 +1902,6 @@
 
 /* --- Samling --- */
 
-.samling-header {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  margin-top: 4px;
-}
-
-.samling-dot {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  margin-bottom: 14px;
-}
-
 .samling-title {
   font-size: 32px;
   line-height: 1.05;
