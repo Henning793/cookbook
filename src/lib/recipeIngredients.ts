@@ -101,6 +101,19 @@ export type StepSegment = { text: string; component: RecipeComponent | null }
 
 // Korte vanlige ord som ellers kunne treffet slutten av et ingrediensnavn.
 const STOP_WORDS = new Set(['med', 'til', 'den', 'det', 'som', 'for', 'har', 'kan', 'ned', 'opp', 'inn', 'alt', 'all', 'men', 'mer', 'nok'])
+// Ord i stegteksten som ikke betyr en ingrediens, selv om et ingrediensnavn
+// slutter på dem. Hele navnet ("soyasausen", "lasagneplatene") treffer fortsatt.
+const DISH_WORDS = new Set([
+  // Det man lager: "la sausen redusere" skal ikke hente soyasaus og fiskesaus.
+  'saus', 'deig', 'røre', 'suppe', 'gryte', 'blanding', 'fyll', 'glasur', 'marinade', 'dressing', 'lake', 'masse', 'farse',
+  'krem', 'kake', 'kaker', 'bunn', 'stuing', 'pasta',
+  // Redskap og former: "legg på en plate" skal ikke hente lasagneplater, og
+  // "skjær i terninger" skal ikke hente buljongterning.
+  'plate', 'plater', 'bolle', 'boller', 'bit', 'skive', 'skiver', 'terning', 'strimmel', 'strimle', 'strimler', 'båt',
+])
+// Ingredienser som ikke er en variant av det siste leddet i navnet: "løk" i
+// et steg betyr rødløk eller gul løk, aldri hvitløk, og "melk" er aldri kokosmelk.
+const NOT_A_VARIANT = new Set(['hvitløk', 'kokosmelk', 'peanøttsmør', 'muskatnøtt', 'cayennepepper', 'sitronpepper'])
 const MIN_LENGTH = 3
 const MIN_COMPOUND_PREFIX = 2
 const MIN_STEM_ENDING = 4
@@ -154,10 +167,12 @@ function ingredientPositions(textLower: string, name: string): Positions {
     for (const match of textLower.matchAll(/[\p{L}\p{N}]+/gu)) {
       const word = match[0]
       if (word.length < MIN_LENGTH) continue
-      const hit = stems(word).some(
+      const wordStems = stems(word)
+      const compound = !wordStems.some((w) => DISH_WORDS.has(w))
+      const hit = wordStems.some(
         (w) =>
           tailStems.includes(w) ||
-          (!STOP_WORDS.has(w) && w.length >= MIN_LENGTH && isCompoundEnding(tail, tailStems, w))
+          (compound && !STOP_WORDS.has(w) && w.length >= MIN_LENGTH && isCompoundEnding(tail, tailStems, w))
       )
       const index = match.index ?? 0
       if (hit && !exact.has(index)) loose.add(index)
@@ -172,6 +187,7 @@ function ingredientPositions(textLower: string, name: string): Positions {
 // Mot en bøyd utgave av navnet ("mandelpotet" for "mandelpoteter") må ordet
 // være lengre, så "ett" (fra "etter") ikke treffer "pancett" (fra "pancetta").
 function isCompoundEnding(tail: string, tailStems: string[], word: string): boolean {
+  if (tailStems.some((stem) => NOT_A_VARIANT.has(stem))) return false
   const endsWith = (whole: string) => whole.endsWith(word) && whole.length - word.length >= MIN_COMPOUND_PREFIX
   return endsWith(tail) || (word.length >= MIN_STEM_ENDING && tailStems.some(endsWith))
 }
