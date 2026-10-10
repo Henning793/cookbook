@@ -56,6 +56,29 @@ test('linjer finnes selv om dataene mangler mengden som står på siden', () => 
   assert.deepEqual(findIngredientGroups(html, lines), [null, 'Rotgrønnsaker', 'Rotgrønnsaker', 'Dillyoghurt'])
 })
 
+test('løse ingredienser øverst på siden blir løse selv om dataene har dem sist', () => {
+  const html = `
+    <h2>Ingredienser</h2>
+    <div>porsjoner</div>
+    <ul><li>9 stk. lasagneplater</li><li>3 dl revet hvitost til toppen</li></ul>
+    <h3>Kjøttsaus:</h3>
+    <ul><li>400 g kjøttdeig</li><li>2 ss tomatpuré</li></ul>
+    <h3>Ostesaus:</h3>
+    <ul><li>3 ss smør</li><li>6 dl melk</li></ul>`
+  const lines = ['400 g kjøttdeig', '2 ss tomatpuré', '3 ss smør', '6 dl melk', '9 stk. lasagneplater', '3 dl revet hvitost til toppen']
+  assert.deepEqual(findIngredientGroups(html, lines), ['Kjøttsaus', 'Kjøttsaus', 'Ostesaus', 'Ostesaus', null, null])
+})
+
+test('samme ingrediens i to grupper holdes fra hverandre', () => {
+  const html = `
+    <h3>Deig</h3>
+    <ul><li>5 dl hvetemel</li><li>1 ts salt</li></ul>
+    <h3>Fyll</h3>
+    <ul><li>200 g fetaost</li><li>1 ts salt</li></ul>`
+  const lines = ['5 dl hvetemel', '1 ts salt', '200 g fetaost', '1 ts salt']
+  assert.deepEqual(findIngredientGroups(html, lines), ['Deig', 'Deig', 'Fyll', 'Fyll'])
+})
+
 test('ingen grupper når listen ikke har overskrifter', () => {
   const html = '<h2>Ingredienser</h2><ul><li>2 egg</li><li>3 dl melk</li><li>2 dl hvetemel</li></ul>'
   assert.deepEqual(findIngredientGroups(html, ['2 egg', '3 dl melk', '2 dl hvetemel']), [null, null, null])
