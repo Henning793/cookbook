@@ -101,6 +101,12 @@ export type StepSegment = { text: string; component: RecipeComponent | null }
 
 // Korte vanlige ord som ellers kunne treffet slutten av et ingrediensnavn.
 const STOP_WORDS = new Set(['med', 'til', 'den', 'det', 'som', 'for', 'har', 'kan', 'ned', 'opp', 'inn', 'alt', 'all', 'men', 'mer', 'nok'])
+// Ord for det man lager, ikke for en ingrediens: "la sausen redusere" handler
+// om sausen i panna, og skal ikke hente "soyasaus" og "fiskesaus". Hele navnet
+// ("soyasausen") treffer fortsatt.
+const DISH_WORDS = new Set([
+  'saus', 'deig', 'røre', 'suppe', 'gryte', 'blanding', 'fyll', 'glasur', 'marinade', 'dressing', 'lake', 'masse', 'farse',
+])
 const MIN_LENGTH = 3
 const MIN_COMPOUND_PREFIX = 2
 const MIN_STEM_ENDING = 4
@@ -157,7 +163,7 @@ function ingredientPositions(textLower: string, name: string): Positions {
       const hit = stems(word).some(
         (w) =>
           tailStems.includes(w) ||
-          (!STOP_WORDS.has(w) && w.length >= MIN_LENGTH && isCompoundEnding(tail, tailStems, w))
+          (!STOP_WORDS.has(w) && !DISH_WORDS.has(w) && w.length >= MIN_LENGTH && isCompoundEnding(tail, tailStems, w))
       )
       const index = match.index ?? 0
       if (hit && !exact.has(index)) loose.add(index)

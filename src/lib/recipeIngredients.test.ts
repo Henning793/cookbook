@@ -287,3 +287,19 @@ test('the last part of a compound name still matches, also when both are inflect
   assert.deepEqual(names('Rør inn melet.'), ['hvetemel'])
   assert.deepEqual(names('Kok potetene møre.'), ['mandelpoteter'])
 })
+
+test('a word for the dish being made does not pull in ingredients that end with it', () => {
+  const wok: RecipeIngredients = {
+    loose: [
+      { amount: 2, unit: 'ss', name: 'soyasaus' },
+      { amount: 1, unit: 'ss', name: 'fiskesaus' },
+      { amount: 5, unit: 'dl', name: 'hvetemel' },
+    ],
+    components: [],
+  }
+  const names = (step: string) => ingredientsForStep(step, wok).flatMap((g) => g.items.map((i) => i.name))
+  assert.deepEqual(names('La sausen redusere i 1 minutt.'), [])
+  assert.deepEqual(names('Elt deigen og hell i blandingen.'), [])
+  assert.deepEqual(names('Ha i soyasausen og fiskesaus.'), ['soyasaus', 'fiskesaus'])
+  assert.deepEqual(names('Rør inn melet.'), ['hvetemel'])
+})
