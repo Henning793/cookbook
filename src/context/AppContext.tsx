@@ -11,7 +11,7 @@ import {
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabaseClient'
 import { TAGS } from '../lib/tags'
-import { normalizeIngredients } from '../lib/recipeIngredients'
+import { capitalizeFirst, capitalizeIngredients, normalizeIngredients } from '../lib/recipeIngredients'
 import { getMyMembership, getMyFamily, listMembers } from '../lib/families'
 import { listIncomingShares, listOutgoingShares } from '../lib/shares'
 import type { Family, FamilyMember, FamilyRole, FamilyShare, Profile, Recipe } from '../types'
@@ -87,11 +87,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // (schema.sql ikke kjørt på nytt), slik at appen ikke krasjer.
       // ingredients tolkes av normalizeIngredients, slik at eldre rader (flat
       // liste med overskrifter) vises som komponenter uten databaseendring.
+      // Navn og steg får stor forbokstav her også, så oppskrifter lagret før
+      // det ble gjort ved lagring vises likt som nye.
       setRecipes(
         data.map((recipe) => ({
           ...recipe,
           tags: recipe.tags ?? [],
-          ingredients: normalizeIngredients(recipe.ingredients),
+          ingredients: capitalizeIngredients(normalizeIngredients(recipe.ingredients)),
+          steps: Array.isArray(recipe.steps) ? recipe.steps.map(capitalizeFirst) : recipe.steps,
         }))
       )
     }

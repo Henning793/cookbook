@@ -7,6 +7,8 @@ import {
   normalizeIngredients,
   stepDisplayText,
   componentSuggestions,
+  capitalizeFirst,
+  capitalizeIngredients,
 } from './recipeIngredients.ts'
 import type { RecipeIngredients } from '../types.ts'
 
@@ -165,7 +167,7 @@ test('stepDisplayText hides links but keeps unknown @ words', () => {
   assert.equal(stepDisplayText('Støv den med mel @Støving av form. @ukjent', bananbrod), 'Støv den med mel. @ukjent')
   assert.equal(stepDisplayText('Støv med mel (@Støving av form).', bananbrod), 'Støv med mel.')
   // Midt i et ord (f.eks. en e-postadresse) er @ ikke en kobling.
-  assert.equal(stepDisplayText('ola@Støving av form', bananbrod), 'ola@Støving av form')
+  assert.equal(stepDisplayText('Ola@Støving av form', bananbrod), 'Ola@Støving av form')
 })
 
 test('componentSuggestions matches the start of component names', () => {
@@ -366,4 +368,31 @@ test('additions after the ingredient itself do not hide it from a step', () => {
   assert.deepEqual(names('Smelt smøret og stek baconet.'), ['smør til steking', 'bacon eller pancetta'])
   assert.deepEqual(names('Ha i hvitløken og tomatene.'), ['hvitløk i tynne skiver', 'tomat (uten innmat)'])
   assert.deepEqual(names('Skjær i skiver og sett til steking.'), [])
+})
+
+test('capitalizeFirst only changes a leading lowercase letter', () => {
+  assert.equal(capitalizeFirst('løk'), 'Løk')
+  assert.equal(capitalizeFirst('  ørret'), '  Ørret')
+  assert.equal(capitalizeFirst('Løk'), 'Løk')
+  assert.equal(capitalizeFirst('2 egg'), '2 egg')
+  assert.equal(capitalizeFirst('(valgfritt) persille'), '(valgfritt) persille')
+  assert.equal(capitalizeFirst(''), '')
+  // Koblinger og tidsmarkør i stegtekst står urørt.
+  assert.equal(capitalizeFirst('stek @saus i 5 min {tid:5}'), 'Stek @saus i 5 min {tid:5}')
+  assert.equal(capitalizeFirst('@saus kokes opp {tid:10}'), '@saus kokes opp {tid:10}')
+})
+
+test('capitalized names still match step text and @-links regardless of case', () => {
+  const recipe = capitalizeIngredients({
+    loose: [{ amount: 1, unit: 'stk', name: 'løk' }],
+    components: [{ name: 'saus', ingredients: [{ amount: 2, unit: 'dl', name: 'fløte' }] }],
+  })
+  assert.equal(recipe.loose[0].name, 'Løk')
+  assert.equal(recipe.components[0].name, 'Saus')
+  assert.equal(recipe.components[0].ingredients[0].name, 'Fløte')
+  const names = (step: string) => ingredientsForStep(step, recipe).flatMap((g) => g.items.map((i) => i.name))
+  assert.deepEqual(names('Stek løken.'), ['Løk'])
+  assert.deepEqual(names('Kok opp fløten @saus {tid:10}'), ['Fløte'])
+  assert.equal(stepDisplayText('@saus kokes opp {tid:10}', recipe), 'Kokes opp')
+  assert.equal(stepDisplayText('stek løken', recipe), 'Stek løken')
 })

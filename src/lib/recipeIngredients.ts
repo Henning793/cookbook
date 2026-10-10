@@ -75,6 +75,27 @@ export function hasIngredients(ingredients: RecipeIngredients): boolean {
   return allIngredients(ingredients).length > 0
 }
 
+// Stor forbokstav: "løk" blir "Løk". Begynner teksten med noe annet enn en
+// liten bokstav ("2 egg", "(valgfritt)", "@Saus"), står den urørt.
+export function capitalizeFirst(text: string): string {
+  return text.replace(/^(\s*)(\p{Ll})/u, (_, space: string, letter: string) => space + letter.toUpperCase())
+}
+
+// Ingrediens- og komponentnavn med stor forbokstav. Brukes både når en
+// oppskrift lagres og når den leses, så eldre rader også vises riktig.
+// Treff mot stegtekst (ingredientsForStep, @-koblinger) skiller ikke
+// mellom store og små bokstaver og påvirkes ikke.
+export function capitalizeIngredients(ingredients: RecipeIngredients): RecipeIngredients {
+  const item = (i: IngredientItem): IngredientItem => ({ ...i, name: capitalizeFirst(i.name) })
+  return {
+    loose: ingredients.loose.map(item),
+    components: ingredients.components.map((c) => ({
+      name: capitalizeFirst(c.name),
+      ingredients: c.ingredients.map(item),
+    })),
+  }
+}
+
 function norm(value: string): string {
   return value.trim().toLowerCase()
 }
@@ -257,7 +278,7 @@ export function parseStep(stepText: string, ingredients: RecipeIngredients): Ste
 // sammen med mellomrommet de etterlater. Det samme gjelder tidsmarkøren
 // ("{tid:25}") fra redigeringsskjemaet.
 export function stepDisplayText(stepText: string, ingredients: RecipeIngredients): string {
-  return parseStep(stripTimerMarker(stepText), ingredients)
+  const text = parseStep(stripTimerMarker(stepText), ingredients)
     .filter((s) => !s.component)
     .map((s) => s.text)
     .join('')
@@ -266,6 +287,8 @@ export function stepDisplayText(stepText: string, ingredients: RecipeIngredients
     .replace(/ +([.,;:!?)])/g, '$1')
     .replace(/\( +/g, '(')
     .trim()
+  // Etter at koblingene er fjernet, så "@Saus kokes opp" vises som "Kokes opp".
+  return capitalizeFirst(text)
 }
 
 // Forslag til autocomplete: komponenter der navnet begynner med det som er
