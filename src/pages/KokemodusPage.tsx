@@ -10,8 +10,6 @@ import { cookingModeTimers } from '../lib/cookingTimers'
 import { StepText } from '../components/StepText'
 import { kokemodusExit } from '../lib/kokemodusExit'
 
-const SWIPE_THRESHOLD = 50
-
 export function KokemodusPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -38,7 +36,6 @@ export function KokemodusPage() {
   const [wakeLockHeld, setWakeLockHeld] = useState(false)
   const wakeLockSupported = typeof navigator !== 'undefined' && 'wakeLock' in navigator
   const wakeLockRef = useRef<WakeLockSentinel | null>(null)
-  const touchStartXRef = useRef<number | null>(null)
 
   // Wake lock: acquire on mount, release on unmount, re-acquire when the tab
   // becomes visible again (the browser force-releases wake locks when a tab
@@ -150,27 +147,6 @@ export function KokemodusPage() {
     }
   }
 
-  function handleTouchStart(event: React.TouchEvent) {
-    touchStartXRef.current = event.changedTouches[0]?.clientX ?? null
-  }
-
-  function handleTouchEnd(event: React.TouchEvent) {
-    const startX = touchStartXRef.current
-    touchStartXRef.current = null
-    if (startX == null) return
-
-    const endX = event.changedTouches[0]?.clientX ?? startX
-    const delta = endX - startX
-
-    if (Math.abs(delta) < SWIPE_THRESHOLD) return
-
-    if (delta < 0) {
-      handleNext()
-    } else {
-      handleBack()
-    }
-  }
-
   return (
     <div className="page kokemodus-page">
       <nav className="nav-bar kokemodus-nav-bar">
@@ -220,11 +196,7 @@ export function KokemodusPage() {
         <TimerPanel timers={inBell} pushState={pushState} onClose={() => setTimerPanelOpen(false)} />
       )}
 
-      <div
-        className="kokemodus-step-body"
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-      >
+      <div className="kokemodus-step-body">
         <p className="kokemodus-step-kicker">
           Steg {stepIndex + 1} av {totalSteps}
         </p>
