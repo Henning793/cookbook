@@ -169,6 +169,10 @@ function bestAlignment(blocks, keys) {
   return null
 }
 
+function blocksOf(match) {
+  return Array.from({ length: match.end - match.start + 1 }, (_, n) => match.start + n)
+}
+
 function headingName(block) {
   return block.text.replace(/^@+/, '').replace(/:$/, '').trim()
 }
@@ -191,27 +195,50 @@ export function findIngredientGroups(html, lines) {
   const keys = lines.map((line) => letterKey(decodeEntities(String(line).replace(/<[^>]*>/g, ' '))))
   const wanted = keys.filter(Boolean).length
   const alignment = bestAlignment(blocks, keys)
-  if (!alignment || alignment.count < 2 || alignment.count < wanted * MIN_MATCHED_SHARE) return none
+  if (!alignment || alignment.count < 2) return none
 
   const { matches } = alignment
-  const firstMatched = matches.findIndex(Boolean)
+
+  // Siden kan ha en annen rekkefølge enn dataene (matprat.no har de løse
+  // ingrediensene øverst, dataene har dem sist). Linjer som ikke ble funnet i
+  // rekkefølge letes derfor opp hvor som helst i og rundt ingredienslisten.
+  const inOrder = matches.filter(Boolean)
+  const windowStart = Math.max(0, inOrder[0].start - MAX_GAP)
+  const windowEnd = inOrder[inOrder.length - 1].end + 1 + MAX_GAP
+  const used = new Set(inOrder.flatMap((m) => blocksOf(m)))
+  matches.forEach((match, i) => {
+    if (match || !keys[i]) return
+    for (let from = windowStart; from < windowEnd; ) {
+      const found = findLine(blocks, keys[i], from, windowEnd)
+      if (!found) return
+      if (blocksOf(found).every((b) => !used.has(b))) {
+        matches[i] = found
+        for (const b of blocksOf(found)) used.add(b)
+        return
+      }
+      from = found.start + 1
+    }
+  })
+
+  if (matches.filter(Boolean).length < wanted * MIN_MATCHED_SHARE) return none
+
+  // Gruppene følger rekkefølgen på siden: en overskrift gjelder linjene
+  // under den, fram til neste overskrift.
+  const onPage = matches
+    .map((match, index) => ({ match, index }))
+    .filter((entry) => entry.match)
+    .sort((a, b) => a.match.start - b.match.start)
+
   const groups = lines.map(() => null)
   const laterHeadings = []
   let current = null
-  let previousEnd = matches[firstMatched].end
-
-  for (let i = firstMatched + 1; i < lines.length; i++) {
-    const found = matches[i]
-    if (found) {
-      const heading = lastHeading(blocks, previousEnd + 1, found.start)
-      if (heading) {
-        current = headingName(heading)
-        laterHeadings.push(heading)
-      }
-      previousEnd = found.end
+  for (let n = 1; n < onPage.length; n++) {
+    const heading = lastHeading(blocks, onPage[n - 1].match.end + 1, onPage[n].match.start)
+    if (heading) {
+      current = headingName(heading)
+      laterHeadings.push(heading)
     }
-    // En linje som ikke ble funnet på siden følger linjen foran.
-    groups[i] = current
+    groups[onPage[n].index] = current
   }
 
   // Én overskrift over hele listen er ikke en gruppe.
@@ -219,12 +246,28 @@ export function findIngredientGroups(html, lines) {
 
   // Overskriften over første ingrediens teller bare hvis den ser ut som de
   // andre gruppeoverskriftene (ellers er det sidetittel, "4 porsjoner" o.l.).
-  const firstStart = matches[firstMatched].start
+  const firstStart = onPage[0].match.start
   const first = lastHeading(blocks, Math.max(0, firstStart - FIRST_HEADING_LOOKBACK), firstStart)
   if (first && laterHeadings.some((h) => h.tag === first.tag && h.bold === first.bold && h.className === first.className)) {
     const name = headingName(first)
-    for (let i = 0; i < lines.length && groups[i] === null; i++) groups[i] = name
+    for (const entry of onPage) {
+      if (groups[entry.index] !== null) break
+      groups[entry.index] = name
+    }
   }
+
+  // En linje som ikke finnes på siden følger nabolinjene i dataene når de
+  // er enige, ellers blir den løs.
+  matches.forEach((match, i) => {
+    if (match) return
+    let before = i - 1
+    while (before >= 0 && !matches[before]) before--
+    let after = i + 1
+    while (after < lines.length && !matches[after]) after++
+    const a = before >= 0 ? groups[before] : undefined
+    const b = after < lines.length ? groups[after] : undefined
+    groups[i] = a === undefined ? (b ?? null) : b === undefined || a === b ? a : null
+  })
 
   return groups
 }
