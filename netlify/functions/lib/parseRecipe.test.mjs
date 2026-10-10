@@ -100,13 +100,17 @@ test('normalizeRecipe setter sammen tittel, ingredienser og steg', () => {
     recipeIngredient: ['300 g kylling', 'salt etter smak'],
     recipeInstructions: ['Stek kyllingen.', 'Server.'],
   }
+  const ingredients = [
+    { amount: 300, unit: 'g', name: 'kylling' },
+    { amount: null, unit: '', name: 'salt etter smak' },
+  ]
   assert.deepEqual(normalizeRecipe(node), {
     title: 'Curry',
-    ingredients: [
-      { amount: 300, unit: 'g', name: 'kylling' },
-      { amount: null, unit: '', name: 'salt etter smak' },
-    ],
+    ingredients,
+    loose: ingredients,
+    components: [],
     steps: ['Stek kyllingen.', 'Server.'],
+    servings: null,
   })
 })
 
@@ -120,4 +124,8 @@ test('parseIngredientLine kutter ikke bokstaver fra navn som starter med en enhe
 
 test('parseIngredientLine med mengde og navn som starter med enhetsbokstav', () => {
   assert.deepEqual(parseIngredientLine('2 gulrøtter'), { amount: 2, unit: '', name: 'gulrøtter' })
+})
+
+test('parseIngredientLine godtar punktum etter enheten', () => {
+  assert.deepEqual(parseIngredientLine('4 stk. potet'), { amount: 4, unit: 'stk', name: 'potet' })
 })

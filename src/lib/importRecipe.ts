@@ -1,9 +1,14 @@
-import type { IngredientItem } from '../types'
+import type { IngredientItem, RecipeComponent } from '../types'
 
 export interface ImportedRecipe {
   title: string
+  // Hele ingredienslisten flatt.
   ingredients: IngredientItem[]
+  // Den samme listen delt i løse ingredienser og elementer ("Marinade").
+  loose: IngredientItem[]
+  components: RecipeComponent[]
   steps: string[]
+  servings: number | null
 }
 
 export async function importRecipeFromUrl(url: string): Promise<ImportedRecipe> {
@@ -25,5 +30,13 @@ export async function importRecipeFromUrl(url: string): Promise<ImportedRecipe> 
     throw new Error(data.error ?? 'Klarte ikke å importere oppskriften')
   }
 
-  return data as ImportedRecipe
+  const ingredients = data.ingredients ?? []
+  return {
+    title: data.title ?? '',
+    ingredients,
+    loose: data.loose ?? ingredients,
+    components: data.components ?? [],
+    steps: data.steps ?? [],
+    servings: data.servings ?? null,
+  }
 }
