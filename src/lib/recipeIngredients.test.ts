@@ -303,3 +303,18 @@ test('a word for the dish being made does not pull in ingredients that end with 
   assert.deepEqual(names('Ha i soyasausen og fiskesaus.'), ['soyasaus', 'fiskesaus'])
   assert.deepEqual(names('Rør inn melet.'), ['hvetemel'])
 })
+
+test('"løk" matches rødløk but not hvitløk', () => {
+  const recipe: RecipeIngredients = {
+    loose: [
+      { amount: 1, unit: 'stk', name: 'rødløk' },
+      { amount: 2, unit: 'fedd', name: 'hvitløk' },
+      { amount: 1, unit: 'stk', name: 'sjalottløk' },
+    ],
+    components: [],
+  }
+  const names = (step: string) => ingredientsForStep(step, recipe).flatMap((g) => g.items.map((i) => i.name))
+  assert.deepEqual(names('Fres løken i olje.'), ['rødløk', 'sjalottløk'])
+  assert.deepEqual(names('Ha i hvitløken.'), ['hvitløk'])
+  assert.deepEqual(names('Fres løk og hvitløk.'), ['rødløk', 'hvitløk', 'sjalottløk'])
+})

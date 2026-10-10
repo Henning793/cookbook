@@ -107,6 +107,9 @@ const STOP_WORDS = new Set(['med', 'til', 'den', 'det', 'som', 'for', 'har', 'ka
 const DISH_WORDS = new Set([
   'saus', 'deig', 'røre', 'suppe', 'gryte', 'blanding', 'fyll', 'glasur', 'marinade', 'dressing', 'lake', 'masse', 'farse',
 ])
+// Ingredienser som ikke er en variant av det siste leddet i navnet: "løk" i
+// et steg betyr rødløk eller gul løk, aldri hvitløk.
+const NOT_A_VARIANT = new Set(['hvitløk'])
 const MIN_LENGTH = 3
 const MIN_COMPOUND_PREFIX = 2
 const MIN_STEM_ENDING = 4
@@ -178,6 +181,7 @@ function ingredientPositions(textLower: string, name: string): Positions {
 // Mot en bøyd utgave av navnet ("mandelpotet" for "mandelpoteter") må ordet
 // være lengre, så "ett" (fra "etter") ikke treffer "pancett" (fra "pancetta").
 function isCompoundEnding(tail: string, tailStems: string[], word: string): boolean {
+  if (tailStems.some((stem) => NOT_A_VARIANT.has(stem))) return false
   const endsWith = (whole: string) => whole.endsWith(word) && whole.length - word.length >= MIN_COMPOUND_PREFIX
   return endsWith(tail) || (word.length >= MIN_STEM_ENDING && tailStems.some(endsWith))
 }
