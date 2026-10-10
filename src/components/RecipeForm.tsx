@@ -4,7 +4,7 @@ import { stripTimerMarker, timerOverride, withTimerOverride } from '../lib/stepT
 import { Check, Plus } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { UNITS } from '../lib/units'
-import { componentSuggestions } from '../lib/recipeIngredients'
+import { capitalizeFirst, capitalizeIngredients, componentSuggestions } from '../lib/recipeIngredients'
 import { CustomUnitDialog } from './CustomUnitDialog'
 import type { IngredientItem, RecipeIngredients } from '../types'
 
@@ -308,19 +308,20 @@ export function RecipeForm({
         imageUrl = data.publicUrl
       }
 
-      const ingredients: RecipeIngredients = {
+      // Navn og steg lagres med stor forbokstav ("løk" blir "Løk").
+      const ingredients = capitalizeIngredients({
         loose: groups[0].rows.map(toItem),
         components: groups.slice(1).map((group) => ({
           name: (group.name ?? '').trim(),
           ingredients: group.rows.map(toItem),
         })),
-      }
+      })
 
       await onSubmit({
         title,
         description: description.trim() === '' ? null : description.trim(),
         ingredients,
-        steps: steps.map((step) => step.trim()),
+        steps: steps.map((step) => capitalizeFirst(step.trim())),
         image_url: imageUrl,
         tags: selectedTags,
         servings,
