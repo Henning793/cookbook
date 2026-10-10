@@ -162,7 +162,8 @@ export function normalizeRecipe(jsonLdRecipe, html = '') {
     component.ingredients.push(ingredient)
   })
 
-  const steps = normalizeSteps(jsonLdRecipe.recipeInstructions)
+  // Noen sider (coop.no) legger gruppeoverskrifter inn som egne steg.
+  const steps = normalizeSteps(jsonLdRecipe.recipeInstructions).filter((step) => !/^GROUP:/i.test(step))
 
   return { title, ingredients, loose, components, steps, servings: parseServings(jsonLdRecipe.recipeYield) }
 }
