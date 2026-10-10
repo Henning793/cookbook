@@ -9,12 +9,6 @@ import { createShareLink } from '../lib/shares'
 import { isSharedIn } from '../lib/recipePermissions'
 import type { Collection } from '../types'
 
-const DOT_COLORS = [
-  'var(--color-accent-100)',
-  'var(--color-accent-2-100)',
-  'var(--color-neutral-300)',
-]
-
 const TAG_TINTS = [
   { bg: 'var(--color-accent-100)', text: 'var(--color-accent-700)' },
   { bg: 'var(--color-accent-2-100)', text: 'var(--color-accent-2-700)' },
@@ -116,17 +110,12 @@ export function SamlingPage() {
   const isUntagged = tag === UNTAGGED_TAG
   const displayLabel = isUntagged ? UNTAGGED_LABEL : tag
 
-  // Samme utledning som HjemPage sin collections-liste, slik at prikkfargen
-  // for denne taggen alltid stemmer overens med Hjem sitt grid.
+  // Samme utledning som HjemPage sin collections-liste, slik at fargen på
+  // etikettbrikkene alltid stemmer overens med Hjem sitt grid.
   const tagsWithRecipes = useMemo(() => {
     const usedTags = new Set(recipes.flatMap((recipe) => recipe.tags))
     return availableTags.filter((usedTag) => usedTags.has(usedTag))
   }, [recipes, availableTags])
-
-  const tagIndex = tagsWithRecipes.indexOf(tag)
-  const dotColor = isUntagged
-    ? 'var(--color-neutral-400)'
-    : DOT_COLORS[(tagIndex < 0 ? 0 : tagIndex) % DOT_COLORS.length]
 
   const tagRecipes = useMemo(
     () =>
@@ -145,10 +134,7 @@ export function SamlingPage() {
         </button>
       </nav>
 
-      <div className="samling-header">
-        <span className="samling-dot" style={{ background: dotColor }} aria-hidden="true" />
-        <h1 className="samling-title">{displayLabel}</h1>
-      </div>
+      <h1 className="samling-title">{displayLabel}</h1>
 
       {loading ? (
         <p className="status-message">Laster oppskrifter...</p>
