@@ -343,3 +343,27 @@ test('shapes, tools and named exceptions do not pull in ingredients', () => {
   assert.deepEqual(names('Ha i kokosmelken, karripastaen og buljongterningen.'), ['buljongterning', 'karripasta', 'kokosmelk'])
   assert.deepEqual(names('Legg lasagneplatene i formen sammen med kjøttbollene.'), ['lasagneplater', 'kjøttboller'])
 })
+
+test('additions after the ingredient itself do not hide it from a step', () => {
+  const recipe: RecipeIngredients = {
+    loose: [
+      { amount: 1, unit: 'dl', name: 'Ristede peanøtter, grovhakkede' },
+      { amount: 1, unit: 'stk', name: 'vårløk , i tynne skiver' },
+      { amount: 1, unit: 'ss', name: 'limejuice' },
+      { amount: 2, unit: 'ss', name: 'smør til steking' },
+      { amount: 150, unit: 'g', name: 'bacon eller pancetta' },
+      { amount: 2, unit: 'fedd', name: 'hvitløk i tynne skiver' },
+      { amount: 1, unit: 'stk', name: 'tomat (uten innmat)' },
+    ],
+    components: [],
+  }
+  const names = (step: string) => ingredientsForStep(step, recipe).flatMap((g) => g.items.map((i) => i.name))
+  assert.deepEqual(names('Topp med kjøtt, koriander, vårløk, peanøtter og en skvis limejuice.'), [
+    'Ristede peanøtter, grovhakkede',
+    'vårløk , i tynne skiver',
+    'limejuice',
+  ])
+  assert.deepEqual(names('Smelt smøret og stek baconet.'), ['smør til steking', 'bacon eller pancetta'])
+  assert.deepEqual(names('Ha i hvitløken og tomatene.'), ['hvitløk i tynne skiver', 'tomat (uten innmat)'])
+  assert.deepEqual(names('Skjær i skiver og sett til steking.'), [])
+})

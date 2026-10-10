@@ -144,25 +144,26 @@ interface Positions {
 }
 
 function ingredientPositions(textLower: string, name: string): Positions {
-  const needle = norm(name)
   const exact = new Set<number>()
   const loose = new Set<number>()
-  if (!needle) return { exact: [], loose: [] }
 
-  let from = 0
-  while (true) {
-    const index = textLower.indexOf(needle, from)
-    if (index === -1) break
-    from = index + 1
-    if (index > 0 && isWordChar(textLower[index - 1])) continue
-    // Resten av ordet må være en bøyning ("smøret"), ikke et nytt ord
-    // ("melblandingen" skal ikke treffe "mel").
-    const rest = /^[\p{L}\p{N}]*/u.exec(textLower.slice(index + needle.length))?.[0] ?? ''
-    if (INFLECTIONS.has(rest)) exact.add(index)
+  for (const needle of nameVariants(name)) {
+    let from = 0
+    while (true) {
+      const index = textLower.indexOf(needle, from)
+      if (index === -1) break
+      from = index + 1
+      if (index > 0 && isWordChar(textLower[index - 1])) continue
+      // Resten av ordet må være en bøyning ("smøret"), ikke et nytt ord
+      // ("melblandingen" skal ikke treffe "mel").
+      const rest = /^[\p{L}\p{N}]*/u.exec(textLower.slice(index + needle.length))?.[0] ?? ''
+      if (INFLECTIONS.has(rest)) exact.add(index)
+    }
   }
 
-  const tail = needle.split(/[^\p{L}\p{N}]+/u).filter(Boolean).pop() ?? ''
-  if (tail.length >= MIN_LENGTH) {
+  for (const needle of nameVariants(name)) {
+    const tail = needle.split(/[^\p{L}\p{N}]+/u).filter(Boolean).pop() ?? ''
+    if (tail.length < MIN_LENGTH) continue
     const tailStems = stems(tail)
     for (const match of textLower.matchAll(/[\p{L}\p{N}]+/gu)) {
       const word = match[0]
@@ -180,6 +181,17 @@ function ingredientPositions(textLower: string, name: string): Positions {
   }
 
   return { exact: [...exact], loose: [...loose] }
+}
+
+// Selve varen i et ingrediensnavn, uten tillegg om tilberedning og bruk:
+// "ristede peanøtter, grovhakket" er "ristede peanøtter", "smør til steking"
+// er "smør", og "bacon eller pancetta" er både "bacon" og "pancetta".
+function nameVariants(name: string): string[] {
+  const head = norm(name).split(/[,(]/)[0]
+  return head
+    .split(/\s+eller\s+/)
+    .map((part) => part.split(/\s+(?:til|i|uten)\s+/)[0].trim())
+    .filter(Boolean)
 }
 
 // Om `word` er siste ledd i det sammensatte ordet `tail`: "mel" i "hvetemel".
