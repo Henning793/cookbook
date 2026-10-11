@@ -14,6 +14,8 @@ import {
 } from '../lib/shoppingList'
 import { listStandingItems } from '../lib/standingItems'
 import { InstallBanner } from '../components/InstallApp'
+import { Welcome } from '../components/Welcome'
+import { isNewUser, isWelcomeSeen, markWelcomeSeen } from '../lib/welcome'
 import type { MenuDay } from '../types'
 
 // Antall fargevarianter for samlingskort uten bilde (.hjem-collection-cover-N).
@@ -32,6 +34,7 @@ export function HjemPage() {
 
   const [todayMenu, setTodayMenu] = useState<MenuDay | null>(null)
   const [shoppingItemsLeft, setShoppingItemsLeft] = useState(0)
+  const [welcomeSeen, setWelcomeSeen] = useState(() => isWelcomeSeen(localStorage))
 
   useEffect(() => {
     if (familyLoading || !session) return
@@ -169,7 +172,13 @@ export function HjemPage() {
       {loading ? (
         <p className="status-message">Laster oppskrifter...</p>
       ) : recipes.length === 0 ? (
-        <p className="status-message">Kokeboka di er tom. Trykk på + for å legge inn en oppskrift.</p>
+        <p className="status-message">
+          Kokeboka di er tom. Trykk på + for å legge inn en oppskrift.
+          <br />
+          <button type="button" className="nav-link hjem-tips-link" onClick={() => navigate('/tips')}>
+            Se tips og triks
+          </button>
+        </p>
       ) : (
         <>
           <div className="hjem-section-head">
@@ -227,6 +236,18 @@ export function HjemPage() {
         >
           <Plus size={30} strokeWidth={2.75} aria-hidden="true" />
         </button>
+      )}
+
+      {/* Venter på gruppen, så en som kom inn via invitasjonslenke får gruppens navn i velkomsten. */}
+      {session && !welcomeSeen && !familyLoading && isNewUser(session.user.created_at) && (
+        <Welcome
+          groupName={family?.name ?? null}
+          onDone={(addRecipe) => {
+            markWelcomeSeen(localStorage)
+            setWelcomeSeen(true)
+            if (addRecipe) navigate('/ny')
+          }}
+        />
       )}
     </div>
   )
