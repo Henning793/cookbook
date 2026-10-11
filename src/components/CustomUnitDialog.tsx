@@ -1,13 +1,14 @@
 import { useState, type FormEvent } from 'react'
+import { UNITS } from '../lib/units'
 
 interface Props {
   initialValue: string
   onConfirm: (unit: string) => void
-  onUseStandard?: () => void
+  onPickStandard?: (unit: string) => void
   onClose: () => void
 }
 
-export function CustomUnitDialog({ initialValue, onConfirm, onUseStandard, onClose }: Props) {
+export function CustomUnitDialog({ initialValue, onConfirm, onPickStandard, onClose }: Props) {
   const [value, setValue] = useState(initialValue)
   const trimmed = value.trim()
 
@@ -39,10 +40,22 @@ export function CustomUnitDialog({ initialValue, onConfirm, onUseStandard, onClo
               Bruk enhet
             </button>
           </div>
-          {onUseStandard && (
-            <button type="button" className="custom-unit-standard-link" onClick={onUseStandard}>
-              Velg en standardenhet i stedet
-            </button>
+          {onPickStandard && (
+            <div className="custom-unit-standard">
+              <p className="custom-unit-standard-label">Eller velg en standardenhet</p>
+              <div className="custom-unit-standard-options">
+                {UNITS.map((unit) => (
+                  <button
+                    type="button"
+                    key={unit}
+                    className="custom-unit-standard-option"
+                    onClick={() => onPickStandard(unit)}
+                  >
+                    {unit}
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
         </form>
       </div>
