@@ -715,10 +715,10 @@ export function RecipeForm({
           updateIngredientRow(customUnitTarget.group, customUnitTarget.row, { unit: 'annet', customUnit: unit })
           setCustomUnitTarget(null)
         }}
-        onUseStandard={
+        onPickStandard={
           customUnitRow.unit === 'annet'
-            ? () => {
-                updateIngredientRow(customUnitTarget.group, customUnitTarget.row, { unit: UNITS[0], customUnit: '' })
+            ? (unit) => {
+                updateIngredientRow(customUnitTarget.group, customUnitTarget.row, { unit, customUnit: '' })
                 setCustomUnitTarget(null)
               }
             : undefined
