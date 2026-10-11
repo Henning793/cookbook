@@ -6,7 +6,7 @@ import { supabase } from '../lib/supabaseClient'
 import { UNITS } from '../lib/units'
 import { capitalizeFirst, capitalizeIngredients, componentSuggestions } from '../lib/recipeIngredients'
 import { CustomUnitDialog } from './CustomUnitDialog'
-import type { IngredientItem, RecipeIngredients } from '../types'
+import type { IngredientItem, RecipeIngredients, RecipeKind } from '../types'
 
 interface IngredientRow {
   amount: string
@@ -79,6 +79,9 @@ export interface RecipeFormValues {
 
 interface Props {
   heading: string
+  // En teknikk har ikke porsjoner eller etiketter, og «Du trenger» er valgfritt.
+  kind: RecipeKind
+  onKindChange: (kind: RecipeKind) => void
   initial?: {
     title: string
     description?: string | null
@@ -99,6 +102,8 @@ interface Props {
 
 export function RecipeForm({
   heading,
+  kind,
+  onKindChange,
   initial,
   availableTags,
   submitLabel,
@@ -132,6 +137,8 @@ export function RecipeForm({
   const [mentionActive, setMentionActive] = useState(0)
   const [openTimer, setOpenTimer] = useState<number | null>(null)
   const [customUnitTarget, setCustomUnitTarget] = useState<{ group: number; row: number } | null>(null)
+
+  const isTechnique = kind === 'technique'
 
   const tagOptions = [...new Set([...availableTags, ...customTagOptions])]
 
@@ -265,7 +272,7 @@ export function RecipeForm({
     e.preventDefault()
     setError('')
 
-    if (selectedTags.length === 0) {
+    if (!isTechnique && selectedTags.length === 0) {
       setTagsMissing(true)
       // Etikettene ligger langt nede i skjemaet, så feltet hentes fram og får fokus.
       tagLabelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -275,7 +282,7 @@ export function RecipeForm({
     }
 
     let servings: number | null = null
-    if (servingsInput.trim() !== '') {
+    if (!isTechnique && servingsInput.trim() !== '') {
       const parsed = Number(servingsInput.replace(',', '.'))
       if (Number.isNaN(parsed) || parsed <= 0) {
         setError('Antall porsjoner må være et tall større enn 0')
@@ -284,12 +291,19 @@ export function RecipeForm({
       servings = Math.round(parsed * 10) / 10
     }
 
-    const totalRows = groups.reduce((sum, group) => sum + group.rows.length, 0)
-    if (totalRows === 0) {
+    // I en teknikk er radene valgfrie, så tomme rader og tomme komponenter droppes.
+    const filledGroups = isTechnique
+      ? groups
+          .map((group) => ({ ...group, rows: group.rows.filter((row) => row.name.trim() !== '') }))
+          .filter((group, index) => index === 0 || group.rows.length > 0)
+      : groups
+
+    const totalRows = filledGroups.reduce((sum, group) => sum + group.rows.length, 0)
+    if (!isTechnique && totalRows === 0) {
       setError('Legg til minst én ingrediens')
       return
     }
-    const emptyComponent = groups.slice(1).find((group) => group.rows.length === 0)
+    const emptyComponent = filledGroups.slice(1).find((group) => group.rows.length === 0)
     if (emptyComponent) {
       setError(`Komponenten «${emptyComponent.name?.trim() || 'uten navn'}» trenger minst én ingrediens`)
       return
@@ -319,8 +333,8 @@ export function RecipeForm({
 
       // Navn og steg lagres med stor forbokstav ("løk" blir "Løk").
       const ingredients = capitalizeIngredients({
-        loose: groups[0].rows.map(toItem),
-        components: groups.slice(1).map((group) => ({
+        loose: filledGroups[0].rows.map(toItem),
+        components: filledGroups.slice(1).map((group) => ({
           name: (group.name ?? '').trim(),
           ingredients: group.rows.map(toItem),
         })),
@@ -332,7 +346,7 @@ export function RecipeForm({
         ingredients,
         steps: steps.map((step) => capitalizeFirst(step.trim())),
         image_url: imageUrl,
-        tags: selectedTags,
+        tags: isTechnique ? [] : selectedTags,
         servings,
       })
     } catch (err) {
@@ -360,8 +374,8 @@ export function RecipeForm({
       <div className="ingredient-row" key={rowIndex}>
         <input
           className="ingredient-name"
-          required
-          placeholder="Ingrediens, f.eks. løk"
+          required={!isTechnique}
+          placeholder={isTechnique ? 'Utstyr eller råvare' : 'Ingrediens, f.eks. løk'}
           value={row.name}
           onChange={(e) => updateIngredientRow(groupIndex, rowIndex, { name: e.target.value })}
         />
@@ -439,6 +453,25 @@ export function RecipeForm({
     <form className="add-recipe-form" onSubmit={handleSubmit}>
       <h2>{heading}</h2>
 
+      <div className="kind-switch" role="group" aria-label="Type">
+        <button
+          type="button"
+          className={isTechnique ? 'kind-switch-option' : 'kind-switch-option kind-switch-option-active'}
+          aria-pressed={!isTechnique}
+          onClick={() => onKindChange('recipe')}
+        >
+          Oppskrift
+        </button>
+        <button
+          type="button"
+          className={isTechnique ? 'kind-switch-option kind-switch-option-active' : 'kind-switch-option'}
+          aria-pressed={isTechnique}
+          onClick={() => onKindChange('technique')}
+        >
+          Teknikk
+        </button>
+      </div>
+
       <label htmlFor="title">Tittel</label>
       <input
         id="title"
@@ -447,27 +480,33 @@ export function RecipeForm({
         onChange={(e) => setTitle(e.target.value)}
       />
 
-      <label htmlFor="description">Beskrivelse (valgfritt)</label>
+      <label htmlFor="description">
+        {isTechnique ? 'Hva er det, og når bruker du det? (valgfritt)' : 'Beskrivelse (valgfritt)'}
+      </label>
       <textarea
         id="description"
         rows={2}
-        placeholder="En kort beskrivelse av retten"
+        placeholder={isTechnique ? 'En kort forklaring av teknikken' : 'En kort beskrivelse av retten'}
         value={description}
         onChange={(e) => setDescription(e.target.value)}
       />
 
-      <label htmlFor="servings">Antall porsjoner</label>
-      <input
-        id="servings"
-        type="number"
-        min="1"
-        step="0.1"
-        placeholder="1"
-        value={servingsInput}
-        onChange={(e) => setServingsInput(e.target.value)}
-      />
+      {!isTechnique && (
+        <>
+          <label htmlFor="servings">Antall porsjoner</label>
+          <input
+            id="servings"
+            type="number"
+            min="1"
+            step="0.1"
+            placeholder="1"
+            value={servingsInput}
+            onChange={(e) => setServingsInput(e.target.value)}
+          />
+        </>
+      )}
 
-      <label>Ingredienser</label>
+      <label>{isTechnique ? 'Du trenger (valgfritt)' : 'Ingredienser'}</label>
       {groups[0].rows.length > 0 && (
         <div className="ingredient-rows">
           {groups[0].rows.map((row, rowIndex) => renderIngredientRow(0, rowIndex, row))}
@@ -475,7 +514,7 @@ export function RecipeForm({
       )}
       <div className="row-add-group">
         <button type="button" className="row-add" onClick={() => addIngredientRow(0)}>
-          + Legg til ingrediens
+          {isTechnique ? '+ Legg til rad' : '+ Legg til ingrediens'}
         </button>
         <button type="button" className="row-add" onClick={addComponent}>
           + Legg til komponent
@@ -634,56 +673,60 @@ export function RecipeForm({
         + Legg til steg
       </button>
 
-      <label id="tags-label" ref={tagLabelRef} className={showTagError ? 'field-label-invalid' : undefined}>
-        Etiketter (velg minst én)
-      </label>
-      <div
-        className={showTagError ? 'tag-picker tag-picker-invalid' : 'tag-picker'}
-        ref={tagPickerRef}
-        role="group"
-        aria-labelledby="tags-label"
-        aria-describedby={showTagError ? 'tags-error' : undefined}
-      >
-        {tagOptions.map((tag) => {
-          const selected = selectedTags.includes(tag)
-          return (
-            <button
-              type="button"
-              key={tag}
-              className={selected ? 'tag-option tag-option-selected' : 'tag-option'}
-              aria-pressed={selected}
-              onClick={() => toggleTag(tag)}
-            >
-              {selected && (
-                <Check size={12} strokeWidth={2.75} className="tag-option-check" aria-hidden="true" />
-              )}
-              {tag}
+      {!isTechnique && (
+        <>
+          <label id="tags-label" ref={tagLabelRef} className={showTagError ? 'field-label-invalid' : undefined}>
+            Etiketter (velg minst én)
+          </label>
+          <div
+            className={showTagError ? 'tag-picker tag-picker-invalid' : 'tag-picker'}
+            ref={tagPickerRef}
+            role="group"
+            aria-labelledby="tags-label"
+            aria-describedby={showTagError ? 'tags-error' : undefined}
+          >
+            {tagOptions.map((tag) => {
+              const selected = selectedTags.includes(tag)
+              return (
+                <button
+                  type="button"
+                  key={tag}
+                  className={selected ? 'tag-option tag-option-selected' : 'tag-option'}
+                  aria-pressed={selected}
+                  onClick={() => toggleTag(tag)}
+                >
+                  {selected && (
+                    <Check size={12} strokeWidth={2.75} className="tag-option-check" aria-hidden="true" />
+                  )}
+                  {tag}
+                </button>
+              )
+            })}
+          </div>
+          {showTagError && (
+            <p className="error field-error" id="tags-error" role="alert">
+              Du må velge minst én etikett før oppskriften kan lagres.
+            </p>
+          )}
+          <div className="tag-add-row">
+            <input
+              ref={customTagInputRef}
+              placeholder="Legg til egen etikett"
+              value={customTagInput}
+              onChange={(e) => setCustomTagInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  addCustomTag()
+                }
+              }}
+            />
+            <button type="button" className="row-add" onClick={addCustomTag}>
+              + Legg til
             </button>
-          )
-        })}
-      </div>
-      {showTagError && (
-        <p className="error field-error" id="tags-error" role="alert">
-          Du må velge minst én etikett før oppskriften kan lagres.
-        </p>
+          </div>
+        </>
       )}
-      <div className="tag-add-row">
-        <input
-          ref={customTagInputRef}
-          placeholder="Legg til egen etikett"
-          value={customTagInput}
-          onChange={(e) => setCustomTagInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault()
-              addCustomTag()
-            }
-          }}
-        />
-        <button type="button" className="row-add" onClick={addCustomTag}>
-          + Legg til
-        </button>
-      </div>
 
       <label className="image-upload-row" htmlFor="image">
         <span className="image-upload-icon" aria-hidden="true">
@@ -728,7 +771,7 @@ export function RecipeForm({
 
       {onDelete && (
         <button type="button" className="delete-recipe-button" onClick={onDelete} disabled={saving}>
-          Slett oppskrift
+          {isTechnique ? 'Slett teknikk' : 'Slett oppskrift'}
         </button>
       )}
     </form>

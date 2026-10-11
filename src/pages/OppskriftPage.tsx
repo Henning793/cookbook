@@ -10,7 +10,8 @@ import { canEditRecipe, isSharedIn } from '../lib/recipePermissions'
 import { getFamilyName } from '../lib/families'
 import { StepText } from '../components/StepText'
 import { FROM_RECIPE_STATE } from '../lib/kokemodusExit'
-import type { IngredientItem } from '../types'
+import { allIngredients } from '../lib/recipeIngredients'
+import type { IngredientItem, RecipeKind } from '../types'
 
 function formatNumber(value: number) {
   return value.toLocaleString('nb-NO')
@@ -20,20 +21,24 @@ export function OppskriftPage() {
   const { id } = useParams<{ id: string }>()
   const location = useLocation()
   const navigate = useNavigate()
-  const { recipes, session, reload, availableTags, loading, family, members } = useApp()
+  const { allRecipes, session, reload, availableTags, loading, family, members } = useApp()
 
   const [editing, setEditing] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [showFamilyShareDialog, setShowFamilyShareDialog] = useState(false)
 
+  const recipe = allRecipes.find((r) => r.id === id)
+  const isTechnique = recipe?.kind === 'technique'
+  // Typen kan byttes i redigeringsskjemaet; null betyr uendret.
+  const [editKind, setEditKind] = useState<RecipeKind | null>(null)
+
   const fromTag = (location.state as { fromTag?: string } | null)?.fromTag
-  const backLabel = fromTag ?? 'Kokeboka'
+  const backLabel = fromTag ?? (isTechnique ? 'Teknikker' : 'Kokeboka')
 
   function goBack() {
-    navigate(fromTag ? `/samling/${encodeURIComponent(fromTag)}` : '/')
+    navigate(fromTag ? `/samling/${encodeURIComponent(fromTag)}` : isTechnique ? '/teknikker' : '/')
   }
 
-  const recipe = recipes.find((r) => r.id === id)
   const baseServings = recipe?.servings ?? 1
 
   // Live porsjonsjustering - ren komponent-state, lagres ikke noe sted og
@@ -81,21 +86,26 @@ export function OppskriftPage() {
     Number.isFinite(parsedTarget) && parsedTarget > 0 ? parsedTarget / baseServings : 1
 
   async function handleUpdate(values: RecipeFormValues) {
-    const { error } = await supabase.from('recipes').update(values).eq('id', recipe!.id)
+    // kind sendes bare når typen er byttet - se handleSubmit i NyOppskriftPage.
+    const row: RecipeFormValues & { kind?: RecipeKind } =
+      editKind && editKind !== recipe!.kind ? { ...values, kind: editKind } : values
+    const { error } = await supabase.from('recipes').update(row).eq('id', recipe!.id)
     if (error) throw error
     reload()
     setEditing(false)
+    setEditKind(null)
   }
 
   async function handleDelete() {
     const { error } = await supabase.from('recipes').delete().eq('id', recipe!.id)
     if (!error) {
       reload()
-      navigate('/')
+      navigate(isTechnique ? '/teknikker' : '/')
     }
   }
 
   if (editing) {
+    const formKind = editKind ?? recipe.kind
     return (
       <div className="page oppskrift-page">
         <nav className="nav-bar">
@@ -106,19 +116,21 @@ export function OppskriftPage() {
         </nav>
         {confirmingDelete ? (
           <div className="delete-confirm">
-            <p>Er du sikker på at du vil slette denne oppskriften?</p>
+            <p>Er du sikker på at du vil slette denne {isTechnique ? 'teknikken' : 'oppskriften'}?</p>
             <div className="form-actions">
               <button type="button" onClick={() => setConfirmingDelete(false)}>
                 Avbryt
               </button>
               <button type="button" className="delete-confirm-button" onClick={handleDelete}>
-                Ja, slett oppskriften
+                {isTechnique ? 'Ja, slett teknikken' : 'Ja, slett oppskriften'}
               </button>
             </div>
           </div>
         ) : (
           <RecipeForm
-            heading="Rediger oppskrift"
+            heading={formKind === 'technique' ? 'Rediger teknikk' : 'Rediger oppskrift'}
+            kind={formKind}
+            onKindChange={setEditKind}
             initial={{
               title: recipe.title,
               description: recipe.description ?? null,
@@ -132,7 +144,10 @@ export function OppskriftPage() {
             submitLabel="Lagre endringer"
             savingLabel="Lagrer..."
             onSubmit={handleUpdate}
-            onCancel={() => setEditing(false)}
+            onCancel={() => {
+              setEditing(false)
+              setEditKind(null)
+            }}
             onDelete={() => setConfirmingDelete(true)}
           />
         )}
@@ -188,17 +203,18 @@ export function OppskriftPage() {
       {showFamilyShareDialog && (
         <DelLenkeDialog
           kind="share"
-          title="Del oppskriften"
-          body="Den som åpner lenken og godtar, får se oppskriften i sin kokebok."
-          shareText={`Jeg vil dele oppskriften «${recipe.title}» med deg:`}
+          title={isTechnique ? 'Del teknikken' : 'Del oppskriften'}
+          body={`Den som åpner lenken og godtar, får se ${isTechnique ? 'teknikken' : 'oppskriften'} i sin kokebok.`}
+          shareText={`Jeg vil dele ${isTechnique ? 'teknikken' : 'oppskriften'} «${recipe.title}» med deg:`}
           createToken={() => createShareLink('recipe', recipe.id, null)}
           onClose={() => setShowFamilyShareDialog(false)}
         />
       )}
 
       <div className={`oppskrift-sheet${recipe.image_url ? '' : ' oppskrift-sheet-plain'}`}>
-        {(recipe.tags.length > 0 || (sharedIn && originFamilyName)) && (
+        {(isTechnique || recipe.tags.length > 0 || (sharedIn && originFamilyName)) && (
           <div className="oppskrift-tags">
+            {isTechnique && <span className="oppskrift-tag">Teknikk</span>}
             {recipe.tags.map((tag) => (
               <span key={tag} className="oppskrift-tag">
                 {tag}
@@ -214,40 +230,42 @@ export function OppskriftPage() {
 
         {description && <p className="oppskrift-lede">{description}</p>}
 
-        <div className="oppskrift-facts">
-          {totalMinutes != null && (
+        {!isTechnique && (
+          <div className="oppskrift-facts">
+            {totalMinutes != null && (
+              <div className="oppskrift-fact">
+                <span className="oppskrift-fact-label">Tid</span>
+                <span className="oppskrift-fact-value">{totalMinutes} min</span>
+              </div>
+            )}
             <div className="oppskrift-fact">
-              <span className="oppskrift-fact-label">Tid</span>
-              <span className="oppskrift-fact-value">{totalMinutes} min</span>
+              <label className="oppskrift-fact-label" htmlFor="servings-adjust">
+                Porsjoner
+              </label>
+              <span className="servings-stepper">
+                <button
+                  type="button"
+                  aria-label="Færre porsjoner"
+                  disabled={!(currentServings > 1)}
+                  onClick={() => stepServings(-1)}
+                >
+                  &minus;
+                </button>
+                <input
+                  id="servings-adjust"
+                  type="number"
+                  min="1"
+                  step="0.1"
+                  value={targetServingsInput}
+                  onChange={(e) => setTargetServingsInput(e.target.value)}
+                />
+                <button type="button" aria-label="Flere porsjoner" onClick={() => stepServings(1)}>
+                  +
+                </button>
+              </span>
             </div>
-          )}
-          <div className="oppskrift-fact">
-            <label className="oppskrift-fact-label" htmlFor="servings-adjust">
-              Porsjoner
-            </label>
-            <span className="servings-stepper">
-              <button
-                type="button"
-                aria-label="Færre porsjoner"
-                disabled={!(currentServings > 1)}
-                onClick={() => stepServings(-1)}
-              >
-                &minus;
-              </button>
-              <input
-                id="servings-adjust"
-                type="number"
-                min="1"
-                step="0.1"
-                value={targetServingsInput}
-                onChange={(e) => setTargetServingsInput(e.target.value)}
-              />
-              <button type="button" aria-label="Flere porsjoner" onClick={() => stepServings(1)}>
-                +
-              </button>
-            </span>
           </div>
-        </div>
+        )}
 
         <button
           type="button"
@@ -265,7 +283,9 @@ export function OppskriftPage() {
           Start kokemodus
         </button>
 
-        <h2 className="oppskrift-section-heading">Ingredienser</h2>
+        {(!isTechnique || allIngredients(recipe.ingredients).length > 0) && (
+          <h2 className="oppskrift-section-heading">{isTechnique ? 'Du trenger' : 'Ingredienser'}</h2>
+        )}
         {recipe.ingredients.loose.length > 0 && (
           <ul className="oppskrift-ingredients">{recipe.ingredients.loose.map(renderIngredient)}</ul>
         )}

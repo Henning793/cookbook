@@ -18,6 +18,10 @@ export interface RecipeIngredients {
   components: RecipeComponent[]
 }
 
+// En teknikk (f.eks. sous-vide) lagres som en oppskrift med kind 'technique'.
+// Den vises i sin egen liste og holdes utenfor samlinger og ukesmeny.
+export type RecipeKind = 'recipe' | 'technique'
+
 export interface Recipe {
   id: string
   created_at: string
@@ -31,6 +35,7 @@ export interface Recipe {
   // medlem av en familie eller ikke - se canEditRecipe/isSharedIn.
   family_id: string | null
   tags: string[]
+  kind: RecipeKind
   // Lagt til av migration_recipe_header_fields.sql (Task 7). Frem til den
   // migreringen er kjørt finnes ikke kolonnene i databasen, så disse er alltid undefined.
   description?: string

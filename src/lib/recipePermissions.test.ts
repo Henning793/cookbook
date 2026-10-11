@@ -14,6 +14,7 @@ function makeRecipe(overrides: Partial<Recipe> = {}): Recipe {
     owner_id: 'owner-1',
     family_id: 'family-a',
     tags: [],
+    kind: 'recipe',
     ...overrides,
   }
 }

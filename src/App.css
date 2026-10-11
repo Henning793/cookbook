@@ -483,6 +483,31 @@
   font-weight: 600;
 }
 
+.kind-switch {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+}
+
+.add-recipe-form .kind-switch-option {
+  flex: 1;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  padding: 8px 12px;
+  font: 600 14px var(--font-body);
+  color: var(--color-neutral-700);
+  cursor: pointer;
+}
+
+.add-recipe-form .kind-switch-option-active {
+  background: var(--color-accent);
+  color: var(--color-bg);
+}
+
 .row-add-group {
   display: flex;
   flex-wrap: wrap;
@@ -1556,6 +1581,13 @@
   line-height: 1.2;
 }
 
+.sok-card-kind {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-neutral-700);
+  margin-top: -6px;
+}
+
 .sok-snippet {
   font-size: 12px;
   line-height: 1.5;
@@ -1823,6 +1855,11 @@
   padding: 0;
   color: var(--color-accent);
   cursor: pointer;
+}
+
+.hjem-section-links {
+  display: flex;
+  gap: 16px;
 }
 
 .hjem-grid {

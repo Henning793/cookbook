@@ -22,10 +22,10 @@ function Kokemodus() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const location = useLocation()
-  const { recipes, cookingSession, setCookingSession, loading } = useApp()
+  const { allRecipes, cookingSession, setCookingSession, loading } = useApp()
   const { timers, now, start: startTimer, pushState } = useTimers()
 
-  const recipe = recipes.find((r) => r.id === id)
+  const recipe = allRecipes.find((r) => r.id === id)
 
   // Porsjonstallet kommer fra oppskriftssiden (?porsjoner=) eller fra den
   // lagrede kokeøkten ("Fortsett" på forsiden). Ugyldig verdi = ingen skalering.

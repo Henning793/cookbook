@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Camera, Images, X } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { importRecipeFromUrl } from '../lib/importRecipe'
@@ -7,6 +7,7 @@ import { MAX_RECIPE_IMAGES, recipeFromImages } from '../lib/recipeFromImage'
 import { errorMessage } from '../lib/errorMessage'
 import { useApp } from '../context/AppContext'
 import { RecipeForm, type RecipeFormValues } from '../components/RecipeForm'
+import type { RecipeKind } from '../types'
 
 type View = 'choose' | 'import' | 'photo' | 'form'
 
@@ -19,7 +20,11 @@ export function NyOppskriftPage() {
   const navigate = useNavigate()
   const { availableTags, reload } = useApp()
 
-  const [view, setView] = useState<View>('choose')
+  // /ny?type=teknikk (fra teknikklisten) går rett til et tomt teknikkskjema.
+  const [searchParams] = useSearchParams()
+  const startAsTechnique = searchParams.get('type') === 'teknikk'
+  const [kind, setKind] = useState<RecipeKind>(startAsTechnique ? 'technique' : 'recipe')
+  const [view, setView] = useState<View>(startAsTechnique ? 'form' : 'choose')
   const [importUrl, setImportUrl] = useState('')
   const [importing, setImporting] = useState(false)
   const [importError, setImportError] = useState('')
@@ -38,6 +43,11 @@ export function NyOppskriftPage() {
   useEffect(() => () => photosRef.current.forEach((photo) => URL.revokeObjectURL(photo.url)), [])
 
   function resetToChoose() {
+    if (startAsTechnique) {
+      navigate('/teknikker')
+      return
+    }
+    setKind('recipe')
     setView('choose')
     setImportUrl('')
     setImportError('')
@@ -83,10 +93,13 @@ export function NyOppskriftPage() {
   }
 
   async function handleSubmit(values: RecipeFormValues) {
-    const { error } = await supabase.from('recipes').insert(values)
+    // kind sendes bare for teknikker, så vanlige oppskrifter kan lagres også
+    // før migration_teknikker.sql er kjørt.
+    const row: RecipeFormValues & { kind?: RecipeKind } = kind === 'technique' ? { ...values, kind } : values
+    const { error } = await supabase.from('recipes').insert(row)
     if (error) throw error
     reload()
-    navigate('/')
+    navigate(kind === 'technique' ? '/teknikker' : '/')
   }
 
   async function handleImport(e: FormEvent) {
@@ -243,10 +256,12 @@ export function NyOppskriftPage() {
   return (
     <div className="page ny-oppskrift-page ny-oppskrift-form-page">
       <RecipeForm
-        heading="Ny oppskrift"
+        heading={kind === 'technique' ? 'Ny teknikk' : 'Ny oppskrift'}
+        kind={kind}
+        onKindChange={setKind}
         initial={importedValues ?? undefined}
         availableTags={availableTags}
-        submitLabel="Lagre oppskrift"
+        submitLabel={kind === 'technique' ? 'Lagre teknikk' : 'Lagre oppskrift'}
         saveAtBottom
         savingLabel="Lagrer..."
         onSubmit={handleSubmit}
