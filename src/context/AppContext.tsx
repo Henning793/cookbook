@@ -14,19 +14,12 @@ import { TAGS } from '../lib/tags'
 import { capitalizeFirst, capitalizeIngredients, normalizeIngredients } from '../lib/recipeIngredients'
 import { getMyMembership, getMyFamily, listMembers } from '../lib/families'
 import { listIncomingShares, listOutgoingShares } from '../lib/shares'
+import { readCookingSession, writeCookingSession, type CookingSession } from '../lib/cookingSession'
 import type { Family, FamilyMember, FamilyRole, FamilyShare, Profile, Recipe } from '../types'
 
 interface Filters {
   ownerId: string | null
   tag: string | null
-}
-
-interface CookingSession {
-  recipeId: string
-  stepIndex: number
-  // Valgt antall porsjoner fra oppskriftssiden, slik at "Fortsett" på
-  // forsiden viser samme skalerte mengder.
-  servings?: number
 }
 
 interface AppContextValue {
@@ -186,27 +179,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setFiltersState((current) => ({ ...current, ...patch }))
   }
 
-  const [cookingSession, setCookingSessionState] = useState<CookingSession | null>(() => {
-    try {
-      const raw = localStorage.getItem('kokeboka.cooking')
-      return raw ? JSON.parse(raw) : null
-    } catch {
-      return null
-    }
-  })
+  // Kokeøkten hører til én bruker (se lib/cookingSession). Den leses på nytt
+  // når en annen bruker logger inn, og er tom til innloggingen er lest.
+  const userId = session?.user.id ?? null
+  const [cooking, setCooking] = useState<{ userId: string | null; session: CookingSession | null } | null>(null)
+  let currentCooking = cooking
+  if (!sessionLoading && (!currentCooking || currentCooking.userId !== userId)) {
+    currentCooking = { userId, session: readCookingSession(localStorage, userId) }
+    setCooking(currentCooking)
+  }
+  const cookingSession = currentCooking?.session ?? null
 
-  function setCookingSession(session: CookingSession | null) {
-    setCookingSessionState(session)
-    try {
-      if (session) {
-        localStorage.setItem('kokeboka.cooking', JSON.stringify(session))
-      } else {
-        localStorage.removeItem('kokeboka.cooking')
-      }
-    } catch {
-      // localStorage utilgjengelig (privat modus, e.l.) - kokemodus-sesjonen
-      // degraderer da til kun in-memory for denne siden, som er en akseptabel avveining.
-    }
+  function setCookingSession(newSession: CookingSession | null) {
+    setCooking({ userId, session: newSession })
+    writeCookingSession(localStorage, userId, newSession)
   }
 
   const value: AppContextValue = {
