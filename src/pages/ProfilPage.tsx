@@ -107,6 +107,12 @@ export function ProfilPage() {
 
       <p className="profil-kicker">Appen</p>
       <div className="profil-group">
+        <button type="button" className="profil-row profil-row-button" onClick={() => navigate('/tips')}>
+          <span>Tips og triks</span>
+          <span className="profil-row-chevron" aria-hidden="true">
+            <ChevronRight size={14} strokeWidth={2.75} />
+          </span>
+        </button>
         <button type="button" className="profil-row profil-row-button" onClick={() => navigate('/familie')}>
           <span>Gruppe</span>
           <span className="profil-row-chevron" aria-hidden="true">
