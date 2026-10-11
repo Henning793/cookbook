@@ -497,6 +497,23 @@
   font-weight: 600;
 }
 
+.add-recipe-form .field-label-invalid {
+  color: var(--color-accent-700);
+  font-weight: 600;
+}
+
+.tag-picker-invalid {
+  padding: 10px;
+  border: 1.5px solid var(--color-accent-700);
+  border-radius: 14px;
+  background: var(--color-accent-100);
+}
+
+.field-error {
+  margin: 0;
+  font-weight: 600;
+}
+
 .tag-option-check {
   margin-right: 4px;
   vertical-align: -1px;
