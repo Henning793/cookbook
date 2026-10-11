@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { WELCOME_SEEN_KEY, isNewUser, isWelcomeSeen, markWelcomeSeen } from './welcome.ts'
+import { WELCOME_SEEN_KEY, isWelcomeSeen, markWelcomeSeen } from './welcome.ts'
 
 function memoryStore() {
   const data = new Map<string, string>()
@@ -30,17 +30,4 @@ test('velkomsten er ikke sett før den er markert som sett', () => {
 test('blokkert lagring regnes som sett og krasjer ikke', () => {
   assert.equal(isWelcomeSeen(throwingStore), true)
   assert.doesNotThrow(() => markWelcomeSeen(throwingStore))
-})
-
-test('ny bruker er en konto opprettet de siste 14 dagene', () => {
-  const now = Date.parse('2026-10-11T12:00:00Z')
-  assert.equal(isNewUser('2026-10-11T11:00:00Z', now), true)
-  assert.equal(isNewUser('2026-09-28T13:00:00Z', now), true)
-  assert.equal(isNewUser('2026-09-27T11:00:00Z', now), false)
-  assert.equal(isNewUser('2025-01-01T00:00:00Z', now), false)
-})
-
-test('manglende eller ugyldig opprettelsesdato gir ikke velkomst', () => {
-  assert.equal(isNewUser(undefined), false)
-  assert.equal(isNewUser('ikke en dato'), false)
 })

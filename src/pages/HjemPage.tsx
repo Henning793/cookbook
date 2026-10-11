@@ -15,7 +15,7 @@ import {
 import { listStandingItems } from '../lib/standingItems'
 import { InstallBanner } from '../components/InstallApp'
 import { Welcome } from '../components/Welcome'
-import { isNewUser, isWelcomeSeen, markWelcomeSeen } from '../lib/welcome'
+import { isWelcomeSeen, markWelcomeSeen } from '../lib/welcome'
 import type { MenuDay } from '../types'
 
 // Antall fargevarianter for samlingskort uten bilde (.hjem-collection-cover-N).
@@ -239,7 +239,7 @@ export function HjemPage() {
       )}
 
       {/* Venter på gruppen, så en som kom inn via invitasjonslenke får gruppens navn i velkomsten. */}
-      {session && !welcomeSeen && !familyLoading && isNewUser(session.user.created_at) && (
+      {session && !welcomeSeen && !familyLoading && (
         <Welcome
           groupName={family?.name ?? null}
           onDone={(addRecipe) => {
