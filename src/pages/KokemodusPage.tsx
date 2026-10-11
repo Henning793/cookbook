@@ -10,7 +10,15 @@ import { cookingModeTimers } from '../lib/cookingTimers'
 import { StepText } from '../components/StepText'
 import { kokemodusExit } from '../lib/kokemodusExit'
 
+// Kokeøkten er per bruker, så steget man stoppet på kan først leses når
+// innloggingen er lest.
 export function KokemodusPage() {
+  const { sessionLoading } = useApp()
+  if (sessionLoading) return null
+  return <Kokemodus />
+}
+
+function Kokemodus() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const location = useLocation()
