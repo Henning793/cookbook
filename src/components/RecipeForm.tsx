@@ -121,6 +121,11 @@ export function RecipeForm({
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  // Settes når man prøver å lagre uten etikett, og gjelder til én er valgt.
+  const [tagsMissing, setTagsMissing] = useState(false)
+  const tagLabelRef = useRef<HTMLLabelElement>(null)
+  const tagPickerRef = useRef<HTMLDivElement>(null)
+  const customTagInputRef = useRef<HTMLInputElement>(null)
   const stepRefs = useRef<(HTMLTextAreaElement | null)[]>([])
   // Åpen @-autocomplete: hvilket steg, hvor "@" står og hva som er skrevet etter.
   const [mention, setMention] = useState<{ step: number; start: number; end: number; query: string } | null>(null)
@@ -261,7 +266,11 @@ export function RecipeForm({
     setError('')
 
     if (selectedTags.length === 0) {
-      setError('Velg minst én etikett')
+      setTagsMissing(true)
+      // Etikettene ligger langt nede i skjemaet, så feltet hentes fram og får fokus.
+      tagLabelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      const target = tagPickerRef.current?.querySelector('button') ?? customTagInputRef.current
+      target?.focus({ preventScroll: true })
       return
     }
 
@@ -340,6 +349,8 @@ export function RecipeForm({
   const mentionOptions = mention
     ? componentSuggestions(mention.query, { loose: [], components: componentNames }).map((c) => c.name)
     : []
+
+  const showTagError = tagsMissing && selectedTags.length === 0
 
   const customUnitRow = customUnitTarget === null ? null : groups[customUnitTarget.group]?.rows[customUnitTarget.row]
 
@@ -623,8 +634,16 @@ export function RecipeForm({
         + Legg til steg
       </button>
 
-      <label>Etiketter (velg minst én)</label>
-      <div className="tag-picker">
+      <label id="tags-label" ref={tagLabelRef} className={showTagError ? 'field-label-invalid' : undefined}>
+        Etiketter (velg minst én)
+      </label>
+      <div
+        className={showTagError ? 'tag-picker tag-picker-invalid' : 'tag-picker'}
+        ref={tagPickerRef}
+        role="group"
+        aria-labelledby="tags-label"
+        aria-describedby={showTagError ? 'tags-error' : undefined}
+      >
         {tagOptions.map((tag) => {
           const selected = selectedTags.includes(tag)
           return (
@@ -643,8 +662,14 @@ export function RecipeForm({
           )
         })}
       </div>
+      {showTagError && (
+        <p className="error field-error" id="tags-error" role="alert">
+          Du må velge minst én etikett før oppskriften kan lagres.
+        </p>
+      )}
       <div className="tag-add-row">
         <input
+          ref={customTagInputRef}
           placeholder="Legg til egen etikett"
           value={customTagInput}
           onChange={(e) => setCustomTagInput(e.target.value)}
