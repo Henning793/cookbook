@@ -18,6 +18,7 @@ function recipe(
     owner_id: 'u1',
     family_id: null,
     tags: [],
+    kind: 'recipe',
   }
 }
 

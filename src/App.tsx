@@ -8,6 +8,7 @@ import { OppskriftPage } from './pages/OppskriftPage'
 import { KokemodusPage } from './pages/KokemodusPage'
 import { NyOppskriftPage } from './pages/NyOppskriftPage'
 import { SokPage } from './pages/SokPage'
+import { TeknikkerPage } from './pages/TeknikkerPage'
 import { ProfilPage } from './pages/ProfilPage'
 import { FamiliePage } from './pages/FamiliePage'
 import { TipsPage } from './pages/TipsPage'
@@ -51,6 +52,7 @@ function App() {
             <Route path="/oppskrift/:id/kok" element={<KokemodusPage />} />
             <Route path="/ny" element={<NyOppskriftPage />} />
             <Route path="/sok" element={<SokPage />} />
+            <Route path="/teknikker" element={<TeknikkerPage />} />
             <Route path="/meg" element={<ProfilPage />} />
             <Route path="/familie" element={<FamiliePage />} />
             <Route path="/tips" element={<TipsPage />} />

@@ -26,7 +26,7 @@ export function FamiliePage() {
     myRole,
     profiles,
     session,
-    recipes,
+    allRecipes,
     incomingShares,
     outgoingShares,
     reloadFamily,
@@ -98,7 +98,7 @@ export function FamiliePage() {
   // Hva en deling gjelder, med navnet på oppskriften eller samlingen når vi kjenner det.
   function shareLabel(share: FamilyShare): string {
     if (share.share_type === 'recipe') {
-      const title = recipes.find((r) => r.id === share.recipe_id)?.title
+      const title = allRecipes.find((r) => r.id === share.recipe_id)?.title
       return title ? `Oppskriften «${title}»` : 'Oppskrift'
     }
     if (share.share_type === 'collection') {

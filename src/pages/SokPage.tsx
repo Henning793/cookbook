@@ -50,7 +50,7 @@ function buildSnippet(match: Match, queryLength: number) {
 
 export function SokPage() {
   const navigate = useNavigate()
-  const { recipes, profiles, availableTags, filters, setFilters } = useApp()
+  const { recipes, techniques, profiles, availableTags, filters, setFilters } = useApp()
 
   const ownersWithRecipes = useMemo(() => {
     const ownerIds = new Set(recipes.map((recipe) => recipe.owner_id))
@@ -84,10 +84,11 @@ export function SokPage() {
     if (!hasQuery) {
       return recipes.map((recipe) => ({ recipe, match: null as Match | null }))
     }
-    return recipes
+    // Teknikker er med i tekstsøket, men ikke når man bare filtrerer på etikett eller eier.
+    return [...recipes, ...techniques]
       .map((recipe) => ({ recipe, match: findMatch(recipe, trimmedQuery) }))
       .filter((entry): entry is { recipe: Recipe; match: Match } => entry.match !== null)
-  }, [recipes, trimmedQuery, hasQuery])
+  }, [recipes, techniques, trimmedQuery, hasQuery])
 
   const results = useMemo(
     () =>
@@ -174,6 +175,7 @@ export function SokPage() {
                     onClick={() => navigate(`/oppskrift/${recipe.id}`)}
                   >
                     <span className="sok-card-title">{recipe.title}</span>
+                    {recipe.kind === 'technique' && <span className="sok-card-kind">Teknikk</span>}
                     {snippet && (
                       <span className="sok-snippet">
                         {snippet.prefix}

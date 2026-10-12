@@ -30,7 +30,8 @@ function getGreeting() {
 
 export function HjemPage() {
   const navigate = useNavigate()
-  const { session, recipes, profiles, loading, availableTags, cookingSession, family, familyLoading } = useApp()
+  const { session, recipes, techniques, allRecipes, profiles, loading, availableTags, cookingSession, family, familyLoading } =
+    useApp()
 
   const [todayMenu, setTodayMenu] = useState<MenuDay | null>(null)
   const [shoppingItemsLeft, setShoppingItemsLeft] = useState(0)
@@ -91,7 +92,7 @@ export function HjemPage() {
   }, [tagsWithRecipes, recipes])
 
   const cookingRecipe = cookingSession
-    ? recipes.find((recipe) => recipe.id === cookingSession.recipeId)
+    ? allRecipes.find((recipe) => recipe.id === cookingSession.recipeId)
     : null
 
   const initialSource = name ?? session?.user.email ?? ''
@@ -171,7 +172,7 @@ export function HjemPage() {
 
       {loading ? (
         <p className="status-message">Laster oppskrifter...</p>
-      ) : recipes.length === 0 ? (
+      ) : recipes.length === 0 && techniques.length === 0 ? (
         <p className="status-message">
           Kokeboka di er tom. Trykk på + for å legge inn en oppskrift.
           <br />
@@ -183,9 +184,14 @@ export function HjemPage() {
         <>
           <div className="hjem-section-head">
             <h2>Samlinger</h2>
-            <button type="button" className="hjem-section-link" onClick={() => navigate('/samlinger')}>
-              Mine samlinger
-            </button>
+            <span className="hjem-section-links">
+              <button type="button" className="hjem-section-link" onClick={() => navigate('/teknikker')}>
+                Teknikker
+              </button>
+              <button type="button" className="hjem-section-link" onClick={() => navigate('/samlinger')}>
+                Mine samlinger
+              </button>
+            </span>
           </div>
           <div className="hjem-grid">
             {collections.map(({ tag, label, count, coverUrls }, index) => {

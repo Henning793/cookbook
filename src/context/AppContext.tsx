@@ -27,7 +27,11 @@ interface AppContextValue {
   // Sann til den lagrede innloggingen er lest, så forsiden ikke rekker å
   // vise landingssiden til en som allerede er innlogget.
   sessionLoading: boolean
+  // Bare vanlige oppskrifter. Teknikker ligger i techniques, og allRecipes
+  // har begge deler for oppslag på id.
   recipes: Recipe[]
+  techniques: Recipe[]
+  allRecipes: Recipe[]
   profiles: Profile[]
   loading: boolean
   reload: () => void
@@ -50,7 +54,7 @@ const AppContext = createContext<AppContextValue | null>(null)
 export function AppProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [sessionLoading, setSessionLoading] = useState(true)
-  const [recipes, setRecipes] = useState<Recipe[]>([])
+  const [allRecipes, setAllRecipes] = useState<Recipe[]>([])
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -82,10 +86,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // liste med overskrifter) vises som komponenter uten databaseendring.
       // Navn og steg får stor forbokstav her også, så oppskrifter lagret før
       // det ble gjort ved lagring vises likt som nye.
-      setRecipes(
+      // kind faller tilbake til 'recipe' til migration_teknikker.sql er kjørt.
+      setAllRecipes(
         data.map((recipe) => ({
           ...recipe,
           tags: recipe.tags ?? [],
+          kind: recipe.kind === 'technique' ? 'technique' : 'recipe',
           ingredients: capitalizeIngredients(normalizeIngredients(recipe.ingredients)),
           steps: Array.isArray(recipe.steps) ? recipe.steps.map(capitalizeFirst) : recipe.steps,
         }))
@@ -106,6 +112,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       })
   }, [loadRecipes])
+
+  const recipes = useMemo(() => allRecipes.filter((recipe) => recipe.kind === 'recipe'), [allRecipes])
+  const techniques = useMemo(() => allRecipes.filter((recipe) => recipe.kind === 'technique'), [allRecipes])
 
   const [family, setFamily] = useState<Family | null>(null)
   const [members, setMembers] = useState<FamilyMember[]>([])
@@ -199,6 +208,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     session,
     sessionLoading,
     recipes,
+    techniques,
+    allRecipes,
     profiles,
     loading,
     reload: loadRecipes,
