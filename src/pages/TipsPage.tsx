@@ -38,6 +38,10 @@ const TIP_GROUPS: { heading: string; tips: [title: string, text: string][] }[] =
     tips: [
       ['Samlinger', 'Sett en etikett på en oppskrift, så havner den i en samling.'],
       ['Søk og filter', 'Søk i alle oppskrifter, og filtrer på etikett eller hvem som la den inn.'],
+      [
+        'Teknikker',
+        'Det du slår opp en sjelden gang, som sous-vide, legger du inn som teknikk i stedet for oppskrift. De ligger bak lenken «Teknikker» på forsiden og dukker opp i søket.',
+      ],
     ],
   },
   {
