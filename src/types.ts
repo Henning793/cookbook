@@ -87,7 +87,18 @@ export interface MenuDay {
   // Lagt til av migration_ukesmeny_porsjoner.sql. NULL (eller undefined før
   // migreringen er kjørt) = oppskriftens eget antall porsjoner.
   servings?: number | null
+  // Lagt til av migration_ukesmeny_flere_retter.sql: retter i tillegg til
+  // hovedretten (recipe_id). Undefined før migreringen er kjørt.
+  extra_dishes?: MenuExtraDish[] | null
   updated_at: string
+}
+
+// En ekstra rett på en dag i ukesmenyen: en oppskrift eller fritekst
+// (f.eks. «Salat»). servings = null betyr at retten følger dagens antall.
+export interface MenuExtraDish {
+  recipe_id: string | null
+  freetext?: string | null
+  servings: number | null
 }
 
 export type ShareType = 'recipe' | 'collection' | 'whole_family'
