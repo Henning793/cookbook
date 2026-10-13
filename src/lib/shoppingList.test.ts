@@ -111,9 +111,9 @@ test('normalizeItemName trims and lowercases', async () => {
 test('removeAlwaysHome hides exact-name matches only', async () => {
   const { removeAlwaysHome } = await import('./shoppingAggregate.ts')
   const items = [
-    { normalizedName: 'curry paste', displayName: 'Curry paste', unit: 'ss', amount: 2 },
-    { normalizedName: 'rød curry paste', displayName: 'Rød curry paste', unit: 'ss', amount: 1 },
-    { normalizedName: 'løk', displayName: 'Løk', unit: 'stk', amount: 1 },
+    { normalizedName: 'curry paste', displayName: 'Curry paste', unit: 'ss', amount: 2, scaled: false, sources: [] },
+    { normalizedName: 'rød curry paste', displayName: 'Rød curry paste', unit: 'ss', amount: 1, scaled: false, sources: [] },
+    { normalizedName: 'løk', displayName: 'Løk', unit: 'stk', amount: 1, scaled: false, sources: [] },
   ]
   const result = removeAlwaysHome(items, new Set(['curry paste']))
   assert.deepEqual(result.map((i) => i.normalizedName), ['rød curry paste', 'løk'])
@@ -138,10 +138,53 @@ test('planWeeklyAdds inserts missing, skips unchecked duplicates, unchecks check
 test('removeCleared hides only items whose name+unit was cleared', async () => {
   const { removeCleared, ingredientKey } = await import('./shoppingAggregate.ts')
   const items = [
-    { normalizedName: 'melk', displayName: 'Melk', unit: 'dl', amount: 8 },
-    { normalizedName: 'melk', displayName: 'Melk', unit: 'ss', amount: 2 },
-    { normalizedName: 'løk', displayName: 'Løk', unit: 'stk', amount: 1 },
+    { normalizedName: 'melk', displayName: 'Melk', unit: 'dl', amount: 8, scaled: false, sources: [] },
+    { normalizedName: 'melk', displayName: 'Melk', unit: 'ss', amount: 2, scaled: false, sources: [] },
+    { normalizedName: 'løk', displayName: 'Løk', unit: 'stk', amount: 1, scaled: false, sources: [] },
   ]
   const result = removeCleared(items, new Set([ingredientKey('melk', 'dl')]))
   assert.deepEqual(result.map((i) => `${i.normalizedName}/${i.unit}`), ['melk/ss', 'løk/stk'])
+})
+
+function scaledDay(weekday: number, recipeId: string, servings: number | null): MenuDay {
+  return { ...menuDay(weekday, recipeId), servings }
+}
+
+test('scales a day by its servings relative to the recipe servings', () => {
+  const recipes = [{ ...recipe('r1', [{ amount: 400, unit: 'g', name: 'Kylling' }]), servings: 4 }]
+  const result = aggregateIngredients([scaledDay(0, 'r1', 6)], recipes)
+  assert.equal(result[0].amount, 600)
+  assert.equal(result[0].scaled, true)
+  assert.deepEqual(result[0].sources, [{ weekday: 0, recipeTitle: 'r1', amount: 600, servings: 6 }])
+})
+
+test('servings equal to the recipe or null leave amounts unscaled', () => {
+  const recipes = [{ ...recipe('r1', [{ amount: 0.25, unit: 'ts', name: 'Salt' }]), servings: 4 }]
+  const result = aggregateIngredients([scaledDay(0, 'r1', 4), scaledDay(1, 'r1', null)], recipes)
+  assert.equal(result[0].amount, 0.5)
+  assert.equal(result[0].scaled, false)
+  assert.deepEqual(result[0].sources.map((s) => s.servings), [null, null])
+})
+
+test('sums scaled and unscaled days and rounds whole units up', () => {
+  const recipes = [
+    { ...recipe('r1', [{ amount: 1, unit: 'stk', name: 'Løk' }]), servings: 4 },
+    { ...recipe('r2', [{ amount: 1, unit: 'stk', name: 'Løk' }]), servings: 2 },
+  ]
+  // 1 × 6/4 = 1,5 + 1 = 2,5 -> 3 stk
+  const result = aggregateIngredients([scaledDay(0, 'r1', 6), scaledDay(1, 'r2', null)], recipes)
+  assert.equal(result[0].amount, 3)
+  assert.deepEqual(result[0].sources.map((s) => s.amount), [2, 1])
+})
+
+test('rounds other scaled units to one decimal', () => {
+  const recipes = [{ ...recipe('r1', [{ amount: 0.25, unit: 'kg', name: 'Mel' }]), servings: 3 }]
+  const result = aggregateIngredients([scaledDay(0, 'r1', 4)], recipes)
+  assert.equal(result[0].amount, 0.3)
+})
+
+test('recipes without servings count as 1 serving', () => {
+  const recipes = [recipe('r1', [{ amount: 2, unit: 'dl', name: 'Melk' }])]
+  const result = aggregateIngredients([scaledDay(0, 'r1', 3)], recipes)
+  assert.equal(result[0].amount, 6)
 })

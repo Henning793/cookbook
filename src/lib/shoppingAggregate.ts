@@ -1,11 +1,37 @@
 import type { MenuDay, Recipe } from '../types.ts'
 import { allIngredients } from './recipeIngredients.ts'
 
+// Hvor mengden kommer fra: én rad per dag i ukesmenyen som bidrar.
+// servings er satt bare når dagen er ganget opp eller ned.
+export interface IngredientSource {
+  weekday: number
+  recipeTitle: string
+  amount: number | null
+  servings: number | null
+}
+
 export interface AggregatedIngredient {
   normalizedName: string
   displayName: string
   unit: string
   amount: number | null
+  // true når minst én av dagene har et annet antall porsjoner enn oppskriften.
+  scaled: boolean
+  sources: IngredientSource[]
+}
+
+// Oppskrifter uten antall porsjoner regnes som 1 porsjon, som på
+// oppskriftssiden (se OppskriftPage).
+export function recipeBaseServings(recipe: Pick<Recipe, 'servings'>): number {
+  return recipe.servings != null && recipe.servings > 0 ? recipe.servings : 1
+}
+
+// Ting man kjøper hele av rundes opp når mengden er ganget opp (1,5 løk blir 2).
+const WHOLE_UNITS = new Set(['', 'stk', 'boks', 'pakke', 'pk', 'fedd', 'bunt', 'pose', 'glass', 'flaske', 'neve'])
+
+function roundScaled(amount: number, unit: string): number {
+  if (WHOLE_UNITS.has(unit.trim().toLowerCase())) return Math.ceil(amount - 1e-9)
+  return Math.round(amount * 10) / 10
 }
 
 export function normalizeItemName(name: string): string {
@@ -25,7 +51,8 @@ export function ingredientKey(normalizedName: string, unit: string): string {
 // entry_type 'recipe' — fritekst-dager bidrar ikke). Matcher kun rader med
 // samme normalisert navn OG samme enhet. Komponenter flates ut: ingrediensene
 // i f.eks. en marinade summeres med løse ingredienser som alle andre.
-// Ingen porsjons-skalering — mengder brukes as-is uansett recipes.servings.
+// Har dagen et eget antall porsjoner (menu_days.servings), ganges mengdene
+// med servings / oppskriftens antall før de summeres.
 // Ren funksjon (ingen supabase-import) slik at den kan enhetstestes med
 // vanlig `node --test`, uten Vite sin import.meta.env.
 export function aggregateIngredients(menuDays: MenuDay[], recipes: Recipe[]): AggregatedIngredient[] {
@@ -37,29 +64,49 @@ export function aggregateIngredients(menuDays: MenuDay[], recipes: Recipe[]): Ag
     const recipe = recipesById.get(day.recipe_id)
     if (!recipe) continue
 
+    const base = recipeBaseServings(recipe)
+    const dayServings = day.servings != null && day.servings > 0 ? day.servings : null
+    const scaled = dayServings !== null && dayServings !== base
+    const factor = scaled ? dayServings / base : 1
+
     for (const ingredient of allIngredients(recipe.ingredients)) {
       const normalizedName = normalize(ingredient.name)
       const unit = ingredient.unit
       const key = ingredientKey(normalizedName, unit)
+      const amount = ingredient.amount !== null ? ingredient.amount * factor : null
+      const source: IngredientSource = {
+        weekday: day.weekday,
+        recipeTitle: recipe.title,
+        amount: amount !== null && scaled ? roundScaled(amount, unit) : amount,
+        servings: scaled ? dayServings : null,
+      }
       const existing = byKey.get(key)
       if (existing) {
-        if (existing.amount !== null && ingredient.amount !== null) {
-          existing.amount += ingredient.amount
-        } else if (ingredient.amount !== null) {
-          existing.amount = ingredient.amount
+        if (existing.amount !== null && amount !== null) {
+          existing.amount += amount
+        } else if (amount !== null) {
+          existing.amount = amount
         }
+        existing.scaled ||= scaled
+        existing.sources.push(source)
       } else {
         byKey.set(key, {
           normalizedName,
           displayName: ingredient.name.trim(),
           unit,
-          amount: ingredient.amount,
+          amount,
+          scaled,
+          sources: [source],
         })
       }
     }
   }
 
-  return [...byKey.values()]
+  const items = [...byKey.values()]
+  for (const item of items) {
+    if (item.scaled && item.amount !== null) item.amount = roundScaled(item.amount, item.unit)
+  }
+  return items
 }
 
 // Skjuler oppskrift-ingredienser som står i "Alltid hjemme" (eksakt navn,

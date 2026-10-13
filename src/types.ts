@@ -84,6 +84,9 @@ export interface MenuDay {
   entry_type: MenuEntryType | null
   recipe_id: string | null
   freetext: string | null
+  // Lagt til av migration_ukesmeny_porsjoner.sql. NULL (eller undefined før
+  // migreringen er kjørt) = oppskriftens eget antall porsjoner.
+  servings?: number | null
   updated_at: string
 }
 
