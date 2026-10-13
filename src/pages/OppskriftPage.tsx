@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ChevronLeft, Pencil, Share2 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useApp } from '../context/AppContext'
@@ -11,6 +11,7 @@ import { getFamilyName } from '../lib/families'
 import { StepText } from '../components/StepText'
 import { FROM_RECIPE_STATE } from '../lib/kokemodusExit'
 import { allIngredients } from '../lib/recipeIngredients'
+import { isFromMenu, parseServingsParam } from '../lib/menuServings'
 import type { IngredientItem, RecipeKind } from '../types'
 
 function formatNumber(value: number) {
@@ -33,22 +34,36 @@ export function OppskriftPage() {
   const [editKind, setEditKind] = useState<RecipeKind | null>(null)
 
   const fromTag = (location.state as { fromTag?: string } | null)?.fromTag
-  const backLabel = fromTag ?? (isTechnique ? 'Teknikker' : 'Kokeboka')
+  const fromMenu = isFromMenu(location.state)
+  const backLabel = fromMenu ? 'Ukesmeny' : fromTag ?? (isTechnique ? 'Teknikker' : 'Kokeboka')
 
   function goBack() {
-    navigate(fromTag ? `/samling/${encodeURIComponent(fromTag)}` : isTechnique ? '/teknikker' : '/')
+    // Fra ukesmenyen ligger den rett under i historikken. Går vi ett steg tilbake
+    // i stedet for å legge den på nytt, blir ikke tilbake-sveip en evig runddans.
+    if (fromMenu) {
+      navigate(-1)
+      return
+    }
+    navigate(
+      fromTag ? `/samling/${encodeURIComponent(fromTag)}` : isTechnique ? '/teknikker' : '/'
+    )
   }
 
   const baseServings = recipe?.servings ?? 1
 
+  // Åpnet fra en dag i ukesmenyen med eget antall (?porsjoner=N) starter
+  // velgeren på det antallet. Ellers oppskriftens eget.
+  const [searchParams] = useSearchParams()
+  const menuServings = parseServingsParam(searchParams.get('porsjoner'))
+
   // Live porsjonsjustering - ren komponent-state, lagres ikke noe sted og
   // nullstilles automatisk ved sideinnlasting. Resettes også når man
   // navigerer til en annen oppskrift uten at siden remountes.
-  const [targetServingsInput, setTargetServingsInput] = useState(String(baseServings))
+  const [targetServingsInput, setTargetServingsInput] = useState(String(menuServings ?? baseServings))
 
   useEffect(() => {
-    setTargetServingsInput(String(recipe?.servings ?? 1))
-  }, [recipe?.id])
+    setTargetServingsInput(String(menuServings ?? recipe?.servings ?? 1))
+  }, [recipe?.id, menuServings])
 
   const sharedIn = recipe ? isSharedIn(recipe, session?.user.id ?? '', family?.id ?? null) : false
 
@@ -263,6 +278,12 @@ export function OppskriftPage() {
                   +
                 </button>
               </span>
+              {/* Forsvinner når antallet endres her, ellers stemmer den ikke lenger. */}
+              {menuServings != null && currentServings === menuServings && (
+                <span className="oppskrift-fact-note">
+                  Fra ukesmenyen: {formatNumber(menuServings)} {menuServings === 1 ? 'porsjon' : 'porsjoner'}
+                </span>
+              )}
             </div>
           </div>
         )}

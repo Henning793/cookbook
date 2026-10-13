@@ -978,6 +978,14 @@
   font: 600 20px/1.5 var(--font-heading);
 }
 
+.oppskrift-fact-note {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-accent-700);
+}
+
 .servings-stepper {
   display: inline-flex;
   align-items: center;
