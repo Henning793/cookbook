@@ -948,6 +948,12 @@
   white-space: pre-line;
 }
 
+.oppskrift-lede-link {
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .oppskrift-facts {
   display: grid;
   grid-auto-flow: column;

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ChevronLeft, Pencil, Share2 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useApp } from '../context/AppContext'
@@ -12,6 +12,7 @@ import { StepText } from '../components/StepText'
 import { FROM_RECIPE_STATE } from '../lib/kokemodusExit'
 import { allIngredients } from '../lib/recipeIngredients'
 import { isFromMenu, parseServingsParam } from '../lib/menuServings'
+import { descriptionParts } from '../lib/descriptionLinks'
 import type { IngredientItem, RecipeKind } from '../types'
 
 function formatNumber(value: number) {
@@ -35,12 +36,16 @@ export function OppskriftPage() {
 
   const fromTag = (location.state as { fromTag?: string } | null)?.fromTag
   const fromMenu = isFromMenu(location.state)
-  const backLabel = fromMenu ? 'Ukesmeny' : fromTag ?? (isTechnique ? 'Teknikker' : 'Kokeboka')
+  // Åpnet fra en lenke i beskrivelsen til en annen oppskrift.
+  const linkedFromState = (location.state as { linkedFrom?: unknown } | null)?.linkedFrom
+  const linkedFrom = typeof linkedFromState === 'string' ? linkedFromState : undefined
+  const backLabel = linkedFrom ?? (fromMenu ? 'Ukesmeny' : fromTag ?? (isTechnique ? 'Teknikker' : 'Kokeboka'))
 
   function goBack() {
-    // Fra ukesmenyen ligger den rett under i historikken. Går vi ett steg tilbake
-    // i stedet for å legge den på nytt, blir ikke tilbake-sveip en evig runddans.
-    if (fromMenu) {
+    // Fra ukesmenyen eller en annen oppskrift ligger forrige side rett under i
+    // historikken. Går vi ett steg tilbake i stedet for å legge den på nytt,
+    // blir ikke tilbake-sveip en evig runddans.
+    if (fromMenu || linkedFrom) {
       navigate(-1)
       return
     }
@@ -243,7 +248,24 @@ export function OppskriftPage() {
 
         <h1 className="oppskrift-heading">{recipe.title}</h1>
 
-        {description && <p className="oppskrift-lede">{description}</p>}
+        {description && (
+          <p className="oppskrift-lede">
+            {descriptionParts(description, allRecipes, recipe.id).map((part, i) =>
+              part.recipeId ? (
+                <Link
+                  key={i}
+                  className="oppskrift-lede-link"
+                  to={`/oppskrift/${part.recipeId}`}
+                  state={{ linkedFrom: recipe.title }}
+                >
+                  {part.text}
+                </Link>
+              ) : (
+                part.text
+              )
+            )}
+          </p>
+        )}
 
         {!isTechnique && (
           <div className="oppskrift-facts">

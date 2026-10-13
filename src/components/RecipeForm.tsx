@@ -502,7 +502,11 @@ export function RecipeForm({
       <textarea
         id="description"
         rows={2}
-        placeholder={isTechnique ? 'En kort forklaring av teknikken' : 'En kort beskrivelse av retten'}
+        placeholder={
+          isTechnique
+            ? 'En kort forklaring av teknikken'
+            : 'En kort beskrivelse av retten. Skriv *Tittel* for å lenke til en annen oppskrift.'
+        }
         value={description}
         onChange={(e) => setDescription(e.target.value)}
       />
