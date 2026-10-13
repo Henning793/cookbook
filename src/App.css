@@ -2267,6 +2267,8 @@
 }
 
 .ukesmeny-days {
+  /* Plass under siste dag, så den kan rulles fri av angre-meldingen. */
+  padding-bottom: 72px;
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
@@ -2433,9 +2435,12 @@
   color: var(--color-on-accent);
   font-size: 14px;
   box-shadow: var(--shadow-lg);
+  /* Bare «Angre» fanger trykk; resten slipper gjennom til dagene under. */
+  pointer-events: none;
 }
 
 .ukesmeny-notice-undo {
+  pointer-events: auto;
   margin-left: auto;
   flex: none;
   background: none;

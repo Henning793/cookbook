@@ -238,7 +238,8 @@ export function UkesmenyPage() {
         </div>
       )}
 
-      {notice && (
+      {/* Skjules mens man drar en ny dag, så den ikke ligger i veien. */}
+      {notice && swap.lifted === null && (
         <div className="ukesmeny-notice" role="status">
           <span>{notice.text}</span>
           {notice.undo && (
