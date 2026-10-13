@@ -38,8 +38,14 @@ export function OppskriftPage() {
   const backLabel = fromMenu ? 'Ukesmeny' : fromTag ?? (isTechnique ? 'Teknikker' : 'Kokeboka')
 
   function goBack() {
+    // Fra ukesmenyen ligger den rett under i historikken. Går vi ett steg tilbake
+    // i stedet for å legge den på nytt, blir ikke tilbake-sveip en evig runddans.
+    if (fromMenu) {
+      navigate(-1)
+      return
+    }
     navigate(
-      fromMenu ? '/ukesmeny' : fromTag ? `/samling/${encodeURIComponent(fromTag)}` : isTechnique ? '/teknikker' : '/'
+      fromTag ? `/samling/${encodeURIComponent(fromTag)}` : isTechnique ? '/teknikker' : '/'
     )
   }
 
