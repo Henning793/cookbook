@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient'
 import type { MenuDay } from '../types'
+import { dayContent } from './menuSwap'
 
 async function currentUserId(): Promise<string> {
   const { data } = await supabase.auth.getUser()
@@ -91,6 +92,19 @@ export async function setMenuDayFreetext(
 
 export async function clearMenuDay(familyId: string | null, weekday: number): Promise<void> {
   await upsertDay(familyId, weekday, { entry_type: null, recipe_id: null, freetext: null })
+}
+
+// Bytter innholdet (rett, fritekst og porsjoner) mellom to ukedager. Leser
+// dagene på nytt først, så et bytte bruker det som faktisk er lagret selv om
+// noen andre i familien har endret menyen i mellomtiden. Å bytte samme par
+// igjen angrer byttet.
+export async function swapMenuDays(familyId: string | null, a: number, b: number): Promise<void> {
+  if (a === b) return
+  const days = await listMenuDays(familyId)
+  const contentA = dayContent(days.find((d) => d.weekday === a))
+  const contentB = dayContent(days.find((d) => d.weekday === b))
+  await upsertDay(familyId, a, contentB)
+  await upsertDay(familyId, b, contentA)
 }
 
 // "Opprett ny ukesmeny" tømmer ukesmenyen OG avkrysningene i "Fra ukens
