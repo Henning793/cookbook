@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import type { CSSProperties } from 'react'
 import { recipeBaseServings } from '../lib/shoppingAggregate'
 import type { Recipe } from '../types'
 
@@ -17,6 +18,32 @@ interface Props {
   onClose: () => void
 }
 
+// Høyden og plasseringen til den synlige delen av skjermen. På Android
+// legger tastaturet seg over siden uten å gjøre den mindre, så arket må
+// følge visualViewport for å holde seg over tastaturet.
+function visibleViewportStyle(): CSSProperties | undefined {
+  const vv = window.visualViewport
+  return vv ? { top: vv.offsetTop, bottom: 'auto', height: vv.height } : undefined
+}
+
+function useVisibleViewport() {
+  const [style, setStyle] = useState(visibleViewportStyle)
+
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    const update = () => setStyle(visibleViewportStyle())
+    vv.addEventListener('resize', update)
+    vv.addEventListener('scroll', update)
+    return () => {
+      vv.removeEventListener('resize', update)
+      vv.removeEventListener('scroll', update)
+    }
+  }, [])
+
+  return style
+}
+
 function formatServings(value: number) {
   return String(Math.round(value * 10) / 10)
 }
@@ -33,6 +60,7 @@ export function RecipePickerDialog({
   onClear,
   onClose,
 }: Props) {
+  const viewportStyle = useVisibleViewport()
   const initialRecipe = recipes.find((r) => r.id === initialRecipeId)
   const [query, setQuery] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(initialRecipe?.id ?? null)
@@ -72,8 +100,8 @@ export function RecipePickerDialog({
   }
 
   return (
-    <div className="del-dialog-backdrop" onClick={onClose}>
-      <div className="del-dialog-sheet" onClick={(e) => e.stopPropagation()}>
+    <div className="del-dialog-backdrop" style={viewportStyle} onClick={onClose}>
+      <div className="del-dialog-sheet recipe-picker-sheet" onClick={(e) => e.stopPropagation()}>
         <h2 className="del-dialog-title">{title}</h2>
 
         {showFreetext ? (

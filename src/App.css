@@ -2259,8 +2259,17 @@
 
 /* --- Ukesmeny --- */
 
+/* Velgeren fyller (nesten) hele den synlige skjermen, også med tastaturet
+   oppe, så søkefelt, liste og knapper får plass. Listen tar resten. */
+.recipe-picker-sheet {
+  height: calc(100% - 24px);
+  padding-bottom: calc(20px + env(safe-area-inset-bottom));
+  overflow-y: auto;
+}
+
 .recipe-picker-list {
-  max-height: 200px;
+  flex: 1 0 120px;
+  min-height: 120px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
