@@ -2276,6 +2276,11 @@
 }
 
 .ukesmeny-days {
+  /* Plass under siste dag, så den kan rulles fri av angre-meldingen. */
+  padding-bottom: 72px;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -2369,6 +2374,90 @@
   background: var(--color-accent-100);
   color: var(--color-accent-700);
   font: 700 11px/1.2 var(--font-body);
+}
+
+.ukesmeny-day {
+  position: relative;
+}
+
+/* Hold-og-dra for å bytte dager. Hindrer tekstmarkering og menyen som
+   ellers dukker opp når man holder fingeren lenge på mobil. */
+.ukesmeny-day-swappable {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.ukesmeny-day-lifted {
+  z-index: 5;
+  transform-origin: 50% 0;
+  opacity: 0.94;
+  background: var(--color-card);
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-lg);
+  cursor: grabbing;
+}
+
+.ukesmeny-day-target {
+  background: var(--color-accent-100);
+  border: 1.5px dashed var(--color-accent);
+}
+
+.ukesmeny-day-lifted .ukesmeny-day-edit,
+.ukesmeny-day-target .ukesmeny-day-edit,
+.ukesmeny-day-target .ukesmeny-day-freetext-tag,
+.ukesmeny-day-target.ukesmeny-day-empty > span[aria-hidden] {
+  visibility: hidden;
+}
+
+.ukesmeny-day-swap-hint {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  font: 700 13px var(--font-body);
+  color: var(--color-accent-700);
+  pointer-events: none;
+}
+
+.ukesmeny-day-flash {
+  animation: ukesmeny-flash 1.1s ease-out;
+}
+
+@keyframes ukesmeny-flash {
+  from { background: var(--color-accent-200); }
+}
+
+.ukesmeny-notice {
+  position: fixed;
+  left: 50%;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: min(560px, calc(100% - 32px));
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  background: var(--color-text);
+  color: var(--color-on-accent);
+  font-size: 14px;
+  box-shadow: var(--shadow-lg);
+  /* Bare «Angre» fanger trykk; resten slipper gjennom til dagene under. */
+  pointer-events: none;
+}
+
+.ukesmeny-notice-undo {
+  pointer-events: auto;
+  margin-left: auto;
+  flex: none;
+  background: none;
+  border: none;
+  padding: 4px 0 4px 8px;
+  font: 700 14px var(--font-body);
+  color: var(--color-accent-300);
+  cursor: pointer;
 }
 
 .recipe-picker-row-selected {

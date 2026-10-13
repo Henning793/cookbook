@@ -1,8 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
 import { useApp } from '../context/AppContext'
-import { listMenuDays, setMenuDayRecipe, setMenuDayFreetext, clearMenuDay, resetMenu } from '../lib/menuDays'
+import { listMenuDays, setMenuDayRecipe, setMenuDayFreetext, clearMenuDay, resetMenu, swapMenuDays } from '../lib/menuDays'
+import { isEmptyDay, swapDaysLocal, swapMessage } from '../lib/menuSwap'
+import { useLongPressSwap } from '../components/useLongPressSwap'
+import { errorMessage } from '../lib/errorMessage'
 import { addWeeklyItemsToShoppingList } from '../lib/standingItems'
 import { RecipePickerDialog } from '../components/RecipePickerDialog'
 import { recipeBaseServings } from '../lib/shoppingAggregate'
@@ -20,6 +23,13 @@ export function UkesmenyPage() {
   const [editingWeekday, setEditingWeekday] = useState<number | null>(null)
   const [showConfirm, setShowConfirm] = useState(false)
   const [busy, setBusy] = useState(false)
+  // Bytter lagres etter tur i bakgrunnen, så man kan bytte videre med en
+  // gang. Menyen hentes på nytt først når alle er lagret.
+  const saveQueue = useRef<Promise<void>>(Promise.resolve())
+  const pendingSaves = useRef(0)
+  const [notice, setNotice] = useState<{ text: string; undo: [number, number] | null } | null>(null)
+  const [flash, setFlash] = useState<number[]>([])
+  const noticeTimer = useRef(0)
 
   const familyId = family?.id ?? null
 
@@ -75,6 +85,34 @@ export function UkesmenyPage() {
     }
   }
 
+  function showNotice(text: string, undo: [number, number] | null) {
+    window.clearTimeout(noticeTimer.current)
+    setNotice({ text, undo })
+    noticeTimer.current = window.setTimeout(() => setNotice(null), 5000)
+  }
+
+  useEffect(() => () => window.clearTimeout(noticeTimer.current), [])
+
+  // Bytter to dager: vises med en gang, lagres i bakgrunnen. Å bytte samme
+  // par igjen er angre.
+  function handleSwap(from: number, to: number, isUndo = false) {
+    const message = isUndo ? 'Byttet tilbake' : swapMessage(days, from, to)
+    setDays((current) => swapDaysLocal(current, from, to))
+    setFlash([from, to])
+    window.setTimeout(() => setFlash([]), 1100)
+    showNotice(message, isUndo ? null : [from, to])
+    pendingSaves.current += 1
+    saveQueue.current = saveQueue.current
+      .then(() => swapMenuDays(familyId, from, to))
+      .catch((err) => showNotice(`Kunne ikke bytte: ${errorMessage(err)}`, null))
+      .finally(() => {
+        pendingSaves.current -= 1
+        if (pendingSaves.current === 0) reload().catch(() => {})
+      })
+  }
+
+  const swap = useLongPressSwap(!busy && editingWeekday === null, (from, to) => handleSwap(from, to))
+
   async function handleResetMenu() {
     setBusy(true)
     try {
@@ -124,17 +162,28 @@ export function UkesmenyPage() {
         <div className="ukesmeny-days">
           {WEEKDAY_LABELS.map((label, weekday) => {
             const day = dayFor(weekday)
+            const swapClasses = [
+              swap.lifted === weekday ? 'ukesmeny-day-lifted' : '',
+              swap.target === weekday ? 'ukesmeny-day-target' : '',
+              flash.includes(weekday) ? 'ukesmeny-day-flash' : '',
+            ].join(' ')
+            const swapHint =
+              swap.target === weekday ? (
+                <span className="ukesmeny-day-swap-hint">{isEmptyDay(day) ? 'Flytt hit' : 'Bytt hit'}</span>
+              ) : null
             if (!day || !day.entry_type) {
               return (
                 <button
                   type="button"
                   key={weekday}
-                  className="ukesmeny-day ukesmeny-day-empty"
+                  data-swap-day={weekday}
+                  className={`ukesmeny-day ukesmeny-day-empty ${swapClasses}`}
                   onClick={() => setEditingWeekday(weekday)}
                 >
                   <span className="ukesmeny-day-abbr">{label}</span>
                   <span className="ukesmeny-day-empty-text">Legg til oppskrift eller skriv noe</span>
                   <span aria-hidden="true">+</span>
+                  {swapHint}
                 </button>
               )
             }
@@ -144,7 +193,13 @@ export function UkesmenyPage() {
             const customServings =
               recipe && day.servings != null && day.servings !== recipeBaseServings(recipe) ? day.servings : null
             return (
-              <div className="ukesmeny-day" key={weekday}>
+              <div
+                className={`ukesmeny-day ukesmeny-day-swappable ${swapClasses}`}
+                key={weekday}
+                data-swap-day={weekday}
+                onPointerDown={(e) => swap.onPointerDown(e, weekday)}
+                onContextMenu={(e) => e.preventDefault()}
+              >
                 {isFreetext ? (
                   <div className="ukesmeny-day-main ukesmeny-day-main-static">
                     <span className="ukesmeny-day-abbr">{label}</span>
@@ -168,8 +223,10 @@ export function UkesmenyPage() {
                     </span>
                   </button>
                 )}
+                {swapHint}
                 <button
                   type="button"
+                  data-swap-ignore
                   className="ukesmeny-day-edit"
                   aria-label={`Rediger ${WEEKDAY_NAMES[weekday].toLowerCase()}`}
                   onClick={() => setEditingWeekday(weekday)}
@@ -179,6 +236,26 @@ export function UkesmenyPage() {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* Skjules mens man drar en ny dag, så den ikke ligger i veien. */}
+      {notice && swap.lifted === null && (
+        <div className="ukesmeny-notice" role="status">
+          <span>{notice.text}</span>
+          {notice.undo && (
+            <button
+              type="button"
+              className="ukesmeny-notice-undo"
+              onClick={() => {
+                const [a, b] = notice.undo!
+                setNotice(null)
+                handleSwap(a, b, true)
+              }}
+            >
+              Angre
+            </button>
+          )}
         </div>
       )}
 
