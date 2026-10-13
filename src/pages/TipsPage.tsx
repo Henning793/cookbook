@@ -12,6 +12,7 @@ const TIP_GROUPS: { heading: string; tips: [title: string, text: string][] }[] =
       ['Fra lenke', 'Lim inn adressen til en oppskrift på nett, så hentes ingredienser og steg.'],
       ['Komponenter', 'Del oppskriften i deler som Marinade og Saus, hver med egne ingredienser.'],
       ['@-kobling', 'Skriv @ i et steg for å koble det til en komponent, så viser kokemodus bare de ingrediensene.'],
+      ['Lenke til oppskrift', 'Skriv @ og navnet på en oppskrift i beskrivelsen, f.eks. @Rødvinssaus, så blir det en lenke dit.'],
       ['Tid på steg', 'Appen gjetter tiden fra teksten, og du kan overstyre den i skjemaet.'],
     ],
   },

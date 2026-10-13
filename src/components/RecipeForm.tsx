@@ -7,6 +7,8 @@ import { UNITS } from '../lib/units'
 import { capitalizeFirst, capitalizeIngredients, componentSuggestions } from '../lib/recipeIngredients'
 import { CustomUnitDialog } from './CustomUnitDialog'
 import { useDragSort } from './useDragSort'
+import { useApp } from '../context/AppContext'
+import { recipeSuggestions } from '../lib/descriptionLinks'
 import { moveBetweenGroups, moveTo, type SortPosition } from '../lib/reorder'
 import type { IngredientItem, RecipeIngredients, RecipeKind } from '../types'
 
@@ -99,6 +101,9 @@ export interface RecipeFormValues {
   servings: number | null
 }
 
+// Brukes som "steg" for @-autocomplete i beskrivelsen.
+const DESCRIPTION = -1
+
 interface Props {
   heading: string
   // En teknikk har ikke porsjoner eller etiketter, og «Du trenger» er valgfritt.
@@ -154,7 +159,10 @@ export function RecipeForm({
   const tagPickerRef = useRef<HTMLDivElement>(null)
   const customTagInputRef = useRef<HTMLInputElement>(null)
   const stepRefs = useRef<(HTMLTextAreaElement | null)[]>([])
-  // Åpen @-autocomplete: hvilket steg, hvor "@" står og hva som er skrevet etter.
+  const descriptionRef = useRef<HTMLTextAreaElement>(null)
+  const { allRecipes } = useApp()
+  // Åpen @-autocomplete: hvilket steg (DESCRIPTION for beskrivelsen), hvor "@"
+  // står og hva som er skrevet etter.
   const [mention, setMention] = useState<{ step: number; start: number; end: number; query: string } | null>(null)
   const [mentionActive, setMentionActive] = useState(0)
   const [openTimer, setOpenTimer] = useState<number | null>(null)
@@ -227,13 +235,15 @@ export function RecipeForm({
   }
 
   // Ser etter et "@" foran markøren (først i et ord, samme linje) og åpner
-  // autocomplete med komponentene som begynner med det som er skrevet.
+  // autocomplete med det som begynner med det som er skrevet: komponenter i
+  // stegene, oppskrifter i beskrivelsen (først etter første bokstav).
   function detectMention(index: number, text: string, caret: number) {
     const before = text.slice(0, caret)
     const at = before.lastIndexOf('@')
     const query = at === -1 ? '' : before.slice(at + 1)
     const startsWord = at === 0 || (at > 0 && !/[\p{L}\p{N}]/u.test(before[at - 1]))
-    if (at === -1 || !startsWord || query.includes('\n') || query.length > 40) {
+    const tooShort = index === DESCRIPTION && query.trim() === ''
+    if (at === -1 || !startsWord || tooShort || query.includes('\n') || query.length > 40) {
       setMention(null)
       return
     }
@@ -245,14 +255,15 @@ export function RecipeForm({
 
   function chooseMention(index: number, name: string) {
     if (!mention) return
-    const current = stripTimerMarker(steps[index] ?? '')
+    const current = index === DESCRIPTION ? description : stripTimerMarker(steps[index] ?? '')
     const after = current.slice(mention.end)
     const inserted = '@' + name + (after === '' || /^[\s.,;:!?)]/.test(after) ? '' : ' ')
     const next = current.slice(0, mention.start) + inserted + (after === '' ? ' ' : after)
-    updateStep(index, next)
+    if (index === DESCRIPTION) setDescription(next)
+    else updateStep(index, next)
     setMention(null)
     const caret = mention.start + inserted.length + (after === '' ? 1 : 0)
-    const textarea = stepRefs.current[index]
+    const textarea = index === DESCRIPTION ? descriptionRef.current : stepRefs.current[index]
     requestAnimationFrame(() => {
       textarea?.focus()
       textarea?.setSelectionRange(caret, caret)
@@ -384,9 +395,36 @@ export function RecipeForm({
     .slice(1)
     .map((group) => ({ name: (group.name ?? '').trim(), ingredients: [] }))
     .filter((component) => component.name !== '')
-  const mentionOptions = mention
-    ? componentSuggestions(mention.query, { loose: [], components: componentNames }).map((c) => c.name)
-    : []
+  const mentionOptions = !mention
+    ? []
+    : mention.step === DESCRIPTION
+      ? recipeSuggestions(mention.query, allRecipes, initial?.title)
+      : componentSuggestions(mention.query, { loose: [], components: componentNames }).map((c) => c.name)
+
+  function renderMentionList(index: number, label: string) {
+    if (mention?.step !== index || mentionOptions.length === 0) return null
+    return (
+      <ul className="step-mention-list" role="listbox" aria-label={label}>
+        {mentionOptions.map((name, optionIndex) => (
+          <li key={name} role="option" aria-selected={optionIndex === mentionActive}>
+            <button
+              type="button"
+              className={
+                'step-mention-option' + (optionIndex === mentionActive ? ' step-mention-option-active' : '')
+              }
+              // mousedown i stedet for click, så tekstfeltet ikke mister fokus først
+              onMouseDown={(e) => {
+                e.preventDefault()
+                chooseMention(index, name)
+              }}
+            >
+              {name}
+            </button>
+          </li>
+        ))}
+      </ul>
+    )
+  }
 
   const showTagError = tagsMissing && selectedTags.length === 0
 
@@ -499,13 +537,26 @@ export function RecipeForm({
       <label htmlFor="description">
         {isTechnique ? 'Hva er det, og når bruker du det? (valgfritt)' : 'Beskrivelse (valgfritt)'}
       </label>
-      <textarea
-        id="description"
-        rows={2}
-        placeholder={isTechnique ? 'En kort forklaring av teknikken' : 'En kort beskrivelse av retten'}
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-      />
+      <div className="step-input description-input">
+        <textarea
+          id="description"
+          rows={2}
+          ref={descriptionRef}
+          placeholder={
+            isTechnique
+              ? 'En kort forklaring av teknikken'
+              : 'En kort beskrivelse av retten. Skriv @ for å lenke til en annen oppskrift.'
+          }
+          value={description}
+          onChange={(e) => {
+            setDescription(e.target.value)
+            detectMention(DESCRIPTION, e.target.value, e.target.selectionStart)
+          }}
+          onKeyDown={(e) => handleStepKeyDown(DESCRIPTION, e)}
+          onBlur={() => setMention(null)}
+        />
+        {renderMentionList(DESCRIPTION, 'Oppskrifter')}
+      </div>
 
       {!isTechnique && (
         <>
@@ -628,28 +679,7 @@ export function RecipeForm({
                 onKeyDown={(e) => handleStepKeyDown(index, e)}
                 onBlur={() => setMention(null)}
               />
-              {mention?.step === index && mentionOptions.length > 0 && (
-                <ul className="step-mention-list" role="listbox" aria-label="Komponenter">
-                  {mentionOptions.map((name, optionIndex) => (
-                    <li key={name} role="option" aria-selected={optionIndex === mentionActive}>
-                      <button
-                        type="button"
-                        className={
-                          'step-mention-option' +
-                          (optionIndex === mentionActive ? ' step-mention-option-active' : '')
-                        }
-                        // mousedown i stedet for click, så tekstfeltet ikke mister fokus først
-                        onMouseDown={(e) => {
-                          e.preventDefault()
-                          chooseMention(index, name)
-                        }}
-                      >
-                        {name}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
+              {renderMentionList(index, 'Komponenter')}
               <StepTimerField
                 step={step}
                 open={openTimer === index}
