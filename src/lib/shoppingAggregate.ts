@@ -1,8 +1,11 @@
 import type { MenuDay, Recipe } from '../types.ts'
 import { allIngredients } from './recipeIngredients.ts'
+import { plannedDishes } from './menuDishes.ts'
 
-// Hvor mengden kommer fra: én rad per dag i ukesmenyen som bidrar.
-// servings er satt bare når dagen er ganget opp eller ned.
+export { recipeBaseServings } from './menuDishes.ts'
+
+// Hvor mengden kommer fra: én rad per rett i ukesmenyen som bidrar.
+// servings er satt bare når retten er ganget opp eller ned.
 export interface IngredientSource {
   weekday: number
   recipeTitle: string
@@ -18,12 +21,6 @@ export interface AggregatedIngredient {
   // true når minst én av dagene har et annet antall porsjoner enn oppskriften.
   scaled: boolean
   sources: IngredientSource[]
-}
-
-// Oppskrifter uten antall porsjoner regnes som 1 porsjon, som på
-// oppskriftssiden (se OppskriftPage).
-export function recipeBaseServings(recipe: Pick<Recipe, 'servings'>): number {
-  return recipe.servings != null && recipe.servings > 0 ? recipe.servings : 1
 }
 
 // Ting man kjøper hele av rundes opp når mengden er ganget opp (1,5 løk blir 2).
@@ -51,53 +48,48 @@ export function ingredientKey(normalizedName: string, unit: string): string {
 // entry_type 'recipe' — fritekst-dager bidrar ikke). Matcher kun rader med
 // samme normalisert navn OG samme enhet. Komponenter flates ut: ingrediensene
 // i f.eks. en marinade summeres med løse ingredienser som alle andre.
-// Har dagen et eget antall porsjoner (menu_days.servings), ganges mengdene
-// med servings / oppskriftens antall før de summeres.
+// Hver rett på dagen (hovedrett og ekstra retter, se menuDishes.ts) ganges
+// med antallet den skal lages til / oppskriftens antall før de summeres.
 // Ren funksjon (ingen supabase-import) slik at den kan enhetstestes med
 // vanlig `node --test`, uten Vite sin import.meta.env.
 export function aggregateIngredients(menuDays: MenuDay[], recipes: Recipe[]): AggregatedIngredient[] {
-  const recipesById = new Map(recipes.map((r) => [r.id, r]))
   const byKey = new Map<string, AggregatedIngredient>()
 
   for (const day of menuDays) {
-    if (day.entry_type !== 'recipe' || !day.recipe_id) continue
-    const recipe = recipesById.get(day.recipe_id)
-    if (!recipe) continue
+    for (const dish of plannedDishes(day, recipes)) {
+      const scaled = dish.servings !== dish.base
+      const factor = scaled ? dish.servings / dish.base : 1
 
-    const base = recipeBaseServings(recipe)
-    const dayServings = day.servings != null && day.servings > 0 ? day.servings : null
-    const scaled = dayServings !== null && dayServings !== base
-    const factor = scaled ? dayServings / base : 1
-
-    for (const ingredient of allIngredients(recipe.ingredients)) {
-      const normalizedName = normalize(ingredient.name)
-      const unit = ingredient.unit
-      const key = ingredientKey(normalizedName, unit)
-      const amount = ingredient.amount !== null ? ingredient.amount * factor : null
-      const source: IngredientSource = {
-        weekday: day.weekday,
-        recipeTitle: recipe.title,
-        amount: amount !== null && scaled ? roundScaled(amount, unit) : amount,
-        servings: scaled ? dayServings : null,
-      }
-      const existing = byKey.get(key)
-      if (existing) {
-        if (existing.amount !== null && amount !== null) {
-          existing.amount += amount
-        } else if (amount !== null) {
-          existing.amount = amount
+      for (const ingredient of allIngredients(dish.recipe.ingredients)) {
+        const normalizedName = normalize(ingredient.name)
+        const unit = ingredient.unit
+        const key = ingredientKey(normalizedName, unit)
+        const amount = ingredient.amount !== null ? ingredient.amount * factor : null
+        const source: IngredientSource = {
+          weekday: day.weekday,
+          recipeTitle: dish.recipe.title,
+          amount: amount !== null && scaled ? roundScaled(amount, unit) : amount,
+          servings: scaled ? dish.servings : null,
         }
-        existing.scaled ||= scaled
-        existing.sources.push(source)
-      } else {
-        byKey.set(key, {
-          normalizedName,
-          displayName: ingredient.name.trim(),
-          unit,
-          amount,
-          scaled,
-          sources: [source],
-        })
+        const existing = byKey.get(key)
+        if (existing) {
+          if (existing.amount !== null && amount !== null) {
+            existing.amount += amount
+          } else if (amount !== null) {
+            existing.amount = amount
+          }
+          existing.scaled ||= scaled
+          existing.sources.push(source)
+        } else {
+          byKey.set(key, {
+            normalizedName,
+            displayName: ingredient.name.trim(),
+            unit,
+            amount,
+            scaled,
+            sources: [source],
+          })
+        }
       }
     }
   }

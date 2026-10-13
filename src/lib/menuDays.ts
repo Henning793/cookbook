@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient'
 import type { MenuDay } from '../types'
 import { dayContent } from './menuSwap'
+import type { MenuDayDishes } from './menuDishes'
 
 async function currentUserId(): Promise<string> {
   const { data } = await supabase.auth.getUser()
@@ -37,7 +38,7 @@ export async function listMenuDays(familyId: string | null): Promise<MenuDay[]> 
 async function upsertDay(
   familyId: string | null,
   weekday: number,
-  patch: Partial<Pick<MenuDay, 'entry_type' | 'recipe_id' | 'freetext' | 'servings'>>
+  patch: Partial<Pick<MenuDay, 'entry_type' | 'recipe_id' | 'freetext' | 'servings' | 'extra_dishes'>>
 ): Promise<void> {
   const userId = await currentUserId()
 
@@ -56,6 +57,7 @@ async function upsertDay(
     recipe_id: null,
     freetext: null,
     servings: null,
+    extra_dishes: [],
     ...patch,
     updated_at: new Date().toISOString(),
   }
@@ -72,14 +74,13 @@ async function upsertDay(
   if (error) throw error
 }
 
-// servings = null betyr oppskriftens eget antall porsjoner.
-export async function setMenuDayRecipe(
+// Hovedrett, dagens antall (null = første oppskrifts eget) og ekstra retter.
+export async function setMenuDayDishes(
   familyId: string | null,
   weekday: number,
-  recipeId: string,
-  servings: number | null
+  dishes: MenuDayDishes
 ): Promise<void> {
-  await upsertDay(familyId, weekday, { entry_type: 'recipe', recipe_id: recipeId, freetext: null, servings })
+  await upsertDay(familyId, weekday, dishes)
 }
 
 export async function setMenuDayFreetext(
@@ -94,7 +95,7 @@ export async function clearMenuDay(familyId: string | null, weekday: number): Pr
   await upsertDay(familyId, weekday, { entry_type: null, recipe_id: null, freetext: null })
 }
 
-// Bytter innholdet (rett, fritekst og porsjoner) mellom to ukedager. Leser
+// Bytter innholdet (retter, fritekst og porsjoner) mellom to ukedager. Leser
 // dagene på nytt først, så et bytte bruker det som faktisk er lagret selv om
 // noen andre i familien har endret menyen i mellomtiden. Å bytte samme par
 // igjen angrer byttet.

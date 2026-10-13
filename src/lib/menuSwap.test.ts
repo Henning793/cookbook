@@ -19,18 +19,19 @@ function day(weekday: number, patch: Partial<MenuDay>): MenuDay {
 }
 
 const week = () => [
-  day(1, { entry_type: 'recipe', recipe_id: 'lasagne', servings: 6 }),
+  day(1, { entry_type: 'recipe', recipe_id: 'lasagne', servings: 6, extra_dishes: [{ recipe_id: 'salat', servings: null }] }),
   day(2, { entry_type: 'freetext', freetext: 'Taco' }),
   day(3, { entry_type: 'recipe', recipe_id: 'fiskegrateng' }),
 ]
 
-test('bytter rett og porsjoner mellom to dager', () => {
+test('bytter retter og porsjoner mellom to dager', () => {
   const result = swapDaysLocal(week(), 1, 3)
   assert.deepEqual(dayContent(result.find((d) => d.weekday === 1)), {
-    entry_type: 'recipe', recipe_id: 'fiskegrateng', freetext: null, servings: null,
+    entry_type: 'recipe', recipe_id: 'fiskegrateng', freetext: null, servings: null, extra_dishes: [],
   })
   assert.deepEqual(dayContent(result.find((d) => d.weekday === 3)), {
     entry_type: 'recipe', recipe_id: 'lasagne', freetext: null, servings: 6,
+    extra_dishes: [{ recipe_id: 'salat', servings: null }],
   })
   // Radene beholder sin egen id, så ukedagen står i ro.
   assert.equal(result.find((d) => d.weekday === 1)?.id, 'id-1')

@@ -1,10 +1,11 @@
 // Ren logikk for å bytte to dager i ukesmenyen. Alt som hører til dagen
-// (rett, fritekst og porsjoner) følger med, og ukedagene står i ro.
+// (retter, fritekst og porsjoner) følger med, og ukedagene står i ro.
 import type { MenuDay } from '../types'
+import { extraDishes } from './menuDishes.ts'
 
-export type MenuDayContent = Pick<MenuDay, 'entry_type' | 'recipe_id' | 'freetext' | 'servings'>
+export type MenuDayContent = Pick<MenuDay, 'entry_type' | 'recipe_id' | 'freetext' | 'servings' | 'extra_dishes'>
 
-const EMPTY: MenuDayContent = { entry_type: null, recipe_id: null, freetext: null, servings: null }
+const EMPTY: MenuDayContent = { entry_type: null, recipe_id: null, freetext: null, servings: null, extra_dishes: [] }
 
 export function dayContent(day: MenuDay | undefined): MenuDayContent {
   if (!day || !day.entry_type) return EMPTY
@@ -13,6 +14,7 @@ export function dayContent(day: MenuDay | undefined): MenuDayContent {
     recipe_id: day.recipe_id,
     freetext: day.freetext,
     servings: day.servings ?? null,
+    extra_dishes: extraDishes(day),
   }
 }
 

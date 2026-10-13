@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { listMenuDays } from '../lib/menuDays'
+import { freetextEntries } from '../lib/menuDishes'
 import {
   aggregateIngredients,
   removeAlwaysHome,
@@ -99,7 +100,7 @@ export function HandlelistePage() {
   )
   const itemsLeft = uncheckedFromRecipesCount + manualItems.filter((m) => !m.checked).length
 
-  const freetextDays = menuDays.filter((d) => d.entry_type === 'freetext')
+  const freetextDays = freetextEntries(menuDays)
   const hasCheckedItems = checked.some((c) => !c.cleared) || manualItems.some((m) => m.checked)
 
   async function toggleChecked(item: AggregatedIngredient) {
@@ -273,9 +274,9 @@ export function HandlelistePage() {
             <>
               <h2 className="section-kicker">Ikke dekket av handlelisten</h2>
               <div className="handleliste-freetext-list">
-                {freetextDays.map((day) => (
-                  <p className="handleliste-freetext-row" key={day.id}>
-                    <span className="handleliste-freetext-day">{WEEKDAY_LABELS[day.weekday]}</span> · {day.freetext}
+                {freetextDays.map((entry, index) => (
+                  <p className="handleliste-freetext-row" key={index}>
+                    <span className="handleliste-freetext-day">{WEEKDAY_LABELS[entry.weekday]}</span> · {entry.text}
                   </p>
                 ))}
               </div>

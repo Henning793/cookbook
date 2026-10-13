@@ -2,13 +2,14 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
 import { useApp } from '../context/AppContext'
-import { listMenuDays, setMenuDayRecipe, setMenuDayFreetext, clearMenuDay, resetMenu, swapMenuDays } from '../lib/menuDays'
+import { listMenuDays, setMenuDayDishes, setMenuDayFreetext, clearMenuDay, resetMenu, swapMenuDays } from '../lib/menuDays'
 import { isEmptyDay, swapDaysLocal, swapMessage } from '../lib/menuSwap'
 import { useLongPressSwap } from '../components/useLongPressSwap'
 import { errorMessage } from '../lib/errorMessage'
 import { addWeeklyItemsToShoppingList } from '../lib/standingItems'
 import { RecipePickerDialog } from '../components/RecipePickerDialog'
-import { recipeBaseServings } from '../lib/shoppingAggregate'
+import { draftDishes, menuDayItems } from '../lib/menuDishes'
+import type { MenuDayDishes, PlannedDish } from '../lib/menuDishes'
 import { Login } from '../components/Login'
 import { FROM_MENU_STATE, menuRecipePath } from '../lib/menuServings'
 import type { MenuDay } from '../types'
@@ -50,11 +51,11 @@ export function UkesmenyPage() {
     setDays(await listMenuDays(familyId))
   }
 
-  async function handlePick(recipeId: string, servings: number | null) {
+  async function handlePick(dishes: MenuDayDishes) {
     if (editingWeekday === null) return
     setBusy(true)
     try {
-      await setMenuDayRecipe(familyId, editingWeekday, recipeId, servings)
+      await setMenuDayDishes(familyId, editingWeekday, dishes)
       await reload()
       setEditingWeekday(null)
     } finally {
@@ -188,42 +189,67 @@ export function UkesmenyPage() {
                 </button>
               )
             }
-            const isFreetext = day.entry_type === 'freetext'
-            const recipe = isFreetext ? undefined : recipes.find((r) => r.id === day.recipe_id)
+            const [main, ...sides] = menuDayItems(day, recipes)
             // Merkelappen vises bare når antallet er endret fra oppskriftens eget.
+            const mainDish = main?.dish ?? null
             const customServings =
-              recipe && day.servings != null && day.servings !== recipeBaseServings(recipe) ? day.servings : null
+              day.servings != null && (mainDish ? mainDish.servings !== mainDish.base : true) ? day.servings : null
+            // Åpner oppskriften med antallet retten skal lages til, når det
+            // er et annet enn oppskriftens eget.
+            const openDish = (dish: PlannedDish) =>
+              navigate(menuRecipePath(dish.recipe.id, dish.servings !== dish.base ? dish.servings : null), {
+                state: FROM_MENU_STATE,
+              })
+            const servingsChip = customServings !== null && (
+              <span className={`ukesmeny-day-servings${sides.length > 0 ? ' ukesmeny-day-servings-multi' : ''}`}>
+                {customServings.toLocaleString('nb-NO')} {customServings === 1 ? 'porsjon' : 'porsjoner'}
+              </span>
+            )
             return (
               <div
-                className={`ukesmeny-day ukesmeny-day-swappable ${swapClasses}`}
+                className={`ukesmeny-day ukesmeny-day-swappable${sides.length > 0 ? ' ukesmeny-day-multi' : ''} ${swapClasses}`}
                 key={weekday}
                 data-swap-day={weekday}
                 onPointerDown={(e) => swap.onPointerDown(e, weekday)}
                 onContextMenu={(e) => e.preventDefault()}
               >
-                {isFreetext ? (
-                  <div className="ukesmeny-day-main ukesmeny-day-main-static">
-                    <span className="ukesmeny-day-abbr">{label}</span>
-                    <span className="ukesmeny-day-title">{day.freetext}</span>
-                    <span className="ukesmeny-day-freetext-tag">fritekst</span>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    className="ukesmeny-day-main"
-                    onClick={() => recipe && navigate(menuRecipePath(recipe.id, customServings), { state: FROM_MENU_STATE })}
-                  >
-                    <span className="ukesmeny-day-abbr">{label}</span>
-                    <span className="ukesmeny-day-title">
-                      {recipe?.title ?? 'Slettet oppskrift'}
-                      {customServings !== null && (
-                        <span className="ukesmeny-day-servings">
-                          {customServings.toLocaleString('nb-NO')} {customServings === 1 ? 'porsjon' : 'porsjoner'}
-                        </span>
-                      )}
-                    </span>
-                  </button>
-                )}
+                <div className="ukesmeny-day-dishes">
+                  {mainDish ? (
+                    <button type="button" className="ukesmeny-day-main" onClick={() => openDish(mainDish)}>
+                      <span className="ukesmeny-day-abbr">{label}</span>
+                      <span className="ukesmeny-day-title">
+                        {main.title}
+                        {sides.length === 0 && servingsChip}
+                      </span>
+                    </button>
+                  ) : (
+                    <div className="ukesmeny-day-main ukesmeny-day-main-static">
+                      <span className="ukesmeny-day-abbr">{label}</span>
+                      <span className="ukesmeny-day-title">{main?.title ?? 'Slettet oppskrift'}</span>
+                      {main && <span className="ukesmeny-day-freetext-tag">fritekst</span>}
+                    </div>
+                  )}
+                  {sides.map((item, index) =>
+                    item.dish ? (
+                      <button
+                        type="button"
+                        key={index}
+                        className="ukesmeny-day-side"
+                        onClick={() => item.dish && openDish(item.dish)}
+                      >
+                        {item.title}
+                        {item.dish.own && (
+                          <span className="ukesmeny-day-side-own"> · {item.dish.servings.toLocaleString('nb-NO')}</span>
+                        )}
+                      </button>
+                    ) : (
+                      <span key={index} className="ukesmeny-day-side ukesmeny-day-side-static">
+                        {item.title}
+                      </span>
+                    )
+                  )}
+                  {sides.length > 0 && servingsChip}
+                </div>
                 {swapHint}
                 <button
                   type="button"
@@ -266,11 +292,10 @@ export function UkesmenyPage() {
         return (
           <RecipePickerDialog
             title={editingDay?.entry_type ? `Rediger ${dayName}` : `Velg for ${dayName}`}
-            submitLabel={editingDay?.entry_type === 'recipe' ? 'Lagre' : `Legg til ${dayName}`}
+            submitLabel={editingDay?.entry_type ? 'Lagre' : `Legg til ${dayName}`}
             recipes={recipes}
-            initialRecipeId={editingDay?.recipe_id}
+            initialDishes={draftDishes(editingDay)}
             initialServings={editingDay?.servings}
-            initialFreetext={editingDay?.freetext}
             onSave={handlePick}
             onFreetext={handleFreetext}
             onClear={editingDay?.entry_type ? handleClearDay : undefined}

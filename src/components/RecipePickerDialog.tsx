@@ -1,18 +1,20 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
-import { recipeBaseServings } from '../lib/shoppingAggregate'
+import { linkedSuggestions, recipeBaseServings, toMenuDayDishes } from '../lib/menuDishes'
+import type { DraftDish, MenuDayDishes } from '../lib/menuDishes'
 import type { Recipe } from '../types'
 
 interface Props {
   title: string
   submitLabel: string
   recipes: Recipe[]
-  // Dagens innhold når en dag redigeres, slik at velgeren starter der.
-  initialRecipeId?: string | null
+  // Dagens retter når en dag redigeres (hovedretten først), slik at
+  // velgeren starter der. initialServings = null betyr antallet til første
+  // oppskrift.
+  initialDishes?: DraftDish[]
   initialServings?: number | null
-  initialFreetext?: string | null
-  // servings = null betyr oppskriftens eget antall.
-  onSave: (recipeId: string, servings: number | null) => void
+  onSave: (dishes: MenuDayDishes) => void
+  // Fritekst når dagen ellers er tom, lagres med en gang.
   onFreetext: (text: string) => void
   onClear?: () => void
   onClose: () => void
@@ -48,55 +50,111 @@ function formatServings(value: number) {
   return String(Math.round(value * 10) / 10)
 }
 
+type Mode = 'list' | 'search' | 'freetext'
+
 export function RecipePickerDialog({
   title,
   submitLabel,
   recipes,
-  initialRecipeId,
+  initialDishes = [],
   initialServings,
-  initialFreetext,
   onSave,
   onFreetext,
   onClear,
   onClose,
 }: Props) {
   const viewportStyle = useVisibleViewport()
-  const initialRecipe = recipes.find((r) => r.id === initialRecipeId)
-  const [query, setQuery] = useState('')
-  const [selectedId, setSelectedId] = useState<string | null>(initialRecipe?.id ?? null)
+  const recipeById = (id: string) => recipes.find((r) => r.id === id)
+  const recipeIdsOf = (list: DraftDish[]) => list.flatMap((d) => ('recipeId' in d ? [d.recipeId] : []))
+  const initialFirstRecipe = recipeById(recipeIdsOf(initialDishes)[0] ?? '')
+  const [dishes, setDishes] = useState<DraftDish[]>(initialDishes)
   const [servingsInput, setServingsInput] = useState(
-    initialRecipe ? formatServings(initialServings ?? recipeBaseServings(initialRecipe)) : ''
+    initialFirstRecipe ? formatServings(initialServings ?? recipeBaseServings(initialFirstRecipe)) : ''
   )
-  const [showFreetext, setShowFreetext] = useState(!!initialFreetext)
-  const [freetext, setFreetext] = useState(initialFreetext ?? '')
+  const [mode, setMode] = useState<Mode>(initialDishes.length > 0 ? 'list' : 'search')
+  // Retten som har sin egen −/+ åpen. Bare én om gangen.
+  const [openDish, setOpenDish] = useState<number | null>(null)
+  const [query, setQuery] = useState('')
+  const [freetext, setFreetext] = useState('')
+  // Fritekst-retten som redigeres, eller null for en ny.
+  const [freetextIndex, setFreetextIndex] = useState<number | null>(null)
 
-  const selected = recipes.find((r) => r.id === selectedId)
-  const base = selected ? recipeBaseServings(selected) : 1
+  const recipeIds = recipeIdsOf(dishes)
+  const hasRecipe = recipeIds.length > 0
   const parsedServings = Number(servingsInput.replace(',', '.'))
   const servingsValid = Number.isFinite(parsedServings) && parsedServings > 0
-  const currentServings = servingsValid ? parsedServings : base
+  const firstRecipe = recipeById(recipeIds[0] ?? '')
+  const shared = servingsValid ? parsedServings : firstRecipe ? recipeBaseServings(firstRecipe) : 1
 
-  // Dagens rett øverst når en dag redigeres. Sorteres på den opprinnelige
-  // retten, så listen ikke hopper når man trykker på en annen.
-  const filtered = recipes
-    .filter((r) => r.title.toLowerCase().includes(query.trim().toLowerCase()))
-    .sort((a, b) => Number(b.id === initialRecipe?.id) - Number(a.id === initialRecipe?.id))
+  const chosenIds = new Set(recipeIds)
+  const filtered = recipes.filter(
+    (r) => !chosenIds.has(r.id) && r.title.toLowerCase().includes(query.trim().toLowerCase())
+  )
+  const suggestions = linkedSuggestions(recipeIds, recipes)
 
-  function pick(recipe: Recipe) {
-    // Har du endret antallet, er det like mange som skal spise selv om du
-    // bytter rett. Ellers følger antallet den nye oppskriften.
-    const changed = selected && servingsValid && parsedServings !== recipeBaseServings(selected)
-    if (!changed) setServingsInput(formatServings(recipeBaseServings(recipe)))
-    setSelectedId(recipe.id)
+  function addDish(recipe: Recipe) {
+    // Første oppskrift bestemmer hvor mange som spiser, til man endrer det.
+    if (!hasRecipe) setServingsInput(formatServings(recipeBaseServings(recipe)))
+    setDishes((current) => [...current, { recipeId: recipe.id, servings: null }])
+    setQuery('')
+    setMode('list')
   }
 
-  function stepServings(delta: number) {
-    setServingsInput(formatServings(Math.max(1, currentServings + delta)))
+  function openFreetext(index: number | null) {
+    const dish = index !== null ? dishes[index] : undefined
+    setFreetext(dish && 'freetext' in dish ? dish.freetext : '')
+    setFreetextIndex(index)
+    setMode('freetext')
+  }
+
+  function submitFreetext() {
+    const text = freetext.trim()
+    if (!text) return
+    // En tom dag med bare fritekst lagres med en gang, som før.
+    if (dishes.length === 0) {
+      onFreetext(text)
+      return
+    }
+    setDishes((current) =>
+      freetextIndex !== null
+        ? current.map((dish, i) => (i === freetextIndex ? { freetext: text } : dish))
+        : [...current, { freetext: text }]
+    )
+    setMode('list')
+  }
+
+  function removeDish(index: number) {
+    const next = dishes.filter((_, i) => i !== index)
+    setDishes(next)
+    setOpenDish(null)
+    if (next.length === 0) setMode('search')
+  }
+
+  function stepShared(delta: number) {
+    setServingsInput(formatServings(Math.max(1, shared + delta)))
+  }
+
+  function stepDish(index: number, delta: number) {
+    setDishes((current) =>
+      current.map((dish, i) =>
+        i === index && 'recipeId' in dish
+          ? { ...dish, servings: Math.max(1, (dish.servings ?? shared) + delta) }
+          : dish
+      )
+    )
+  }
+
+  function followShared(index: number) {
+    setDishes((current) =>
+      current.map((dish, i) => (i === index && 'recipeId' in dish ? { ...dish, servings: null } : dish))
+    )
+    setOpenDish(null)
   }
 
   function save() {
-    if (!selected || !servingsValid) return
-    onSave(selected.id, parsedServings === base ? null : parsedServings)
+    if (hasRecipe && !servingsValid) return
+    const result = toMenuDayDishes(dishes, shared, recipes)
+    if (result) onSave(result)
   }
 
   return (
@@ -104,32 +162,38 @@ export function RecipePickerDialog({
       <div className="del-dialog-sheet recipe-picker-sheet" onClick={(e) => e.stopPropagation()}>
         <h2 className="del-dialog-title">{title}</h2>
 
-        {showFreetext ? (
+        {mode === 'freetext' && (
           <>
             <p className="del-dialog-body">Skriv noe fritt (teller ikke med i handlelisten):</p>
             <input
               type="text"
               className="del-dialog-input"
-              placeholder="F.eks. Taco, Rester"
+              placeholder={dishes.length > 0 ? 'F.eks. Salat, Brød' : 'F.eks. Taco, Rester'}
               autoFocus
               value={freetext}
               onChange={(e) => setFreetext(e.target.value)}
             />
             <div className="del-dialog-actions">
-              <button type="button" className="del-dialog-cancel" onClick={() => setShowFreetext(false)}>
-                Velg oppskrift
+              <button
+                type="button"
+                className="del-dialog-cancel"
+                onClick={() => setMode(dishes.length > 0 ? 'list' : 'search')}
+              >
+                {dishes.length > 0 ? 'Tilbake' : 'Velg oppskrift'}
               </button>
               <button
                 type="button"
                 className="del-dialog-submit"
                 disabled={!freetext.trim()}
-                onClick={() => freetext.trim() && onFreetext(freetext.trim())}
+                onClick={submitFreetext}
               >
-                Bruk fritekst
+                {dishes.length === 0 ? 'Bruk fritekst' : freetextIndex !== null ? 'Lagre' : 'Legg til'}
               </button>
             </div>
           </>
-        ) : (
+        )}
+
+        {mode === 'search' && (
           <>
             <input
               type="text"
@@ -139,55 +203,170 @@ export function RecipePickerDialog({
               onChange={(e) => setQuery(e.target.value)}
             />
             <div className="recipe-picker-list">
-              {filtered.map((recipe) => {
-                const isSelected = recipe.id === selectedId
+              {filtered.map((recipe) => (
+                <button
+                  type="button"
+                  key={recipe.id}
+                  className="samling-recipe-row"
+                  onClick={() => addDish(recipe)}
+                >
+                  <span className="samling-recipe-title">{recipe.title}</span>
+                </button>
+              ))}
+            </div>
+            <div className="del-dialog-actions">
+              <button
+                type="button"
+                className="del-dialog-cancel"
+                onClick={() => (dishes.length > 0 ? setMode('list') : onClose())}
+              >
+                {dishes.length > 0 ? 'Tilbake' : 'Avbryt'}
+              </button>
+            </div>
+          </>
+        )}
+
+        {mode === 'list' && (
+          <>
+            <ul className="menu-dish-list">
+              {dishes.map((dish, index) => {
+                if ('freetext' in dish) {
+                  return (
+                    <li key={index} className="menu-dish-row">
+                      <div className="menu-dish-head">
+                        <button type="button" className="menu-dish-name" onClick={() => openFreetext(index)}>
+                          <span className="menu-dish-title">{dish.freetext}</span>
+                          <span className="menu-dish-note">Uten oppskrift</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="menu-dish-remove"
+                          aria-label={`Fjern ${dish.freetext}`}
+                          onClick={() => removeDish(index)}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    </li>
+                  )
+                }
+                const recipe = recipeById(dish.recipeId)
+                // Hovedretten følger alltid «hvor mange spiser». De andre
+                // kan trykkes på for å få eget antall.
+                const fixed = index === 0
+                const isOpen = openDish === index
+                const note = recipe?.servings
+                  ? `Oppskriften er for ${formatServings(recipe.servings)}`
+                  : recipe
+                    ? 'Oppskriften har ikke antall'
+                    : ''
                 return (
-                  <button
-                    type="button"
-                    key={recipe.id}
-                    className={`samling-recipe-row${isSelected ? ' recipe-picker-row-selected' : ''}`}
-                    aria-pressed={isSelected}
-                    onClick={() => pick(recipe)}
-                  >
-                    <span className="samling-recipe-title">{recipe.title}</span>
-                    {isSelected && <span className="recipe-picker-selected-tag">valgt</span>}
-                  </button>
+                  <li key={index} className={`menu-dish-row${isOpen ? ' menu-dish-row-open' : ''}`}>
+                    <div className="menu-dish-head">
+                      <button
+                        type="button"
+                        className="menu-dish-name"
+                        disabled={fixed}
+                        aria-expanded={fixed ? undefined : isOpen}
+                        onClick={() => setOpenDish(isOpen ? null : index)}
+                      >
+                        <span className="menu-dish-title">{recipe?.title ?? 'Slettet oppskrift'}</span>
+                        <span className="menu-dish-note">
+                          {note}
+                          {dish.servings !== null && !fixed && !isOpen && (
+                            <span className="menu-dish-own">
+                              {note ? ' · ' : ''}lages til {formatServings(dish.servings)}
+                            </span>
+                          )}
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        className="menu-dish-remove"
+                        aria-label={`Fjern ${recipe?.title ?? 'retten'}`}
+                        onClick={() => removeDish(index)}
+                      >
+                        ×
+                      </button>
+                    </div>
+                    {isOpen && (
+                      <div className="menu-dish-edit">
+                        <span>Lag til</span>
+                        <span className="servings-stepper">
+                          <button
+                            type="button"
+                            aria-label="Færre porsjoner"
+                            disabled={!((dish.servings ?? shared) > 1)}
+                            onClick={() => stepDish(index, -1)}
+                          >
+                            &minus;
+                          </button>
+                          <span className="menu-dish-edit-value">{formatServings(dish.servings ?? shared)}</span>
+                          <button type="button" aria-label="Flere porsjoner" onClick={() => stepDish(index, 1)}>
+                            +
+                          </button>
+                        </span>
+                        <button type="button" className="menu-dish-reset" onClick={() => followShared(index)}>
+                          Som resten
+                        </button>
+                      </div>
+                    )}
+                  </li>
                 )
               })}
-            </div>
+            </ul>
 
-            {selected && (
-              <div className="recipe-picker-servings">
-                <div>
-                  <label className="recipe-picker-servings-label" htmlFor="picker-servings">
-                    Porsjoner
-                  </label>
-                  <p className="recipe-picker-servings-note">
-                    {selected.servings ? `Oppskriften er for ${formatServings(selected.servings)}` : 'Oppskriften har ikke antall'}
-                  </p>
-                </div>
-                <span className="servings-stepper">
-                  <button
-                    type="button"
-                    aria-label="Færre porsjoner"
-                    disabled={!(currentServings > 1)}
-                    onClick={() => stepServings(-1)}
-                  >
-                    &minus;
-                  </button>
-                  <input
-                    id="picker-servings"
-                    type="number"
-                    min="1"
-                    inputMode="decimal"
-                    value={servingsInput}
-                    onChange={(e) => setServingsInput(e.target.value)}
-                  />
-                  <button type="button" aria-label="Flere porsjoner" onClick={() => stepServings(1)}>
-                    +
-                  </button>
+            {suggestions.map((recipe) => (
+              <div className="menu-dish-suggestion" key={recipe.id}>
+                <span>
+                  Lenket i beskrivelsen: <b>{recipe.title}</b>. Ta den med?
                 </span>
+                <button type="button" onClick={() => addDish(recipe)}>
+                  + Ta med
+                </button>
               </div>
+            ))}
+
+            <button type="button" className="menu-dish-add" onClick={() => setMode('search')}>
+              + Legg til rett
+            </button>
+
+            {hasRecipe && (
+            <div className="recipe-picker-servings">
+              <div>
+                <label className="recipe-picker-servings-label" htmlFor="picker-servings">
+                  Hvor mange spiser
+                </label>
+                <p className="recipe-picker-servings-note">
+                  {recipeIds.length > 1
+                    ? 'Gjelder alle rettene'
+                    : firstRecipe?.servings
+                      ? `Oppskriften er for ${formatServings(firstRecipe.servings)}`
+                      : 'Oppskriften har ikke antall'}
+                </p>
+              </div>
+              <span className="servings-stepper">
+                <button
+                  type="button"
+                  aria-label="Færre porsjoner"
+                  disabled={!(shared > 1)}
+                  onClick={() => stepShared(-1)}
+                >
+                  &minus;
+                </button>
+                <input
+                  id="picker-servings"
+                  type="number"
+                  min="1"
+                  inputMode="decimal"
+                  value={servingsInput}
+                  onChange={(e) => setServingsInput(e.target.value)}
+                />
+                <button type="button" aria-label="Flere porsjoner" onClick={() => stepShared(1)}>
+                  +
+                </button>
+              </span>
+            </div>
             )}
 
             <div className="del-dialog-actions">
@@ -197,20 +376,19 @@ export function RecipePickerDialog({
               <button
                 type="button"
                 className="del-dialog-submit"
-                disabled={!selected || !servingsValid}
+                disabled={dishes.length === 0 || (hasRecipe && !servingsValid)}
                 onClick={save}
               >
                 {submitLabel}
               </button>
             </div>
-
           </>
         )}
 
         <div className="recipe-picker-links">
-          {!showFreetext && (
-            <button type="button" className="nav-link" onClick={() => setShowFreetext(true)}>
-              Eller skriv noe fritt
+          {mode !== 'freetext' && (
+            <button type="button" className="nav-link" onClick={() => openFreetext(null)}>
+              {dishes.length > 0 ? 'Legg til uten oppskrift' : 'Eller skriv noe fritt'}
             </button>
           )}
           {onClear && (
