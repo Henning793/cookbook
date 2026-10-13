@@ -6,7 +6,6 @@ import { supabase } from '../lib/supabaseClient'
 import { UNITS } from '../lib/units'
 import { capitalizeFirst, capitalizeIngredients, componentSuggestions } from '../lib/recipeIngredients'
 import { CustomUnitDialog } from './CustomUnitDialog'
-import { RowMenu, type RowMenuItem } from './RowMenu'
 import { useDragSort } from './useDragSort'
 import { moveBetweenGroups, moveTo, type SortPosition } from '../lib/reorder'
 import type { IngredientItem, RecipeIngredients, RecipeKind } from '../types'
@@ -200,31 +199,6 @@ export function RecipeForm({
     setGroups((current) => moveBetweenGroups(current, from, to))
   }
 
-  // «Flytt til» legger raden sist i den valgte gruppen.
-  function moveIngredientToGroup(from: SortPosition, groupIndex: number) {
-    setGroups((current) =>
-      moveBetweenGroups(current, from, { group: groupIndex, index: current[groupIndex]?.rows.length ?? 0 })
-    )
-  }
-
-  function moveIngredientToNewComponent(from: SortPosition) {
-    setGroups((current) => {
-      const row = current[from.group]?.rows[from.index]
-      if (!row) return current
-      const without = current.map((group, i) =>
-        i === from.group ? { ...group, rows: group.rows.filter((_, r) => r !== from.index) } : group
-      )
-      return [...without, { name: '', rows: [row] }]
-    })
-    // Den nye komponenten trenger et navn, så navnefeltet får fokus.
-    requestAnimationFrame(() => {
-      const inputs = document.querySelectorAll<HTMLInputElement>('.add-recipe-form .ingredient-heading-input')
-      const last = inputs[inputs.length - 1]
-      last?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      last?.focus({ preventScroll: true })
-    })
-  }
-
   function addComponent() {
     setGroups((current) => [...current, { name: '', rows: [emptyIngredientRow()] }])
   }
@@ -317,16 +291,6 @@ export function RecipeForm({
   const ingredientDrag = useDragSort('ingredient', moveIngredient)
   const componentDrag = useDragSort('component', (from, to) => moveComponent(from.index, to.index))
   const stepDrag = useDragSort('step', (from, to) => moveStep(from.index, to.index))
-
-  // Flytt opp/ned/øverst/nederst for en liste med `count` elementer.
-  function orderItems(index: number, count: number, move: (to: number) => void): RowMenuItem[] {
-    return [
-      { label: 'Flytt opp', onSelect: () => move(index - 1), disabled: index === 0 },
-      { label: 'Flytt ned', onSelect: () => move(index + 1), disabled: index === count - 1 },
-      { label: 'Flytt øverst', onSelect: () => move(0), disabled: index === 0 },
-      { label: 'Flytt nederst', onSelect: () => move(count - 1), disabled: index === count - 1 },
-    ]
-  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -429,14 +393,6 @@ export function RecipeForm({
   const customUnitRow = customUnitTarget === null ? null : groups[customUnitTarget.group]?.rows[customUnitTarget.row]
 
   function renderIngredientRow(groupIndex: number, rowIndex: number, row: IngredientRow) {
-    const rowCount = groups[groupIndex].rows.length
-    const position = { group: groupIndex, index: rowIndex }
-    const moveTargets: RowMenuItem[] = groups
-      .map((group, i) => ({
-        label: i === 0 ? 'Ingredienser uten komponent' : group.name?.trim() || 'Komponent uten navn',
-        onSelect: () => moveIngredientToGroup(position, i),
-      }))
-      .filter((_, i) => i !== groupIndex)
     return (
       <div
         className={'ingredient-row' + sortItemClass(ingredientDrag, groupIndex, rowIndex)}
@@ -495,29 +451,6 @@ export function RecipeForm({
           </select>
         )}
         <div className="row-actions">
-          <RowMenu
-            label="Flytt ingrediens"
-            sections={[
-              {
-                items: [
-                  {
-                    label: 'Flytt opp',
-                    onSelect: () => moveIngredient(position, { group: groupIndex, index: rowIndex - 1 }),
-                    disabled: rowIndex === 0,
-                  },
-                  {
-                    label: 'Flytt ned',
-                    onSelect: () => moveIngredient(position, { group: groupIndex, index: rowIndex + 1 }),
-                    disabled: rowIndex === rowCount - 1,
-                  },
-                ],
-              },
-              {
-                heading: 'Flytt til',
-                items: [...moveTargets, { label: '+ Ny komponent', onSelect: () => moveIngredientToNewComponent(position) }],
-              },
-            ]}
-          />
           <button
             type="button"
             className="row-remove"
@@ -638,10 +571,6 @@ export function RecipeForm({
                 onChange={(e) => renameComponent(groupIndex, e.target.value)}
               />
               <div className="row-actions">
-                <RowMenu
-                  label="Flytt komponent"
-                  sections={[{ items: orderItems(offset, groups.length - 1, (to) => moveComponent(offset, to)) }]}
-                />
                 <button
                   type="button"
                   className="row-remove"
@@ -730,10 +659,6 @@ export function RecipeForm({
               />
             </div>
             <div className="row-actions">
-              <RowMenu
-                label="Flytt steg"
-                sections={[{ items: orderItems(index, steps.length, (to) => moveStep(index, to)) }]}
-              />
               <button
                 type="button"
                 className="row-remove"
