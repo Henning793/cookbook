@@ -166,15 +166,9 @@ export function UkesmenyPage() {
               swap.target === weekday ? 'ukesmeny-day-target' : '',
               flash.includes(weekday) ? 'ukesmeny-day-flash' : '',
             ].join(' ')
-            // Raden man drar dekker ofte målet, så den sier selv hvor den skal.
-            const liftedTarget = swap.lifted === weekday ? swap.target : null
             const swapHint =
               swap.target === weekday ? (
                 <span className="ukesmeny-day-swap-hint">{isEmptyDay(day) ? 'Flytt hit' : 'Bytt hit'}</span>
-              ) : liftedTarget !== null ? (
-                <span className="ukesmeny-day-swap-hint">
-                  {isEmptyDay(dayFor(liftedTarget)) ? 'Flytt til' : 'Bytt med'} {WEEKDAY_NAMES[liftedTarget].toLowerCase()}
-                </span>
               ) : null
             if (!day || !day.entry_type) {
               return (

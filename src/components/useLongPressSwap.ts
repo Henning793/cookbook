@@ -6,6 +6,10 @@ import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } f
 // data-swap-day="<ukedag>", og målet er raden fingeren er over.
 
 const LIFT_DELAY = 350
+// Raden krymper mens man drar og legger seg like over fingeren, så man ser
+// dagen man er over.
+const LIFTED_SCALE = 0.6
+const FINGER_GAP = 14
 const MOVE_TOLERANCE = 10
 const EDGE = 70
 const MAX_SCROLL_SPEED = 14
@@ -16,7 +20,6 @@ interface Press {
   startX: number
   startY: number
   clientY: number
-  grabOffset: number
   offset: number
   lifted: boolean
   timer: number
@@ -56,9 +59,11 @@ export function useLongPressSwap(enabled: boolean, onSwap: (from: number, to: nu
       speed = MAX_SCROLL_SPEED * (1 - Math.max(window.innerHeight - clientY, 0) / EDGE)
     if (speed !== 0) window.scrollBy(0, speed)
 
+    // transform-origin er toppen av raden, så toppen påvirkes bare av translateY.
     const base = state.element.getBoundingClientRect().top - state.offset
-    state.offset = clientY - state.grabOffset - base
-    state.element.style.transform = `translateY(${state.offset}px) scale(1.02)`
+    const height = state.element.offsetHeight * LIFTED_SCALE
+    state.offset = clientY - FINGER_GAP - height - base
+    state.element.style.transform = `translateY(${state.offset}px) scale(${LIFTED_SCALE})`
 
     const next = findTarget(clientY, state.element)
     if (next !== targetRef.current) {
@@ -72,7 +77,6 @@ export function useLongPressSwap(enabled: boolean, onSwap: (from: number, to: nu
     const state = press.current
     if (!state) return
     state.lifted = true
-    state.grabOffset = state.clientY - state.element.getBoundingClientRect().top
     setLifted(state.weekday)
     try {
       navigator.vibrate?.(15)
@@ -139,7 +143,6 @@ export function useLongPressSwap(enabled: boolean, onSwap: (from: number, to: nu
       startX: e.clientX,
       startY: e.clientY,
       clientY: e.clientY,
-      grabOffset: 0,
       offset: 0,
       lifted: false,
       timer: window.setTimeout(lift, LIFT_DELAY),

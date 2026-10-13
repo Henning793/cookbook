@@ -2376,6 +2376,9 @@
 
 .ukesmeny-day-lifted {
   z-index: 5;
+  transform-origin: 50% 0;
+  opacity: 0.94;
+  pointer-events: none;
   background: var(--color-card);
   border-color: var(--color-accent);
   box-shadow: var(--shadow-lg);
@@ -2387,7 +2390,7 @@
   border: 1.5px dashed var(--color-accent);
 }
 
-.ukesmeny-day-lifted:has(.ukesmeny-day-swap-hint) .ukesmeny-day-edit,
+.ukesmeny-day-lifted .ukesmeny-day-edit,
 .ukesmeny-day-target .ukesmeny-day-edit,
 .ukesmeny-day-target .ukesmeny-day-freetext-tag,
 .ukesmeny-day-target.ukesmeny-day-empty > span[aria-hidden] {
