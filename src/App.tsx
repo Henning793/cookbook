@@ -13,6 +13,7 @@ import { ProfilPage } from './pages/ProfilPage'
 import { FamiliePage } from './pages/FamiliePage'
 import { TipsPage } from './pages/TipsPage'
 import { UkesmenyPage } from './pages/UkesmenyPage'
+import { DagPage } from './pages/DagPage'
 import { HandlelistePage } from './pages/HandlelistePage'
 import { FasteVarerPage } from './pages/FasteVarerPage'
 import { BliMedPage } from './pages/BliMedPage'
@@ -57,6 +58,7 @@ function App() {
             <Route path="/familie" element={<FamiliePage />} />
             <Route path="/tips" element={<TipsPage />} />
             <Route path="/ukesmeny" element={<UkesmenyPage />} />
+            <Route path="/ukesmeny/dag/:weekday" element={<DagPage />} />
             <Route path="/handleliste" element={<HandlelistePage />} />
             <Route path="/handleliste/faste" element={<FasteVarerPage />} />
             <Route path="/bli-med/:token" element={<BliMedPage />} />

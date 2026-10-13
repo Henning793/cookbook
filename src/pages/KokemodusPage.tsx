@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ChevronLeft, Timer } from 'lucide-react'
+import { Check, ChevronLeft, Timer } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { formatScaledAmount, ingredientsForStep, stepDisplayText } from '../lib/recipeIngredients'
 import { formatDuration, stepTimerSeconds } from '../lib/stepTimer'
@@ -9,13 +9,27 @@ import { KokemodusBell, PushHint, TimerCard, TimerPanel, TimerPill } from '../co
 import { cookingModeTimers } from '../lib/cookingTimers'
 import { StepText } from '../components/StepText'
 import { kokemodusExit } from '../lib/kokemodusExit'
+import {
+  WEEKDAY_NAMES,
+  dayKokemodusPath,
+  dayStartStep,
+  dishProgress,
+  dishTimerLabel,
+  finishDayDish,
+  parseWeekdayParam,
+  withDayStep,
+} from '../lib/dayCooking'
+import { plannedDishes } from '../lib/menuDishes'
+import { useMenuDay } from '../components/useMenuDay'
 
 // Kokeøkten er per bruker, så steget man stoppet på kan først leses når
 // innloggingen er lest.
 export function KokemodusPage() {
   const { sessionLoading } = useApp()
+  const { id } = useParams<{ id: string }>()
   if (sessionLoading) return null
-  return <Kokemodus />
+  // Ny rett (bytte rett fra dagen) = ny kokemodus med sitt eget steg.
+  return <Kokemodus key={id} />
 }
 
 function Kokemodus() {
@@ -30,6 +44,9 @@ function Kokemodus() {
   // Porsjonstallet kommer fra oppskriftssiden (?porsjoner=) eller fra den
   // lagrede kokeøkten ("Fortsett" på forsiden). Ugyldig verdi = ingen skalering.
   const [searchParams] = useSearchParams()
+  // Satt når man koker fra en dag i ukesmenyen med flere oppskrifter.
+  const weekday = parseWeekdayParam(searchParams.get('dag'))
+  const { day } = useMenuDay(weekday)
   const [servings] = useState<number | null>(() => {
     const fromUrl = Number(searchParams.get('porsjoner'))
     if (Number.isFinite(fromUrl) && fromUrl > 0) return fromUrl
@@ -37,9 +54,10 @@ function Kokemodus() {
     return fromSession != null && Number.isFinite(fromSession) && fromSession > 0 ? fromSession : null
   })
 
-  const [stepIndex, setStepIndex] = useState(() =>
-    cookingSession && cookingSession.recipeId === id ? cookingSession.stepIndex : 0
-  )
+  const [stepIndex, setStepIndex] = useState(() => {
+    if (weekday !== null && id) return dayStartStep(cookingSession, weekday, id)
+    return cookingSession && cookingSession.recipeId === id ? cookingSession.stepIndex : 0
+  })
   const [timerPanelOpen, setTimerPanelOpen] = useState(false)
   const [wakeLockHeld, setWakeLockHeld] = useState(false)
   const wakeLockSupported = typeof navigator !== 'undefined' && 'wakeLock' in navigator
@@ -88,7 +106,8 @@ function Kokemodus() {
   // Persist cooking session on every step change.
   useEffect(() => {
     if (!id) return
-    setCookingSession({ recipeId: id, stepIndex, ...(servings != null ? { servings } : {}) })
+    if (weekday !== null) setCookingSession(withDayStep(cookingSession, weekday, id, stepIndex, servings))
+    else setCookingSession({ recipeId: id, stepIndex, ...(servings != null ? { servings } : {}) })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, stepIndex])
 
@@ -141,18 +160,27 @@ function Kokemodus() {
 
   // Tilbake til oppskriften uten at kokemodus blir liggende i historikken.
   function exitToRecipe() {
-    const exit = kokemodusExit(id, location.state)
+    const exit = kokemodusExit(id, location.state, weekday)
     if (exit.back) navigate(-1)
     else navigate(exit.to, { replace: true })
   }
 
   function handleNext() {
     if (isLastStep) {
-      setCookingSession(null)
+      setCookingSession(weekday !== null && id ? finishDayDish(cookingSession, weekday, id) : null)
       exitToRecipe()
     } else {
       goToStep(stepIndex + 1)
     }
+  }
+
+  // Rettene på dagen, når man koker fra en dag med flere oppskrifter. Bytte
+  // rett erstatter adressen, så tilbake går til dagssiden og ikke gjennom
+  // alle rettene.
+  const dayDishes = weekday !== null && day ? plannedDishes(day, allRecipes) : []
+  function switchDish(recipeId: string, dishServings: number) {
+    if (weekday === null || recipeId === id) return
+    navigate(dayKokemodusPath(recipeId, weekday, dishServings), { replace: true, state: location.state })
   }
 
   return (
@@ -163,7 +191,14 @@ function Kokemodus() {
           className="nav-link kokemodus-exit"
           onClick={exitToRecipe}
         >
-          Avslutt
+          {weekday !== null ? (
+            <>
+              <ChevronLeft size={14} strokeWidth={2.75} aria-hidden="true" />
+              {WEEKDAY_NAMES[weekday]}
+            </>
+          ) : (
+            'Avslutt'
+          )}
         </button>
         <div className="kokemodus-nav-right">
           {wakeLockSupported && wakeLockHeld && (
@@ -172,6 +207,45 @@ function Kokemodus() {
           <KokemodusBell count={inBell.length} open={timerPanelOpen} onToggle={() => setTimerPanelOpen((o) => !o)} />
         </div>
       </nav>
+
+      {dayDishes.length > 1 && weekday !== null && (
+        <div className="kokemodus-dishes">
+          {dayDishes.map((dish) => {
+            const dishId = dish.recipe.id
+            const isCurrent = dishId === id
+            const progress = dishProgress(cookingSession, weekday, dishId)
+            const timerLabel = dishTimerLabel(timers, dishId, now)
+            return (
+              <button
+                key={dishId}
+                type="button"
+                className={`kokemodus-dish${isCurrent ? ' kokemodus-dish-active' : ''}`}
+                aria-current={isCurrent ? 'true' : undefined}
+                onClick={() => switchDish(dishId, dish.servings)}
+              >
+                <span className="kokemodus-dish-title">{dish.recipe.title}</span>
+                <span className={`kokemodus-dish-status${timerLabel && !isCurrent ? ' kokemodus-dish-timer' : ''}`}>
+                  {isCurrent ? (
+                    `Steg ${stepIndex + 1} av ${totalSteps}`
+                  ) : timerLabel ? (
+                    <>
+                      <Timer size={11} strokeWidth={2.75} aria-hidden="true" /> {timerLabel}
+                    </>
+                  ) : progress?.kind === 'step' ? (
+                    `Steg ${progress.stepIndex + 1} av ${dish.recipe.steps.length}`
+                  ) : progress?.kind === 'done' ? (
+                    <>
+                      <Check size={11} strokeWidth={3} aria-hidden="true" /> Ferdig
+                    </>
+                  ) : (
+                    'Ikke startet'
+                  )}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      )}
 
       <div className="kokemodus-progress">
         {steps.map((_, index) => (
