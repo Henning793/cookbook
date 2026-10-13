@@ -53,9 +53,13 @@ export function useLongPressSwap(enabled: boolean, onSwap: (from: number, to: nu
     }
     document.addEventListener('touchmove', blockScroll, { passive: false })
     document.addEventListener('contextmenu', blockContextMenu, true)
+    // Langt trykk markerer ellers teksten under fingeren, noe som også
+    // avbryter draget.
+    document.addEventListener('selectstart', blockContextMenu, true)
     return () => {
       document.removeEventListener('touchmove', blockScroll)
       document.removeEventListener('contextmenu', blockContextMenu, true)
+      document.removeEventListener('selectstart', blockContextMenu, true)
     }
   }, [])
 
@@ -85,7 +89,10 @@ export function useLongPressSwap(enabled: boolean, onSwap: (from: number, to: nu
     state.offset = clientY - FINGER_GAP - height - base
     state.element.style.transform = `translateY(${state.offset}px) scale(${LIFTED_SCALE})`
 
-    const next = findTarget(clientY, state.element)
+    // Målet er dagen midt på raden man drar, ikke under fingeren, siden
+    // raden ligger over fingeren.
+    const rect = state.element.getBoundingClientRect()
+    const next = findTarget(rect.top + rect.height / 2, state.element)
     if (next !== targetRef.current) {
       targetRef.current = next
       setTarget(next)

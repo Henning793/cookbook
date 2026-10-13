@@ -2267,6 +2267,9 @@
 }
 
 .ukesmeny-days {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
   display: flex;
   flex-direction: column;
   gap: 10px;
