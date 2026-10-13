@@ -10,6 +10,7 @@ import { addWeeklyItemsToShoppingList } from '../lib/standingItems'
 import { RecipePickerDialog } from '../components/RecipePickerDialog'
 import { recipeBaseServings } from '../lib/shoppingAggregate'
 import { Login } from '../components/Login'
+import { FROM_MENU_STATE, menuRecipePath } from '../lib/menuServings'
 import type { MenuDay } from '../types'
 
 const WEEKDAY_LABELS = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn']
@@ -210,7 +211,7 @@ export function UkesmenyPage() {
                   <button
                     type="button"
                     className="ukesmeny-day-main"
-                    onClick={() => recipe && navigate(`/oppskrift/${recipe.id}`)}
+                    onClick={() => recipe && navigate(menuRecipePath(recipe.id, customServings), { state: FROM_MENU_STATE })}
                   >
                     <span className="ukesmeny-day-abbr">{label}</span>
                     <span className="ukesmeny-day-title">
