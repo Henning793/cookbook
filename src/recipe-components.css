@@ -48,3 +48,83 @@
   white-space: nowrap;
   opacity: 0.75;
 }
+
+/* Flytting i redigeringsskjemaet: dra-håndtak og slippmarkering. */
+
+.drag-handle {
+  flex: none;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  margin-right: -2px;
+  color: var(--color-neutral-700);
+  opacity: 0.6;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.step-row .drag-handle {
+  align-self: flex-start;
+  height: 40px;
+}
+
+[data-sort-item],
+[data-sort-zone] {
+  position: relative;
+}
+
+.sort-dragging {
+  z-index: 20;
+  border-radius: 10px;
+  background: var(--color-surface);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+}
+
+.sort-dragging .drag-handle {
+  cursor: grabbing;
+  opacity: 1;
+}
+
+.sort-drop-before::before,
+.sort-drop-end::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--color-accent);
+  pointer-events: none;
+}
+
+.sort-drop-before::before {
+  top: -6px;
+}
+
+.sort-drop-end::after {
+  bottom: -6px;
+}
+
+.component-card.sort-drop-before::before {
+  top: -9px;
+}
+
+.ingredient-rows.sort-zone-empty {
+  min-height: 44px;
+  border: 1px dashed var(--color-divider);
+  border-radius: 10px;
+}
+
+.ingredient-rows.sort-zone-empty.sort-drop-end {
+  border-color: var(--color-accent);
+  background: var(--color-accent-100);
+}
+
+.ingredient-rows.sort-zone-empty.sort-drop-end::after {
+  display: none;
+}

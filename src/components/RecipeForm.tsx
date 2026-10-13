@@ -1,11 +1,13 @@
 import { useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { StepTimerField } from './StepTimerField'
 import { stripTimerMarker, timerOverride, withTimerOverride } from '../lib/stepTimer'
-import { Check, Plus } from 'lucide-react'
+import { Check, GripVertical, Plus } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { UNITS } from '../lib/units'
 import { capitalizeFirst, capitalizeIngredients, componentSuggestions } from '../lib/recipeIngredients'
 import { CustomUnitDialog } from './CustomUnitDialog'
+import { useDragSort } from './useDragSort'
+import { moveBetweenGroups, moveTo, type SortPosition } from '../lib/reorder'
 import type { IngredientItem, RecipeIngredients, RecipeKind } from '../types'
 
 interface IngredientRow {
@@ -37,12 +39,32 @@ function toItem(row: IngredientRow): IngredientItem {
   }
 }
 
-function moveItem<T>(items: T[], index: number, direction: -1 | 1): T[] {
-  const target = index + direction
-  if (target < 0 || target >= items.length) return items
-  const copy = [...items]
-  ;[copy[index], copy[target]] = [copy[target], copy[index]]
-  return copy
+// Klassene som viser hvor en rad havner under dra-og-slipp. Posisjonene i
+// målet regnes uten raden som dras (se useDragSort).
+function sortItemClass(
+  drag: { dragging: SortPosition | null; target: SortPosition | null },
+  group: number,
+  index: number
+): string {
+  const { dragging, target } = drag
+  if (!dragging) return ''
+  if (dragging.group === group && dragging.index === index) return ' sort-dragging'
+  if (!target || target.group !== group) return ''
+  if (target.group === dragging.group && target.index === dragging.index) return ''
+  const position = dragging.group === group && index > dragging.index ? index - 1 : index
+  return position === target.index ? ' sort-drop-before' : ''
+}
+
+function sortZoneClass(
+  drag: { dragging: SortPosition | null; target: SortPosition | null },
+  group: number,
+  count: number
+): string {
+  const { dragging, target } = drag
+  if (!dragging || !target || target.group !== group) return ''
+  if (target.group === dragging.group && target.index === dragging.index) return ''
+  const remaining = dragging.group === group ? count - 1 : count
+  return target.index === remaining ? ' sort-drop-end' : ''
 }
 
 function toIngredientRow(item: IngredientItem): IngredientRow {
@@ -173,8 +195,8 @@ export function RecipeForm({
     updateGroup(groupIndex, (group) => ({ ...group, rows: group.rows.filter((_, i) => i !== rowIndex) }))
   }
 
-  function moveIngredientRow(groupIndex: number, rowIndex: number, direction: -1 | 1) {
-    updateGroup(groupIndex, (group) => ({ ...group, rows: moveItem(group.rows, rowIndex, direction) }))
+  function moveIngredient(from: SortPosition, to: SortPosition) {
+    setGroups((current) => moveBetweenGroups(current, from, to))
   }
 
   function addComponent() {
@@ -190,13 +212,9 @@ export function RecipeForm({
   }
 
   // Gruppe 0 (løse ingredienser) ligger fast øverst, så komponenter kan
-  // bare flyttes innbyrdes (indeks 1 og oppover).
-  function moveComponent(groupIndex: number, direction: -1 | 1) {
-    setGroups((current) => {
-      const target = groupIndex + direction
-      if (target < 1 || target >= current.length) return current
-      return moveItem(current, groupIndex, direction)
-    })
+  // bare flyttes innbyrdes. Indeksene her teller bare komponentene.
+  function moveComponent(from: number, to: number) {
+    setGroups((current) => [current[0], ...moveTo(current.slice(1), from, to)])
   }
 
   // Tekstfeltet viser steget uten tidsmarkøren; markøren beholdes ved endring.
@@ -264,9 +282,15 @@ export function RecipeForm({
     setSteps((current) => current.filter((_, i) => i !== index))
   }
 
-  function moveStep(index: number, direction: -1 | 1) {
-    setSteps((current) => moveItem(current, index, direction))
+  function moveStep(from: number, to: number) {
+    setOpenTimer(null)
+    setMention(null)
+    setSteps((current) => moveTo(current, from, to))
   }
+
+  const ingredientDrag = useDragSort('ingredient', moveIngredient)
+  const componentDrag = useDragSort('component', (from, to) => moveComponent(from.index, to.index))
+  const stepDrag = useDragSort('step', (from, to) => moveStep(from.index, to.index))
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -369,9 +393,19 @@ export function RecipeForm({
   const customUnitRow = customUnitTarget === null ? null : groups[customUnitTarget.group]?.rows[customUnitTarget.row]
 
   function renderIngredientRow(groupIndex: number, rowIndex: number, row: IngredientRow) {
-    const rowCount = groups[groupIndex].rows.length
     return (
-      <div className="ingredient-row" key={rowIndex}>
+      <div
+        className={'ingredient-row' + sortItemClass(ingredientDrag, groupIndex, rowIndex)}
+        key={rowIndex}
+        data-sort-item="ingredient"
+      >
+        <span
+          className="drag-handle"
+          aria-hidden="true"
+          onPointerDown={(e) => ingredientDrag.startDrag(e, groupIndex, rowIndex)}
+        >
+          <GripVertical size={16} />
+        </span>
         <input
           className="ingredient-name"
           required={!isTechnique}
@@ -417,24 +451,6 @@ export function RecipeForm({
           </select>
         )}
         <div className="row-actions">
-          <button
-            type="button"
-            className="row-move"
-            aria-label="Flytt ingrediens opp"
-            onClick={() => moveIngredientRow(groupIndex, rowIndex, -1)}
-            disabled={rowIndex === 0}
-          >
-            ↑
-          </button>
-          <button
-            type="button"
-            className="row-move"
-            aria-label="Flytt ingrediens ned"
-            onClick={() => moveIngredientRow(groupIndex, rowIndex, 1)}
-            disabled={rowIndex === rowCount - 1}
-          >
-            ↓
-          </button>
           <button
             type="button"
             className="row-remove"
@@ -507,8 +523,16 @@ export function RecipeForm({
       )}
 
       <label>{isTechnique ? 'Du trenger (valgfritt)' : 'Ingredienser'}</label>
-      {groups[0].rows.length > 0 && (
-        <div className="ingredient-rows">
+      {(groups[0].rows.length > 0 || ingredientDrag.dragging) && (
+        <div
+          className={
+            'ingredient-rows' +
+            (groups[0].rows.length === 0 ? ' sort-zone-empty' : '') +
+            sortZoneClass(ingredientDrag, 0, groups[0].rows.length)
+          }
+          data-sort-zone="ingredient"
+          data-sort-group={0}
+        >
           {groups[0].rows.map((row, rowIndex) => renderIngredientRow(0, rowIndex, row))}
         </div>
       )}
@@ -521,11 +545,23 @@ export function RecipeForm({
         </button>
       </div>
 
+      <div className={'component-cards' + sortZoneClass(componentDrag, 0, groups.length - 1)} data-sort-zone="component">
       {groups.slice(1).map((group, offset) => {
         const groupIndex = offset + 1
         return (
-          <div className="component-card" key={groupIndex}>
+          <div
+            className={'component-card' + sortItemClass(componentDrag, 0, offset)}
+            key={groupIndex}
+            data-sort-item="component"
+          >
             <div className="component-card-header">
+              <span
+                className="drag-handle"
+                aria-hidden="true"
+                onPointerDown={(e) => componentDrag.startDrag(e, 0, offset)}
+              >
+                <GripVertical size={16} />
+              </span>
               <input
                 className="ingredient-heading-input"
                 required
@@ -537,24 +573,6 @@ export function RecipeForm({
               <div className="row-actions">
                 <button
                   type="button"
-                  className="row-move"
-                  aria-label="Flytt komponent opp"
-                  onClick={() => moveComponent(groupIndex, -1)}
-                  disabled={groupIndex === 1}
-                >
-                  ↑
-                </button>
-                <button
-                  type="button"
-                  className="row-move"
-                  aria-label="Flytt komponent ned"
-                  onClick={() => moveComponent(groupIndex, 1)}
-                  disabled={groupIndex === groups.length - 1}
-                >
-                  ↓
-                </button>
-                <button
-                  type="button"
                   className="row-remove"
                   aria-label="Fjern komponent"
                   onClick={() => removeComponent(groupIndex)}
@@ -563,7 +581,15 @@ export function RecipeForm({
                 </button>
               </div>
             </div>
-            <div className="ingredient-rows">
+            <div
+              className={
+                'ingredient-rows' +
+                (group.rows.length === 0 ? ' sort-zone-empty' : '') +
+                sortZoneClass(ingredientDrag, groupIndex, group.rows.length)
+              }
+              data-sort-zone="ingredient"
+              data-sort-group={groupIndex}
+            >
               {group.rows.map((row, rowIndex) => renderIngredientRow(groupIndex, rowIndex, row))}
             </div>
             <button type="button" className="row-add" onClick={() => addIngredientRow(groupIndex)}>
@@ -572,6 +598,7 @@ export function RecipeForm({
           </div>
         )
       })}
+      </div>
 
       <label>Fremgangsmåte</label>
       {componentNames.length > 0 && (
@@ -579,9 +606,12 @@ export function RecipeForm({
           Skriv @ for å koble et steg til en komponent. Da hentes ingrediensene bare derfra.
         </p>
       )}
-      <div className="step-rows">
+      <div className={'step-rows' + sortZoneClass(stepDrag, 0, steps.length)} data-sort-zone="step">
         {steps.map((step, index) => (
-          <div className="step-row" key={index}>
+          <div className={'step-row' + sortItemClass(stepDrag, 0, index)} key={index} data-sort-item="step">
+            <span className="drag-handle" aria-hidden="true" onPointerDown={(e) => stepDrag.startDrag(e, 0, index)}>
+              <GripVertical size={16} />
+            </span>
             <span className="step-number">{index + 1}.</span>
             <div className="step-input">
               <textarea
@@ -629,30 +659,6 @@ export function RecipeForm({
               />
             </div>
             <div className="row-actions">
-              <button
-                type="button"
-                className="row-move"
-                aria-label="Flytt steg opp"
-                onClick={() => {
-                  setOpenTimer(null)
-                  moveStep(index, -1)
-                }}
-                disabled={index === 0}
-              >
-                ↑
-              </button>
-              <button
-                type="button"
-                className="row-move"
-                aria-label="Flytt steg ned"
-                onClick={() => {
-                  setOpenTimer(null)
-                  moveStep(index, 1)
-                }}
-                disabled={index === steps.length - 1}
-              >
-                ↓
-              </button>
               <button
                 type="button"
                 className="row-remove"
