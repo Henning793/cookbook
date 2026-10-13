@@ -26,9 +26,9 @@ import type { MenuDay } from '../types'
 
 const WEEKDAY_LABELS = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn']
 
-function formatAmount(item: AggregatedIngredient): string {
-  if (item.amount === null) return item.unit
-  return `${item.amount} ${item.unit}`.trim()
+function formatAmount(amount: number | null, unit: string): string {
+  if (amount === null) return unit
+  return `${amount.toLocaleString('nb-NO')} ${unit}`.trim()
 }
 
 const keyFor = ingredientKey
@@ -46,6 +46,8 @@ export function HandlelistePage() {
   const [showAdd, setShowAdd] = useState(false)
   const [newItemName, setNewItemName] = useState('')
   const [busy, setBusy] = useState(false)
+  // Varer der man har trykket på mengden for å se hvilke dager den kommer fra.
+  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     if (familyLoading || !session) return
@@ -112,6 +114,15 @@ export function HandlelistePage() {
     } finally {
       setBusy(false)
     }
+  }
+
+  function toggleExpanded(key: string) {
+    setExpandedKeys((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
   }
 
   async function handleClearChecked() {
@@ -195,21 +206,45 @@ export function HandlelistePage() {
           ) : (
             <div className="handleliste-rows">
               {sortedAggregated.map((item) => {
-                const isChecked = checkedKeys.has(keyFor(item.normalizedName, item.unit))
+                const key = keyFor(item.normalizedName, item.unit)
+                const isChecked = checkedKeys.has(key)
+                const isExpanded = expandedKeys.has(key)
                 return (
-                  <button
-                    type="button"
-                    key={keyFor(item.normalizedName, item.unit)}
-                    className="handleliste-row"
-                    onClick={() => toggleChecked(item)}
-                    disabled={busy}
-                  >
-                    <span className={`handleliste-checkbox${isChecked ? ' handleliste-checkbox-checked' : ''}`} />
-                    <span className={`handleliste-name${isChecked ? ' handleliste-name-checked' : ''}`}>
-                      {item.displayName}
-                    </span>
-                    <span className="handleliste-amount">{formatAmount(item)}</span>
-                  </button>
+                  <div className="handleliste-row-group" key={key}>
+                    <div className="handleliste-row">
+                      <button
+                        type="button"
+                        className="handleliste-row-toggle"
+                        onClick={() => toggleChecked(item)}
+                        disabled={busy}
+                      >
+                        <span className={`handleliste-checkbox${isChecked ? ' handleliste-checkbox-checked' : ''}`} />
+                        <span className={`handleliste-name${isChecked ? ' handleliste-name-checked' : ''}`}>
+                          {item.displayName}
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        className={`handleliste-amount${item.scaled ? ' handleliste-amount-scaled' : ''}`}
+                        aria-expanded={isExpanded}
+                        aria-label={`Vis hvor ${item.displayName.toLowerCase()} kommer fra`}
+                        onClick={() => toggleExpanded(key)}
+                      >
+                        {formatAmount(item.amount, item.unit)}
+                      </button>
+                    </div>
+                    {isExpanded && (
+                      <div className="handleliste-sources">
+                        {item.sources.map((source, index) => (
+                          <p className="handleliste-source" key={index}>
+                            <span className="handleliste-source-day">{WEEKDAY_LABELS[source.weekday]}</span>{' '}
+                            {source.recipeTitle}: {formatAmount(source.amount, item.unit)}
+                            {source.servings !== null && ` (${source.servings.toLocaleString('nb-NO')} pors.)`}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 )
               })}
             </div>

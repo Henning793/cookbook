@@ -5,6 +5,7 @@ import { useApp } from '../context/AppContext'
 import { listMenuDays, setMenuDayRecipe, setMenuDayFreetext, clearMenuDay, resetMenu } from '../lib/menuDays'
 import { addWeeklyItemsToShoppingList } from '../lib/standingItems'
 import { RecipePickerDialog } from '../components/RecipePickerDialog'
+import { recipeBaseServings } from '../lib/shoppingAggregate'
 import { Login } from '../components/Login'
 import type { MenuDay } from '../types'
 
@@ -38,11 +39,11 @@ export function UkesmenyPage() {
     setDays(await listMenuDays(familyId))
   }
 
-  async function handlePick(recipeId: string) {
+  async function handlePick(recipeId: string, servings: number | null) {
     if (editingWeekday === null) return
     setBusy(true)
     try {
-      await setMenuDayRecipe(familyId, editingWeekday, recipeId)
+      await setMenuDayRecipe(familyId, editingWeekday, recipeId, servings)
       await reload()
       setEditingWeekday(null)
     } finally {
@@ -139,6 +140,9 @@ export function UkesmenyPage() {
             }
             const isFreetext = day.entry_type === 'freetext'
             const recipe = isFreetext ? undefined : recipes.find((r) => r.id === day.recipe_id)
+            // Merkelappen vises bare når antallet er endret fra oppskriftens eget.
+            const customServings =
+              recipe && day.servings != null && day.servings !== recipeBaseServings(recipe) ? day.servings : null
             return (
               <div className="ukesmeny-day" key={weekday}>
                 {isFreetext ? (
@@ -154,7 +158,14 @@ export function UkesmenyPage() {
                     onClick={() => recipe && navigate(`/oppskrift/${recipe.id}`)}
                   >
                     <span className="ukesmeny-day-abbr">{label}</span>
-                    <span className="ukesmeny-day-title">{recipe?.title ?? 'Slettet oppskrift'}</span>
+                    <span className="ukesmeny-day-title">
+                      {recipe?.title ?? 'Slettet oppskrift'}
+                      {customServings !== null && (
+                        <span className="ukesmeny-day-servings">
+                          {customServings.toLocaleString('nb-NO')} {customServings === 1 ? 'porsjon' : 'porsjoner'}
+                        </span>
+                      )}
+                    </span>
                   </button>
                 )}
                 <button
@@ -171,15 +182,24 @@ export function UkesmenyPage() {
         </div>
       )}
 
-      {editingWeekday !== null && (
-        <RecipePickerDialog
-          recipes={recipes}
-          onPick={handlePick}
-          onFreetext={handleFreetext}
-          onClear={dayFor(editingWeekday)?.entry_type ? handleClearDay : undefined}
-          onClose={() => !busy && setEditingWeekday(null)}
-        />
-      )}
+      {editingWeekday !== null && (() => {
+        const editingDay = dayFor(editingWeekday)
+        const dayName = WEEKDAY_NAMES[editingWeekday].toLowerCase()
+        return (
+          <RecipePickerDialog
+            title={editingDay?.entry_type ? `Rediger ${dayName}` : `Velg for ${dayName}`}
+            submitLabel={editingDay?.entry_type === 'recipe' ? 'Lagre' : `Legg til ${dayName}`}
+            recipes={recipes}
+            initialRecipeId={editingDay?.recipe_id}
+            initialServings={editingDay?.servings}
+            initialFreetext={editingDay?.freetext}
+            onSave={handlePick}
+            onFreetext={handleFreetext}
+            onClear={editingDay?.entry_type ? handleClearDay : undefined}
+            onClose={() => !busy && setEditingWeekday(null)}
+          />
+        )
+      })()}
 
       {showConfirm && (
         <div className="del-dialog-backdrop" onClick={() => !busy && setShowConfirm(false)}>

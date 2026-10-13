@@ -36,7 +36,7 @@ export async function listMenuDays(familyId: string | null): Promise<MenuDay[]> 
 async function upsertDay(
   familyId: string | null,
   weekday: number,
-  patch: Partial<Pick<MenuDay, 'entry_type' | 'recipe_id' | 'freetext'>>
+  patch: Partial<Pick<MenuDay, 'entry_type' | 'recipe_id' | 'freetext' | 'servings'>>
 ): Promise<void> {
   const userId = await currentUserId()
 
@@ -54,6 +54,7 @@ async function upsertDay(
     entry_type: null,
     recipe_id: null,
     freetext: null,
+    servings: null,
     ...patch,
     updated_at: new Date().toISOString(),
   }
@@ -70,12 +71,14 @@ async function upsertDay(
   if (error) throw error
 }
 
+// servings = null betyr oppskriftens eget antall porsjoner.
 export async function setMenuDayRecipe(
   familyId: string | null,
   weekday: number,
-  recipeId: string
+  recipeId: string,
+  servings: number | null
 ): Promise<void> {
-  await upsertDay(familyId, weekday, { entry_type: 'recipe', recipe_id: recipeId, freetext: null })
+  await upsertDay(familyId, weekday, { entry_type: 'recipe', recipe_id: recipeId, freetext: null, servings })
 }
 
 export async function setMenuDayFreetext(
