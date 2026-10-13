@@ -2378,7 +2378,6 @@
   z-index: 5;
   transform-origin: 50% 0;
   opacity: 0.94;
-  pointer-events: none;
   background: var(--color-card);
   border-color: var(--color-accent);
   box-shadow: var(--shadow-lg);

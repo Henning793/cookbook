@@ -39,6 +39,26 @@ export function useLongPressSwap(enabled: boolean, onSwap: (from: number, to: nu
 
   useEffect(() => () => finish(false), [])
 
+  // Lyttere som må finnes før fingeren treffer skjermen. Mobilnettlesere
+  // avgjør ved berøringsstart om scrolling kan stoppes, og når fingeren
+  // holdes lenge kommer en «contextmenu» der fingeren er (ikke lenger over
+  // raden når den har krympet). Slippes de gjennom, avbryter nettleseren
+  // draget og raden hopper tilbake.
+  useEffect(() => {
+    function blockScroll(e: TouchEvent) {
+      if (press.current?.lifted) e.preventDefault()
+    }
+    function blockContextMenu(e: Event) {
+      if (press.current) e.preventDefault()
+    }
+    document.addEventListener('touchmove', blockScroll, { passive: false })
+    document.addEventListener('contextmenu', blockContextMenu, true)
+    return () => {
+      document.removeEventListener('touchmove', blockScroll)
+      document.removeEventListener('contextmenu', blockContextMenu, true)
+    }
+  }, [])
+
   function findTarget(clientY: number, dragged: HTMLElement): number | null {
     const rows = [...document.querySelectorAll<HTMLElement>('[data-swap-day]')].filter((el) => el !== dragged)
     const row = rows.find((el) => {
@@ -100,7 +120,6 @@ export function useLongPressSwap(enabled: boolean, onSwap: (from: number, to: nu
     window.removeEventListener('pointermove', handleMove)
     window.removeEventListener('pointerup', handleUp)
     window.removeEventListener('pointercancel', handleCancel)
-    window.removeEventListener('touchmove', blockScroll)
     if (state.lifted) {
       // Klikket som kommer etter at man slipper skal ikke åpne oppskriften.
       window.addEventListener('click', swallowClick, true)
@@ -123,9 +142,6 @@ export function useLongPressSwap(enabled: boolean, onSwap: (from: number, to: nu
   }
   function handleCancel() {
     finish(false)
-  }
-  function blockScroll(e: TouchEvent) {
-    if (press.current?.lifted) e.preventDefault()
   }
   function swallowClick(e: MouseEvent) {
     e.preventDefault()
@@ -150,7 +166,6 @@ export function useLongPressSwap(enabled: boolean, onSwap: (from: number, to: nu
     window.addEventListener('pointermove', handleMove)
     window.addEventListener('pointerup', handleUp)
     window.addEventListener('pointercancel', handleCancel)
-    window.addEventListener('touchmove', blockScroll, { passive: false })
   }
 
   return { lifted, target, onPointerDown }
