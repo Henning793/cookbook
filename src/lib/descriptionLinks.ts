@@ -1,43 +1,67 @@
-// Lenker til andre oppskrifter i beskrivelsen: «Passer til *Rødvinssaus*».
-// Tittelen mellom stjernene slås opp blant oppskriftene brukeren ser. Uten
-// treff vises bare ordet, uten stjerner og uten lenke.
+// Lenker til andre oppskrifter i beskrivelsen: «Passer til @Rødvinssaus».
+// Samme @-tegn som i stegene, men i beskrivelsen betyr det en oppskrift, ikke
+// en komponent. Navnet slås opp blant oppskriftene brukeren ser, og lengste
+// tittel vinner, så "@Ovnsbakte poteter" ikke tolkes som "@Ovnsbakte". Ukjente
+// @-ord blir stående som tekst.
 
 export type DescriptionPart = { text: string; recipeId?: string }
 
-const LINK_PATTERN = /\*([^*\n]+)\*/g
+type RecipeRef = { id: string; title: string }
 
-function normalizeTitle(title: string) {
-  return title.trim().toLocaleLowerCase('nb-NO')
+function norm(value: string) {
+  return value.trim().toLocaleLowerCase('nb-NO')
 }
 
-export function descriptionParts(
-  text: string,
-  recipes: { id: string; title: string }[],
-  selfId?: string
-): DescriptionPart[] {
-  const byTitle = new Map<string, string>()
-  for (const recipe of recipes) {
-    const key = normalizeTitle(recipe.title)
-    if (recipe.id !== selfId && !byTitle.has(key)) byTitle.set(key, recipe.id)
-  }
+function isWordChar(char: string | undefined): boolean {
+  return char !== undefined && /[\p{L}\p{N}]/u.test(char)
+}
 
+function recipeAt(text: string, index: number, recipes: RecipeRef[]): { recipe: RecipeRef; length: number } | null {
+  const rest = text.slice(index).toLocaleLowerCase('nb-NO')
+  let best: { recipe: RecipeRef; length: number } | null = null
+  for (const recipe of recipes) {
+    const title = norm(recipe.title)
+    if (!title || !rest.startsWith(title) || isWordChar(rest[title.length])) continue
+    if (!best || title.length > best.length) best = { recipe, length: title.length }
+  }
+  return best
+}
+
+export function descriptionParts(text: string, recipes: RecipeRef[], selfId?: string): DescriptionPart[] {
+  const candidates = recipes.filter((recipe) => recipe.id !== selfId)
   const parts: DescriptionPart[] = []
   let last = 0
-  for (const match of text.matchAll(LINK_PATTERN)) {
-    const start = match.index
-    if (start > last) parts.push({ text: text.slice(last, start) })
-    const title = match[1]
-    const recipeId = byTitle.get(normalizeTitle(title))
-    parts.push(recipeId ? { text: title, recipeId } : { text: title })
-    last = start + match[0].length
+  let at = text.indexOf('@')
+  while (at !== -1) {
+    const match = isWordChar(text[at - 1]) ? null : recipeAt(text, at + 1, candidates)
+    if (match) {
+      if (at > last) parts.push({ text: text.slice(last, at) })
+      const end = at + 1 + match.length
+      parts.push({ text: text.slice(at + 1, end), recipeId: match.recipe.id })
+      last = end
+    }
+    at = text.indexOf('@', match ? last : at + 1)
   }
   if (last < text.length) parts.push({ text: text.slice(last) })
+  return parts
+}
 
-  // Slå sammen nabobiter uten lenke, så teksten blir hel der ingenting lenkes.
-  return parts.reduce<DescriptionPart[]>((merged, part) => {
-    const prev = merged[merged.length - 1]
-    if (prev && !prev.recipeId && !part.recipeId) prev.text += part.text
-    else merged.push({ ...part })
-    return merged
-  }, [])
+// Forslag til autocomplete i beskrivelsen: titler som begynner med det som er
+// skrevet etter "@", deretter titler der et senere ord gjør det.
+export function recipeSuggestions(query: string, recipes: RecipeRef[], exclude?: string, limit = 6): string[] {
+  const q = norm(query)
+  const excluded = exclude ? norm(exclude) : null
+  const seen = new Set<string>()
+  const first: string[] = []
+  const later: string[] = []
+  for (const recipe of recipes) {
+    const title = recipe.title.trim()
+    const key = norm(title)
+    if (!key || key === excluded || seen.has(key)) continue
+    seen.add(key)
+    if (key.startsWith(q)) first.push(title)
+    else if (q && key.split(/\s+/).some((word) => word.startsWith(q))) later.push(title)
+  }
+  const byTitle = (a: string, b: string) => a.localeCompare(b, 'nb-NO')
+  return [...first.sort(byTitle), ...later.sort(byTitle)].slice(0, limit)
 }

@@ -125,7 +125,11 @@
   padding: 11px 16px;
 }
 
-.add-recipe-form .step-row textarea {
+.add-recipe-form .description-input {
+  flex: none;
+}
+
+.step-row textarea {
   border-radius: var(--radius-md);
   min-height: 70px;
 }
