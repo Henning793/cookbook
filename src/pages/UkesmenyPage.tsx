@@ -23,7 +23,10 @@ export function UkesmenyPage() {
   const [editingWeekday, setEditingWeekday] = useState<number | null>(null)
   const [showConfirm, setShowConfirm] = useState(false)
   const [busy, setBusy] = useState(false)
-  const [swapping, setSwapping] = useState(false)
+  // Bytter lagres etter tur i bakgrunnen, så man kan bytte videre med en
+  // gang. Menyen hentes på nytt først når alle er lagret.
+  const saveQueue = useRef<Promise<void>>(Promise.resolve())
+  const pendingSaves = useRef(0)
   const [notice, setNotice] = useState<{ text: string; undo: [number, number] | null } | null>(null)
   const [flash, setFlash] = useState<number[]>([])
   const noticeTimer = useRef(0)
@@ -92,25 +95,23 @@ export function UkesmenyPage() {
 
   // Bytter to dager: vises med en gang, lagres i bakgrunnen. Å bytte samme
   // par igjen er angre.
-  async function handleSwap(from: number, to: number, isUndo = false) {
-    if (swapping) return
+  function handleSwap(from: number, to: number, isUndo = false) {
     const message = isUndo ? 'Byttet tilbake' : swapMessage(days, from, to)
     setDays((current) => swapDaysLocal(current, from, to))
     setFlash([from, to])
     window.setTimeout(() => setFlash([]), 1100)
-    setSwapping(true)
-    try {
-      await swapMenuDays(familyId, from, to)
-      showNotice(message, isUndo ? null : [from, to])
-    } catch (err) {
-      showNotice(`Kunne ikke bytte: ${errorMessage(err)}`, null)
-    } finally {
-      setSwapping(false)
-      await reload().catch(() => {})
-    }
+    showNotice(message, isUndo ? null : [from, to])
+    pendingSaves.current += 1
+    saveQueue.current = saveQueue.current
+      .then(() => swapMenuDays(familyId, from, to))
+      .catch((err) => showNotice(`Kunne ikke bytte: ${errorMessage(err)}`, null))
+      .finally(() => {
+        pendingSaves.current -= 1
+        if (pendingSaves.current === 0) reload().catch(() => {})
+      })
   }
 
-  const swap = useLongPressSwap(!busy && !swapping && editingWeekday === null, (from, to) => handleSwap(from, to))
+  const swap = useLongPressSwap(!busy && editingWeekday === null, (from, to) => handleSwap(from, to))
 
   async function handleResetMenu() {
     setBusy(true)
@@ -246,7 +247,6 @@ export function UkesmenyPage() {
             <button
               type="button"
               className="ukesmeny-notice-undo"
-              disabled={swapping}
               onClick={() => {
                 const [a, b] = notice.undo!
                 setNotice(null)
