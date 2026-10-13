@@ -48,3 +48,149 @@
   white-space: nowrap;
   opacity: 0.75;
 }
+
+/* Flytting i redigeringsskjemaet: dra-håndtak, flyttemeny og slippmarkering. */
+
+.drag-handle {
+  flex: none;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  margin-right: -2px;
+  color: var(--color-neutral-700);
+  opacity: 0.6;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.step-row .drag-handle {
+  align-self: flex-start;
+  height: 40px;
+}
+
+[data-sort-item],
+[data-sort-zone] {
+  position: relative;
+}
+
+.sort-dragging {
+  z-index: 20;
+  border-radius: 10px;
+  background: var(--color-surface);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+}
+
+.sort-dragging .drag-handle {
+  cursor: grabbing;
+  opacity: 1;
+}
+
+.sort-drop-before::before,
+.sort-drop-end::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--color-accent);
+  pointer-events: none;
+}
+
+.sort-drop-before::before {
+  top: -6px;
+}
+
+.sort-drop-end::after {
+  bottom: -6px;
+}
+
+.component-card.sort-drop-before::before {
+  top: -9px;
+}
+
+.ingredient-rows.sort-zone-empty {
+  min-height: 44px;
+  border: 1px dashed var(--color-divider);
+  border-radius: 10px;
+}
+
+.ingredient-rows.sort-zone-empty.sort-drop-end {
+  border-color: var(--color-accent);
+  background: var(--color-accent-100);
+}
+
+.ingredient-rows.sort-zone-empty.sort-drop-end::after {
+  display: none;
+}
+
+.row-menu {
+  position: relative;
+  display: flex;
+}
+
+.add-recipe-form .row-menu-toggle {
+  display: flex;
+  align-items: center;
+  padding: 6px 7px;
+}
+
+.row-menu-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 30;
+  min-width: 210px;
+  max-width: min(280px, 80vw);
+  padding: 4px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
+}
+
+.row-menu-section + .row-menu-section {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--color-divider);
+}
+
+.row-menu-heading {
+  margin: 4px 10px 2px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-neutral-700);
+}
+
+.add-recipe-form .row-menu-item {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 10px 10px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--color-text);
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.add-recipe-form .row-menu-item:hover:not(:disabled) {
+  background: var(--color-accent-100);
+}
+
+.add-recipe-form .row-menu-item:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
