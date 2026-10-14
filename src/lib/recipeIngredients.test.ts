@@ -6,6 +6,7 @@ import {
   ingredientsForStep,
   normalizeIngredients,
   stepDisplayText,
+  stepDisplayParts,
   componentSuggestions,
   capitalizeFirst,
   capitalizeIngredients,
@@ -395,4 +396,41 @@ test('capitalized names still match step text and @-links regardless of case', (
   assert.deepEqual(names('Kok opp fløten @saus {tid:10}'), ['Fløte'])
   assert.equal(stepDisplayText('@saus kokes opp {tid:10}', recipe), 'Kokes opp')
   assert.equal(stepDisplayText('stek løken', recipe), 'Stek løken')
+})
+
+const techniques = [
+  { id: 't1', title: 'Sous-vide' },
+  { id: 't2', title: 'Sous-vide av kylling' },
+  { id: 't3', title: 'Saus' },
+]
+
+test('stepDisplayParts turns @Teknikk into a link and hides component links', () => {
+  assert.deepEqual(stepDisplayParts('Stek kjøttet @sous-vide i 2 timer.', ingredients, techniques), [
+    { text: 'Stek kjøttet ' },
+    { text: 'sous-vide', techniqueId: 't1' },
+    { text: ' i 2 timer.' },
+  ])
+  // Lengste tittel vinner.
+  assert.deepEqual(stepDisplayParts('@Sous-vide av kylling {tid:90}', ingredients, techniques), [
+    { text: 'Sous-vide av kylling', techniqueId: 't2' },
+  ])
+  // Komponenten vinner ved likt navn, og koblingen fjernes som før.
+  assert.deepEqual(stepDisplayParts('Kok opp @Saus. Bruk @Sous-vide.', ingredients, techniques), [
+    { text: 'Kok opp. Bruk ' },
+    { text: 'Sous-vide', techniqueId: 't1' },
+    { text: '.' },
+  ])
+  assert.equal(stepDisplayText('Bruk @Sous-vide @Marinade.', ingredients, techniques), 'Bruk Sous-vide.')
+  // Uten teknikker er @-ordet ukjent og står urørt.
+  assert.equal(stepDisplayText('Bruk @Sous-vide.', ingredients), 'Bruk @Sous-vide.')
+})
+
+test('technique links do not change what the step needs', () => {
+  const withLink = ingredientsForStep('Bland salt og sukker. @Saus @Sous-vide', ingredients, techniques)
+  const without = ingredientsForStep('Bland salt og sukker. @Saus', ingredients, techniques)
+  assert.deepEqual(withLink, without)
+  assert.deepEqual(
+    ingredientsForStep('Strø over salt, så @Sous-vide', ingredients, techniques),
+    ingredientsForStep('Strø over salt, så', ingredients, techniques)
+  )
 })

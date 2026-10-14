@@ -118,7 +118,12 @@ function mentionsAtWordStart(textLower: string, name: string): boolean {
 // @Støving av form". Teksten forblir en vanlig streng, så det trengs ingen
 // skjemaendring. Lengste navn vinner, så "@Saus til servering" ikke tolkes
 // som "@Saus" når begge finnes.
-export type StepSegment = { text: string; component: RecipeComponent | null }
+//
+// "@Teknikk" kobler på samme måte til en teknikk fra kokeboka, f.eks. "stek
+// kjøttet @Sous-vide". Den koblingen vises som en lenke i stedet for å fjernes.
+export type StepSegment = { text: string; component: RecipeComponent | null; technique?: StepTechnique }
+
+export type StepTechnique = { id: string; title: string }
 
 // Korte vanlige ord som ellers kunne treffet slutten av et ingrediensnavn.
 const STOP_WORDS = new Set(['med', 'til', 'den', 'det', 'som', 'for', 'har', 'kan', 'ned', 'opp', 'inn', 'alt', 'all', 'men', 'mer', 'nok'])
@@ -254,33 +259,75 @@ function componentAt(stepText: string, index: number, ingredients: RecipeIngredi
   return best
 }
 
-// Deler stegteksten i vanlig tekst og @-koblinger. Ukjente @-ord blir
-// stående som tekst.
-export function parseStep(stepText: string, ingredients: RecipeIngredients): StepSegment[] {
+function techniqueAt(stepText: string, index: number, techniques: StepTechnique[]): StepTechnique | null {
+  const rest = stepText.slice(index).toLowerCase()
+  let best: StepTechnique | null = null
+  for (const technique of techniques) {
+    const title = norm(technique.title)
+    if (!title || !rest.startsWith(title) || isWordChar(rest[title.length])) continue
+    if (!best || title.length > norm(best.title).length) best = technique
+  }
+  return best
+}
+
+// Deler stegteksten i vanlig tekst og @-koblinger til komponenter og
+// teknikker. Lengste navn vinner, og ved likt navn vinner komponenten.
+// Ukjente @-ord blir stående som tekst.
+export function parseStep(
+  stepText: string,
+  ingredients: RecipeIngredients,
+  techniques: StepTechnique[] = []
+): StepSegment[] {
   const segments: StepSegment[] = []
   let last = 0
   let at = stepText.indexOf('@')
   while (at !== -1) {
-    const component = isWordChar(stepText[at - 1]) ? null : componentAt(stepText, at + 1, ingredients)
-    if (component) {
+    const startsWord = !isWordChar(stepText[at - 1])
+    const component = startsWord ? componentAt(stepText, at + 1, ingredients) : null
+    const technique = startsWord ? techniqueAt(stepText, at + 1, techniques) : null
+    const componentLength = component ? component.name.trim().length : 0
+    const techniqueLength = technique ? technique.title.trim().length : 0
+    const length = Math.max(componentLength, techniqueLength)
+    if (length > 0) {
       if (at > last) segments.push({ text: stepText.slice(last, at), component: null })
-      const end = at + 1 + component.name.trim().length
-      segments.push({ text: stepText.slice(at + 1, end), component })
+      const end = at + 1 + length
+      const text = stepText.slice(at + 1, end)
+      if (component && componentLength >= techniqueLength) segments.push({ text, component })
+      else segments.push({ text, component: null, technique: technique! })
       last = end
     }
-    at = stepText.indexOf('@', component ? last : at + 1)
+    at = stepText.indexOf('@', length > 0 ? last : at + 1)
   }
   if (last < stepText.length) segments.push({ text: stepText.slice(last), component: null })
   return segments
 }
 
-// Stegteksten slik den leses: @-koblinger er bare for kokemodus og fjernes,
-// sammen med mellomrommet de etterlater. Det samme gjelder tidsmarkøren
-// ("{tid:25}") fra redigeringsskjemaet.
-export function stepDisplayText(stepText: string, ingredients: RecipeIngredients): string {
-  const text = parseStep(stripTimerMarker(stepText), ingredients)
+// En del av stegteksten slik den vises. techniqueId er satt for en
+// teknikklenke.
+export type StepPart = { text: string; techniqueId?: string }
+
+// Tegn fra Unicodes private område som holder plassen til en teknikklenke
+// mens teksten ryddes. De forekommer ikke i vanlig tekst.
+const LINK_START = '\uE000'
+const LINK_END = '\uE001'
+
+// Stegteksten slik den leses, delt i tekst og teknikklenker. @-koblinger til
+// komponenter er bare for kokemodus og fjernes, sammen med mellomrommet de
+// etterlater. Det samme gjelder tidsmarkøren ("{tid:25}") fra
+// redigeringsskjemaet. En teknikklenke vises uten "@".
+export function stepDisplayParts(
+  stepText: string,
+  ingredients: RecipeIngredients,
+  techniques: StepTechnique[] = []
+): StepPart[] {
+  const links: StepPart[] = []
+  const text = parseStep(stripTimerMarker(stepText), ingredients, techniques)
     .filter((s) => !s.component)
-    .map((s) => s.text)
+    .map((s) => {
+      if (!s.technique) return s.text
+      links.push({ text: s.text, techniqueId: s.technique.id })
+      return LINK_START + (links.length - 1) + LINK_END
+    })
     .join('')
     .replace(/\(\s*\)/g, '')
     .replace(/[ \t]{2,}/g, ' ')
@@ -288,7 +335,22 @@ export function stepDisplayText(stepText: string, ingredients: RecipeIngredients
     .replace(/\( +/g, '(')
     .trim()
   // Etter at koblingene er fjernet, så "@Saus kokes opp" vises som "Kokes opp".
-  return capitalizeFirst(text)
+  const parts: StepPart[] = []
+  for (const [i, piece] of capitalizeFirst(text).split(new RegExp(`${LINK_START}(\\d+)${LINK_END}`)).entries()) {
+    if (i % 2 === 1) parts.push(links[Number(piece)])
+    else if (piece) parts.push({ text: piece })
+  }
+  return parts
+}
+
+export function stepDisplayText(
+  stepText: string,
+  ingredients: RecipeIngredients,
+  techniques: StepTechnique[] = []
+): string {
+  return stepDisplayParts(stepText, ingredients, techniques)
+    .map((part) => part.text)
+    .join('')
 }
 
 // Forslag til autocomplete: komponenter der navnet begynner med det som er
@@ -317,9 +379,16 @@ export interface StepIngredientGroup {
 // 3. Finnes en nevnt ingrediens bare inne i en komponent som ikke er nevnt,
 //    vises den likevel (under komponentnavnet).
 // Rekkefølge: løse først, så komponentene i oppskriftens rekkefølge.
-export function ingredientsForStep(rawStepText: string, ingredients: RecipeIngredients): StepIngredientGroup[] {
-  const stepText = stripTimerMarker(rawStepText)
-  const segments = parseStep(stepText, ingredients)
+// Teknikklenker teller ikke som at noe er nevnt.
+export function ingredientsForStep(
+  rawStepText: string,
+  ingredients: RecipeIngredients,
+  techniques: StepTechnique[] = []
+): StepIngredientGroup[] {
+  const stripped = stripTimerMarker(rawStepText)
+  const allSegments = parseStep(stripped, ingredients, techniques)
+  const segments = allSegments.filter((s) => !s.technique)
+  const stepText = segments.length < allSegments.length ? segments.map((s) => s.text).join('') : stripped
   const linked = new Set(segments.flatMap((s) => (s.component ? [s.component] : [])))
   if (linked.size > 0) {
     // Komponentnavnet selv skal ikke telle som at en ingrediens er nevnt.

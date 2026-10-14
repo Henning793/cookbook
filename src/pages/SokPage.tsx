@@ -10,7 +10,7 @@ interface Match {
   index: number
 }
 
-function findMatch(recipe: Recipe, query: string): Match | null {
+function findMatch(recipe: Recipe, query: string, techniques: Recipe[]): Match | null {
   const lowerQuery = query.toLowerCase()
 
   const titleIndex = recipe.title.toLowerCase().indexOf(lowerQuery)
@@ -26,7 +26,7 @@ function findMatch(recipe: Recipe, query: string): Match | null {
   }
 
   for (const rawStep of recipe.steps) {
-    const step = stepDisplayText(rawStep, recipe.ingredients)
+    const step = stepDisplayText(rawStep, recipe.ingredients, techniques)
     const index = step.toLowerCase().indexOf(lowerQuery)
     if (index !== -1) {
       return { text: step, index }
@@ -86,7 +86,7 @@ export function SokPage() {
     }
     // Teknikker er med i tekstsøket, men ikke når man bare filtrerer på etikett eller eier.
     return [...recipes, ...techniques]
-      .map((recipe) => ({ recipe, match: findMatch(recipe, trimmedQuery) }))
+      .map((recipe) => ({ recipe, match: findMatch(recipe, trimmedQuery, techniques) }))
       .filter((entry): entry is { recipe: Recipe; match: Match } => entry.match !== null)
   }, [recipes, techniques, trimmedQuery, hasQuery])
 

@@ -658,6 +658,12 @@
   cursor: pointer;
 }
 
+.add-recipe-form .step-mention-kind {
+  margin-left: 8px;
+  font-size: 12px;
+  color: var(--color-neutral-700);
+}
+
 .add-recipe-form .step-mention-option-active,
 .add-recipe-form .step-mention-option:hover {
   background: var(--color-accent-100);
@@ -953,6 +959,12 @@
 }
 
 .oppskrift-lede-link {
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.step-technique-link {
   color: var(--color-accent);
   text-decoration: underline;
   text-underline-offset: 3px;
