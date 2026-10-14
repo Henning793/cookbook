@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient'
 import { timerLabel, type CookingTimer } from './cookingTimers'
+import { timerPath } from './dayCooking'
 
 // Push-varsel når en klokke i kokemodus er ferdig, også når telefonen er
 // låst og appen ikke kjører. Appen lagrer sluttidspunktet i cooking_timers,
@@ -71,7 +72,7 @@ export async function syncTimerToServer(timer: CookingTimer | null, id: string):
         id,
         title: 'Tiden er ute',
         body: `${timerLabel(timer)}${timer.recipeTitle ? ` (${timer.recipeTitle})` : ''}`,
-        url: `/oppskrift/${timer.recipeId}/kok`,
+        url: timerPath(timer),
         ends_at: new Date(timer.endsAt).toISOString(),
         sent_at: null,
       })

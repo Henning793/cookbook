@@ -4,6 +4,7 @@ import { ChevronDown, Minus, Pause, Play, Plus, Timer, X } from 'lucide-react'
 import { useTimers } from '../context/TimerContext'
 import { remainingMs, timerLabel, timerSummary, type CookingTimer } from '../lib/cookingTimers'
 import { formatClock } from '../lib/stepTimer'
+import { timerPath } from '../lib/dayCooking'
 
 const MINUTE = 60_000
 
@@ -11,6 +12,10 @@ const MINUTE = 60_000
 // "large" brukes på steget i kokemodus, ellers den kompakte varianten i klokkelisten.
 export function TimerCard({ timer, large = false, showLabel = true }: { timer: CookingTimer; large?: boolean; showLabel?: boolean }) {
   const { now, pause, resume, adjust, remove } = useTimers()
+  const location = useLocation()
+  // Fra kokemodus er det å gå til klokka som å bytte rett: adressen erstattes,
+  // så tilbake fortsatt går dit kokemodus ble åpnet fra.
+  const inCookingMode = /^\/oppskrift\/[^/]+\/kok$/.test(location.pathname)
   const paused = timer.endsAt === null && !timer.ringing
 
   return (
@@ -25,7 +30,12 @@ export function TimerCard({ timer, large = false, showLabel = true }: { timer: C
     >
       <div className="cooking-timer-info">
         {showLabel && (
-          <Link className="cooking-timer-label" to={`/oppskrift/${timer.recipeId}/kok`}>
+          <Link
+            className="cooking-timer-label"
+            to={timerPath(timer)}
+            replace={inCookingMode}
+            state={inCookingMode ? location.state : undefined}
+          >
             {timerLabel(timer)}
           </Link>
         )}

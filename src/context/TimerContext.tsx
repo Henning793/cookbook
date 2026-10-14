@@ -11,6 +11,7 @@ import {
   type CookingTimer,
   type NewTimer,
 } from '../lib/cookingTimers'
+import { timerPath } from '../lib/dayCooking'
 import { startAlarm, stopAlarm, unlockAlarmSound } from '../lib/alarmSound'
 import { ensurePushSubscription, pushState, syncTimerToServer, type PushState } from '../lib/timerPush'
 
@@ -55,7 +56,7 @@ async function notifyLocally(timer: CookingTimer) {
       tag: timer.id,
       icon: '/icons/icon-192.png',
       requireInteraction: true,
-      data: { url: `/oppskrift/${timer.recipeId}/kok` },
+      data: { url: timerPath(timer) },
     })
   } catch {
     // Ikke kritisk: alarmen i appen ringer uansett.

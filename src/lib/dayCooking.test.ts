@@ -8,6 +8,7 @@ import {
   finishDayDish,
   parseWeekdayParam,
   selectedDish,
+  timerPath,
   withDayStep,
 } from './dayCooking.ts'
 
@@ -86,4 +87,18 @@ test('nedtellingen som vises på en rett', () => {
   assert.equal(dishTimerLabel(timers, 'grateng', 1_000), '0:30')
   assert.equal(dishTimerLabel(timers, 'saus', 1_000), 'Ringer')
   assert.equal(dishTimerLabel(timers, 'kjott', 1_000), null)
+})
+
+test('alarmen åpner dagens kokemodus når klokka ble startet fra en dag', () => {
+  assert.equal(timerPath({ recipeId: 'lasagne', weekday: 2, servings: 6 }), '/oppskrift/lasagne/kok?dag=2&porsjoner=6')
+  assert.equal(timerPath({ recipeId: 'lasagne', weekday: 0 }), '/oppskrift/lasagne/kok?dag=0')
+  assert.equal(timerPath({ recipeId: 'lasagne' }), '/oppskrift/lasagne/kok')
+})
+
+test('steget i hver rett huskes når man bytter fane og kommer tilbake', () => {
+  let session = withDayStep(null, 2, 'lasagne', 4, 6)
+  session = withDayStep(session, 2, 'salat', 0, 6)
+  session = withDayStep(session, 2, 'salat', 1, 6)
+  assert.equal(dayStartStep(session, 2, 'lasagne'), 4)
+  assert.equal(dayStartStep(session, 2, 'salat'), 1)
 })
