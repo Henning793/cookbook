@@ -21,6 +21,8 @@ import {
 } from '../lib/dayCooking'
 import { plannedDishes } from '../lib/menuDishes'
 import { useMenuDay } from '../components/useMenuDay'
+import { TechniquePanel } from '../components/TechniquePanel'
+import { isTechniqueTimerText, keepTechniqueSteps, techniqueStep, withTechniqueStep } from '../lib/techniqueCooking'
 
 // Kokeøkten er per bruker, så steget man stoppet på kan først leses når
 // innloggingen er lest.
@@ -59,6 +61,8 @@ function Kokemodus() {
     return cookingSession && cookingSession.recipeId === id ? cookingSession.stepIndex : 0
   })
   const [timerPanelOpen, setTimerPanelOpen] = useState(false)
+  // Teknikken som er åpen i panelet over steget, se TechniquePanel.
+  const [openTechniqueId, setOpenTechniqueId] = useState<string | null>(null)
   const [wakeLockHeld, setWakeLockHeld] = useState(false)
   const wakeLockSupported = typeof navigator !== 'undefined' && 'wakeLock' in navigator
   const wakeLockRef = useRef<WakeLockSentinel | null>(null)
@@ -106,8 +110,11 @@ function Kokemodus() {
   // Persist cooking session on every step change.
   useEffect(() => {
     if (!id) return
-    if (weekday !== null) setCookingSession(withDayStep(cookingSession, weekday, id, stepIndex, servings))
-    else setCookingSession({ recipeId: id, stepIndex, ...(servings != null ? { servings } : {}) })
+    const next =
+      weekday !== null
+        ? withDayStep(cookingSession, weekday, id, stepIndex, servings)
+        : { recipeId: id, stepIndex, ...(servings != null ? { servings } : {}) }
+    setCookingSession(keepTechniqueSteps(cookingSession, next))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, stepIndex])
 
@@ -135,7 +142,12 @@ function Kokemodus() {
   // ett minutt eller mindre igjen, dukker de opp som en pille, og ringer de,
   // vises de som vanlig kort over steget.
   const stepSeconds = stepTimerSeconds(currentStep)
-  const stepTimers = timers.filter((t) => t.recipeId === recipe.id && t.stepIndex === stepIndex)
+  // Klokker startet i en teknikk hører også til dette steget, men vises i
+  // teknikkpanelet og bak bjella, ikke som stegets egen klokke.
+  const techniqueTitles = techniques.map((t) => t.title)
+  const stepTimers = timers.filter(
+    (t) => t.recipeId === recipe.id && t.stepIndex === stepIndex && !isTechniqueTimerText(t.stepText, techniqueTitles)
+  )
   const otherTimers = timers.filter((t) => !stepTimers.includes(t))
   const { ringing: ringingOthers, soon: soonOthers, inBell } = cookingModeTimers(otherTimers, now)
 
@@ -149,6 +161,17 @@ function Kokemodus() {
       ...(weekday !== null ? { weekday, ...(servings != null ? { servings } : {}) } : {}),
       durationMs: seconds * 1000,
     })
+  }
+
+  // Teknikkens mengder følger porsjonene i oppskriften når teknikken har et
+  // porsjonsantall. Ellers vises mengdene slik de står i teknikken.
+  const openTechnique = techniques.find((t) => t.id === openTechniqueId) ?? null
+  const recipeServings = servings ?? recipe.servings ?? null
+  const techniqueScale =
+    openTechnique?.servings && recipeServings ? recipeServings / openTechnique.servings : 1
+
+  function closeTechnique() {
+    setOpenTechniqueId(null)
   }
 
   function goToStep(index: number) {
@@ -168,7 +191,9 @@ function Kokemodus() {
 
   function handleNext() {
     if (isLastStep) {
-      setCookingSession(weekday !== null && id ? finishDayDish(cookingSession, weekday, id) : null)
+      setCookingSession(
+        weekday !== null && id ? keepTechniqueSteps(cookingSession, finishDayDish(cookingSession, weekday, id), id) : null
+      )
       exitToRecipe()
     } else {
       goToStep(stepIndex + 1)
@@ -289,6 +314,7 @@ function Kokemodus() {
             ingredients={recipe.ingredients}
             recipeId={recipe.id}
             linkedFrom={recipe.title}
+            onTechnique={setOpenTechniqueId}
           />
         </p>
 
@@ -329,6 +355,21 @@ function Kokemodus() {
           </div>
         )}
       </div>
+
+      {openTechnique && (
+        <TechniquePanel
+          technique={openTechnique}
+          recipe={recipe}
+          recipeStepIndex={stepIndex}
+          scaleFactor={techniqueScale}
+          savedStep={techniqueStep(cookingSession, recipe.id, openTechnique.id)}
+          onStepChange={(step) => {
+            if (cookingSession) setCookingSession(withTechniqueStep(cookingSession, recipe.id, openTechnique.id, step))
+          }}
+          onClose={closeTechnique}
+          timerExtras={weekday !== null ? { weekday, ...(servings != null ? { servings } : {}) } : {}}
+        />
+      )}
 
       <div className="kokemodus-footer">
         <button

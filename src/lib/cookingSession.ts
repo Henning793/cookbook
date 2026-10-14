@@ -13,6 +13,9 @@ export interface CookingSession {
   weekday?: number
   dishSteps?: Record<string, number>
   doneIds?: string[]
+  // Steget man er på i teknikker åpnet i panelet i kokemodus (se
+  // lib/techniqueCooking). Nøkkelen er «oppskrift:teknikk».
+  techniqueSteps?: Record<string, number>
   // Når økten sist ble lagret (ms siden 1970). Mangler i økter lagret før
   // feltet fantes.
   savedAt?: number
