@@ -665,8 +665,8 @@ export function RecipeForm({
           <summary>Koble et steg med @</summary>
           <p>
             {isTechnique
-              ? 'Skriv @ for å koble et steg til en komponent. Da hentes ingrediensene bare derfra.'
-              : 'Skriv @ for å koble et steg til en komponent eller en teknikk. En komponent styrer hvilke ingredienser som vises, en teknikk blir en lenke i steget.'}
+              ? 'Skriv @ og navnet på en komponent i et steg, for eksempel @Saus. Da viser kokemodus bare ingrediensene og mengdene fra den komponenten i det steget, i stedet for alle.'
+              : 'Skriv @ og navnet på en komponent i et steg, for eksempel @Saus. Da viser kokemodus bare ingrediensene og mengdene fra den komponenten i det steget, i stedet for alle. Skriv @ og navnet på en teknikk for å lenke til den.'}
           </p>
         </details>
       )}
