@@ -113,6 +113,13 @@ export function ProfilPage() {
             <ChevronRight size={14} strokeWidth={2.75} />
           </span>
         </button>
+        {/* Samlingene som kan deles med andre grupper. Lenken lå før på forsiden. */}
+        <button type="button" className="profil-row profil-row-button" onClick={() => navigate('/samlinger')}>
+          <span>Samlinger</span>
+          <span className="profil-row-chevron" aria-hidden="true">
+            <ChevronRight size={14} strokeWidth={2.75} />
+          </span>
+        </button>
         <button type="button" className="profil-row profil-row-button" onClick={() => navigate('/familie')}>
           <span>Gruppe</span>
           <span className="profil-row-chevron" aria-hidden="true">

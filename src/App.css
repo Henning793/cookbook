@@ -1771,9 +1771,6 @@
 }
 
 .hjem-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
   padding: 8px 6px 0;
 }
 
@@ -1790,69 +1787,12 @@
   margin: 0;
 }
 
-.hjem-avatar {
-  flex: none;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: var(--color-accent-2);
-  color: var(--color-surface);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font: 600 17px var(--font-heading);
-  border: none;
-  padding: 0;
-  cursor: pointer;
-}
 
-.hjem-sist-brukt {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-top: 10px;
-  padding: 14px 16px;
-  border-radius: 14px;
-  background: var(--color-card);
-  border: 1px solid var(--color-line);
-}
 
-.hjem-sist-brukt-text {
-  flex: 1;
-  min-width: 0;
-}
 
-.hjem-sist-brukt-kicker {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--color-text-soft);
-  margin: 0;
-}
 
-.hjem-sist-brukt-title {
-  font-size: 20px;
-  line-height: 1.15;
-  margin: 4px 0 0;
-  overflow-wrap: anywhere;
-}
 
-.hjem-sist-brukt-meta {
-  font-size: 13px;
-  color: var(--color-text-soft);
-  margin: 3px 0 0;
-}
 
-.hjem-sist-brukt-cta {
-  flex: none;
-  border: none;
-  border-radius: 999px;
-  background: var(--color-accent);
-  color: var(--color-on-accent);
-  font: 700 14px var(--font-body);
-  padding: 9px 18px;
-  cursor: pointer;
-}
 
 .hjem-section-head {
   display: flex;
@@ -1868,19 +1808,7 @@
   margin: 0;
 }
 
-.hjem-section-link {
-  font: 600 14px var(--font-body);
-  background: none;
-  border: none;
-  padding: 0;
-  color: var(--color-accent);
-  cursor: pointer;
-}
 
-.hjem-section-links {
-  display: flex;
-  gap: 16px;
-}
 
 .hjem-grid {
   display: grid;
@@ -1973,20 +1901,141 @@
   margin-top: 14px;
 }
 
-.hjem-fab {
-  position: fixed;
-  right: 24px;
-  bottom: 30px;
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  border: none;
-  background: var(--color-neutral-900);
-  color: var(--color-bg);
+
+/* «I kveld»-kortet: kveldens middag fra ukesmenyen. Hele kortet åpner
+   oppskriften, og «Fortsett» vises bare når man er i gang i kokemodus. */
+.hjem-tonight-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.hjem-tonight {
   display: flex;
   align-items: center;
-  justify-content: center;
-  box-shadow: var(--shadow-lg);
+  gap: 8px;
+  padding: 0 12px 0 0;
+  border-radius: 16px;
+  background: var(--color-card);
+  border: 1px solid var(--color-line);
+  font: inherit;
+  color: var(--color-text);
+  text-align: left;
+}
+
+button.hjem-tonight {
+  width: 100%;
+  cursor: pointer;
+}
+
+.hjem-tonight-empty {
+  background: transparent;
+  border-style: dashed;
+}
+
+.hjem-tonight-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 0 10px 10px;
+  background: none;
+  border: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.hjem-tonight-empty .hjem-tonight-main {
+  padding-left: 16px;
+}
+
+.hjem-tonight-thumb,
+.hjem-tonight-stack {
+  flex: none;
+  width: 64px;
+  height: 64px;
+}
+
+.hjem-tonight-thumb {
+  border-radius: 12px;
+  object-fit: cover;
+  display: block;
+}
+
+.hjem-tonight-thumb-icon {
+  display: grid;
+  place-items: center;
+  background: var(--color-accent-200);
+  color: var(--color-accent-600);
+}
+
+/* To retter: to bilder lagt litt over hverandre. */
+.hjem-tonight-stack {
+  position: relative;
+}
+
+.hjem-tonight-stack img {
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  border-radius: 11px;
+  object-fit: cover;
+}
+
+.hjem-tonight-stack img:first-child {
+  left: 0;
+  top: 0;
+}
+
+.hjem-tonight-stack img:last-child {
+  right: 0;
+  bottom: 0;
+  border: 2px solid var(--color-card);
+}
+
+.hjem-tonight-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.hjem-tonight-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-text-soft);
+}
+
+.hjem-tonight-title {
+  font: 600 20px/1.15 var(--font-heading);
+  margin-top: 3px;
+  overflow-wrap: anywhere;
+}
+
+.hjem-tonight-meta {
+  font-size: 13px;
+  color: var(--color-text-soft);
+  margin-top: 3px;
+}
+
+.hjem-tonight-chevron {
+  flex: none;
+  color: var(--color-accent);
+}
+
+.hjem-tonight-cta {
+  flex: none;
+  border: none;
+  border-radius: 999px;
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font: 700 14px var(--font-body);
+  padding: 9px 18px;
   cursor: pointer;
 }
 
@@ -2945,41 +2994,10 @@
   cursor: not-allowed;
 }
 
-/* --- Hjem: Ukesmeny/Handleliste-kort --- */
 
-.hjem-menu-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin: 20px 0 0;
-}
 
-.hjem-menu-card {
-  min-width: 0;
-  border-radius: 14px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-line);
-  padding: 12px 14px;
-  text-align: left;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  font: inherit;
-  color: var(--color-text);
-}
 
-.hjem-menu-card-label {
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--color-text-soft);
-}
 
-.hjem-menu-card-value {
-  font: 400 17px/1.25 var(--font-heading);
-  overflow-wrap: anywhere;
-}
 
 /* --- Installer appen (se InstallApp.tsx) --- */
 /* Banneret ligger i sideflyten på forsiden, så det aldri dekker knapper. */
@@ -3222,7 +3240,7 @@
 }
 
 /* Klokkeknappen utenfor kokemodus, nede til venstre så den ikke dekker
-   tilbakeknappen øverst eller pluss-knappen nede til høyre på forsiden. */
+   tilbakeknappen øverst. Med bunnmenyen ligger den rett over menyen. */
 .timer-fab {
   position: fixed;
   left: 20px;
@@ -3735,4 +3753,110 @@ body.has-timer-button {
 .kokemodus-dish-timer {
   color: var(--color-accent-400);
   opacity: 1;
+}
+
+/* --- Bunnmeny (se BottomNav.tsx) --- */
+/* Når menyen vises, får sidene og det som ligger fast nederst plass over den. */
+
+:root {
+  --bottom-nav-space: 0px;
+}
+
+body.has-bottom-nav {
+  --bottom-nav-space: calc(64px + env(safe-area-inset-bottom, 0px));
+}
+
+body.has-bottom-nav .page {
+  padding-bottom: calc(40px + var(--bottom-nav-space));
+}
+
+body.has-bottom-nav .form-save-bar {
+  bottom: var(--bottom-nav-space);
+}
+
+body.has-bottom-nav .timer-fab,
+body.has-bottom-nav .ukesmeny-notice {
+  bottom: calc(16px + var(--bottom-nav-space));
+}
+
+.bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 12;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  align-items: center;
+  height: calc(64px + env(safe-area-inset-bottom, 0px));
+  padding: 0 max(8px, calc((100% - 640px) / 2)) env(safe-area-inset-bottom, 0px);
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-line);
+  box-sizing: border-box;
+}
+
+.bottom-nav-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  padding: 6px 2px;
+  background: none;
+  border: none;
+  font: 600 11px var(--font-body);
+  color: var(--color-text-soft);
+  cursor: pointer;
+}
+
+.bottom-nav-tab-active {
+  color: var(--color-accent);
+  font-weight: 700;
+}
+
+.bottom-nav-icon {
+  position: relative;
+  display: flex;
+}
+
+.bottom-nav-badge {
+  position: absolute;
+  top: -5px;
+  left: 14px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font: 700 10.5px/18px var(--font-body);
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.bottom-nav-label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bottom-nav-add {
+  justify-self: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  background: var(--color-neutral-900);
+  color: var(--color-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-lg);
+  cursor: pointer;
+}
+
+.bottom-nav button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }

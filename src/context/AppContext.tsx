@@ -200,8 +200,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const cookingSession = currentCooking?.session ?? null
 
   function setCookingSession(newSession: CookingSession | null) {
-    setCooking({ userId, session: newSession })
-    writeCookingSession(localStorage, userId, newSession)
+    const stamped = newSession ? { ...newSession, savedAt: Date.now() } : null
+    setCooking({ userId, session: stamped })
+    writeCookingSession(localStorage, userId, stamped)
   }
 
   const value: AppContextValue = {

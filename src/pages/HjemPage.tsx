@@ -1,19 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Plus } from 'lucide-react'
+import { CalendarDays, ChefHat, ChevronRight, CookingPot, Search, type LucideIcon } from 'lucide-react'
 import { useApp } from '../context/AppContext'
-import { WEEKDAY_NAMES, dayKokemodusPath } from '../lib/dayCooking'
 import { UNTAGGED_TAG, UNTAGGED_LABEL } from '../lib/tags'
 import { collectionIcon } from '../lib/collectionIcon'
 import { listMenuDays } from '../lib/menuDays'
-import {
-  aggregateIngredients,
-  ingredientKey,
-  listCheckedItems,
-  listManualItems,
-  removeAlwaysHome,
-} from '../lib/shoppingList'
-import { listStandingItems } from '../lib/standingItems'
+import { isRecentCookingSession } from '../lib/cookingSession'
+import { otherCooking, tonightCard, type CookingProgress } from '../lib/tonightCard'
 import { InstallBanner } from '../components/InstallApp'
 import { Welcome } from '../components/Welcome'
 import { isWelcomeSeen, markNewsSeen, markWelcomeSeen, unseenNews } from '../lib/welcome'
@@ -21,6 +14,11 @@ import type { MenuDay } from '../types'
 
 // Antall fargevarianter for samlingskort uten bilde (.hjem-collection-cover-N).
 const COVER_TINTS = 3
+
+// Oppskriften åpnet herfra får «Kokeboka» som tilbakeknapp, og tilbake går
+// ett steg i historikken i stedet for å legge forsiden på nytt (samme
+// mekanisme som lenker mellom oppskrifter, se OppskriftPage).
+const BACK_TO_HOME = { linkedFrom: 'Kokeboka' }
 
 function getGreeting() {
   const hour = new Date().getHours()
@@ -34,37 +32,20 @@ export function HjemPage() {
   const { session, recipes, techniques, allRecipes, profiles, loading, availableTags, cookingSession, family, familyLoading } =
     useApp()
 
-  const [todayMenu, setTodayMenu] = useState<MenuDay | null>(null)
-  const [shoppingItemsLeft, setShoppingItemsLeft] = useState(0)
+  // undefined til ukesmenyen er lest, så kortet ikke blinker «Ingen plan».
+  const [todayMenu, setTodayMenu] = useState<MenuDay | null | undefined>(undefined)
   const [welcomeSeen, setWelcomeSeen] = useState(() => isWelcomeSeen(localStorage))
   // Har man sett velkomsten før, vises bare sidene som er nye siden sist.
   const [news, setNews] = useState(() => unseenNews(localStorage))
+  const isoWeekday = (new Date().getDay() + 6) % 7 // JS: 0=søn -> her: 0=man ... 6=søn
 
   useEffect(() => {
     if (familyLoading || !session) return
-    const familyId = family?.id ?? null
-    const isoWeekday = (new Date().getDay() + 6) % 7 // JS: 0=søn -> her: 0=man ... 6=søn
-
-    Promise.all([
-      listMenuDays(familyId),
-      listCheckedItems(familyId),
-      listManualItems(familyId),
-      listStandingItems(familyId, 'always_home'),
-    ]).then(
-      ([days, checkedRows, manualItems, alwaysHome]) => {
-        setTodayMenu(days.find((d) => d.weekday === isoWeekday && d.entry_type) ?? null)
-        const aggregated = removeAlwaysHome(
-          aggregateIngredients(days, recipes),
-          new Set(alwaysHome.map((i) => i.normalized_name))
-        )
-        const checkedKeys = new Set(checkedRows.map((c) => ingredientKey(c.normalized_name, c.unit)))
-        const uncheckedCount = aggregated.filter(
-          (item) => !checkedKeys.has(ingredientKey(item.normalizedName, item.unit))
-        ).length
-        setShoppingItemsLeft(uncheckedCount + manualItems.filter((m) => !m.checked).length)
-      }
+    listMenuDays(family?.id ?? null).then(
+      (days) => setTodayMenu(days.find((d) => d.weekday === isoWeekday && d.entry_type) ?? null),
+      () => setTodayMenu(null)
     )
-  }, [family, familyLoading, session, recipes])
+  }, [family, familyLoading, session, isoWeekday])
 
   const name = session
     ? profiles.find((p) => p.id === session.user.id)?.display_name ?? null
@@ -94,33 +75,26 @@ export function HjemPage() {
       : tagged
   }, [tagsWithRecipes, recipes])
 
-  const cookingRecipe = cookingSession
-    ? allRecipes.find((recipe) => recipe.id === cookingSession.recipeId)
-    : null
+  // En kokeøkt som er eldre enn et halvt døgn vises ikke lenger.
+  const [now] = useState(() => Date.now())
+  const recentCooking = isRecentCookingSession(cookingSession, now) ? cookingSession : null
+  const tonight = todayMenu === undefined ? null : tonightCard(todayMenu, isoWeekday, allRecipes, recentCooking)
+  const other = tonight ? otherCooking(tonight, recentCooking, allRecipes) : null
 
-  const initialSource = name ?? session?.user.email ?? ''
-  const initial = initialSource.charAt(0).toUpperCase()
+  const techniqueCovers = techniques
+    .flatMap((recipe) => (recipe.image_url ? [recipe.image_url] : []))
+    .slice(0, 3)
 
   return (
     <div className="page hjem-page">
       <div className="hjem-header">
-        <div>
-          {session && (
-            <p className="hjem-kicker">
-              {getGreeting()}
-              {name ? `, ${name}` : ''}
-            </p>
-          )}
-          <h1 className="hjem-title">Kokeboka</h1>
-        </div>
-        <button
-          type="button"
-          className="hjem-avatar"
-          aria-label="Profil"
-          onClick={() => navigate('/meg')}
-        >
-          {initial}
-        </button>
+        {session && (
+          <p className="hjem-kicker">
+            {getGreeting()}
+            {name ? `, ${name}` : ''}
+          </p>
+        )}
+        <h1 className="hjem-title">Kokeboka</h1>
       </div>
 
       <InstallBanner />
@@ -135,50 +109,64 @@ export function HjemPage() {
         />
       </div>
 
-      {session && (
-        <div className="hjem-menu-row">
-          <button type="button" className="hjem-menu-card" onClick={() => navigate('/ukesmeny')}>
-            <span className="hjem-menu-card-label">Ukesmeny</span>
-            <span className="hjem-menu-card-value">
-              {todayMenu
-                ? `i kveld: ${
-                    todayMenu.entry_type === 'freetext'
-                      ? todayMenu.freetext
-                      : recipes.find((r) => r.id === todayMenu.recipe_id)?.title ?? 'Slettet oppskrift'
-                  }`
-                : 'Ingen plan for i dag'}
-            </span>
-          </button>
-          <button type="button" className="hjem-menu-card" onClick={() => navigate('/handleliste')}>
-            <span className="hjem-menu-card-label">Handleliste</span>
-            <span className="hjem-menu-card-value">{shoppingItemsLeft} varer igjen</span>
-          </button>
-        </div>
-      )}
-
-      {cookingSession && cookingRecipe && (
-        <div className="hjem-sist-brukt">
-          <div className="hjem-sist-brukt-text">
-            <p className="hjem-sist-brukt-kicker">Sist brukt</p>
-            <h2 className="hjem-sist-brukt-title">{cookingRecipe.title}</h2>
-            <p className="hjem-sist-brukt-meta">
-              {cookingSession.weekday != null && `${WEEKDAY_NAMES[cookingSession.weekday]} · `}
-              Du stoppet på steg {cookingSession.stepIndex + 1}
-            </p>
-          </div>
-          <button
-            type="button"
-            className="hjem-sist-brukt-cta"
-            onClick={() =>
-              navigate(
-                cookingSession.weekday != null
-                  ? dayKokemodusPath(cookingSession.recipeId, cookingSession.weekday, null)
-                  : `/oppskrift/${cookingSession.recipeId}/kok`
-              )
-            }
-          >
-            Fortsett
-          </button>
+      {session && tonight && (
+        <div className="hjem-tonight-list">
+          {tonight.kind === 'empty' ? (
+            <button type="button" className="hjem-tonight hjem-tonight-empty" onClick={() => navigate('/ukesmeny')}>
+              <span className="hjem-tonight-main">
+                <span className="hjem-tonight-text">
+                  <span className="hjem-tonight-label">I kveld</span>
+                  <span className="hjem-tonight-title">Ingen plan ennå</span>
+                  <span className="hjem-tonight-meta">Planlegg uka</span>
+                </span>
+                <ChevronRight className="hjem-tonight-chevron" size={22} aria-hidden="true" />
+              </span>
+            </button>
+          ) : tonight.kind === 'freetext' ? (
+            <button type="button" className="hjem-tonight" onClick={() => navigate('/ukesmeny')}>
+              <span className="hjem-tonight-main">
+                <span className="hjem-tonight-thumb hjem-tonight-thumb-icon" aria-hidden="true">
+                  <CalendarDays size={26} strokeWidth={1.5} />
+                </span>
+                <span className="hjem-tonight-text">
+                  <span className="hjem-tonight-label">I kveld</span>
+                  <span className="hjem-tonight-title">{tonight.title}</span>
+                </span>
+                <ChevronRight className="hjem-tonight-chevron" size={22} aria-hidden="true" />
+              </span>
+            </button>
+          ) : (
+            <TonightRecipeCard
+              label="I kveld"
+              title={tonight.title}
+              imageUrls={tonight.imageUrls}
+              meta={
+                tonight.kind === 'day'
+                  ? `${tonight.dishCount} retter`
+                  : tonight.servings != null
+                    ? `${tonight.servings.toLocaleString('nb-NO')} ${tonight.servings === 1 ? 'porsjon' : 'porsjoner'}`
+                    : null
+              }
+              progress={tonight.progress}
+              onOpen={() =>
+                tonight.kind === 'day'
+                  ? navigate(tonight.openPath)
+                  : navigate(tonight.openPath, { state: BACK_TO_HOME })
+              }
+              onResume={(path) => navigate(path)}
+            />
+          )}
+          {other && (
+            <TonightRecipeCard
+              label="Sist brukt"
+              title={other.recipe.title}
+              imageUrls={other.recipe.image_url ? [other.recipe.image_url] : []}
+              meta={null}
+              progress={other}
+              onOpen={() => navigate(`/oppskrift/${other.recipe.id}`, { state: BACK_TO_HOME })}
+              onResume={(path) => navigate(path)}
+            />
+          )}
         </div>
       )}
 
@@ -196,64 +184,31 @@ export function HjemPage() {
         <>
           <div className="hjem-section-head">
             <h2>Samlinger</h2>
-            <span className="hjem-section-links">
-              <button type="button" className="hjem-section-link" onClick={() => navigate('/teknikker')}>
-                Teknikker
-              </button>
-              <button type="button" className="hjem-section-link" onClick={() => navigate('/samlinger')}>
-                Mine samlinger
-              </button>
-            </span>
           </div>
           <div className="hjem-grid">
-            {collections.map(({ tag, label, count, coverUrls }, index) => {
-              const Icon = collectionIcon(label)
-              return (
-                <button
-                  type="button"
-                  key={tag}
-                  className="hjem-collection-card"
-                  onClick={() => navigate(`/samling/${encodeURIComponent(tag)}`)}
-                >
-                  {coverUrls.length > 0 ? (
-                    <span
-                      className={`hjem-collection-cover hjem-collection-mosaic-${coverUrls.length}`}
-                      aria-hidden="true"
-                    >
-                      {coverUrls.map((url) => (
-                        <img key={url} src={url} alt="" loading="lazy" />
-                      ))}
-                    </span>
-                  ) : (
-                    <span
-                      className={`hjem-collection-cover hjem-collection-cover-${index % COVER_TINTS}`}
-                      aria-hidden="true"
-                    >
-                      <Icon size={60} strokeWidth={1.3} />
-                    </span>
-                  )}
-                  <span className="hjem-collection-body">
-                    <span className="hjem-collection-name">{label}</span>
-                    <span className="hjem-collection-count">
-                      {count} {count === 1 ? 'oppskrift' : 'oppskrifter'}
-                    </span>
-                  </span>
-                </button>
-              )
-            })}
+            {collections.map(({ tag, label, count, coverUrls }, index) => (
+              <CollectionCard
+                key={tag}
+                label={label}
+                countText={`${count} ${count === 1 ? 'oppskrift' : 'oppskrifter'}`}
+                coverUrls={coverUrls}
+                tint={index % COVER_TINTS}
+                Icon={collectionIcon(label)}
+                onClick={() => navigate(`/samling/${encodeURIComponent(tag)}`)}
+              />
+            ))}
+            {techniques.length > 0 && (
+              <CollectionCard
+                label="Teknikker"
+                countText={`${techniques.length} ${techniques.length === 1 ? 'teknikk' : 'teknikker'}`}
+                coverUrls={techniqueCovers}
+                tint={collections.length % COVER_TINTS}
+                Icon={ChefHat}
+                onClick={() => navigate('/teknikker')}
+              />
+            )}
           </div>
         </>
-      )}
-
-      {session && (
-        <button
-          type="button"
-          className="hjem-fab"
-          aria-label="Ny oppskrift"
-          onClick={() => navigate('/ny')}
-        >
-          <Plus size={30} strokeWidth={2.75} aria-hidden="true" />
-        </button>
       )}
 
       {/* Venter på gruppen, så en som kom inn via invitasjonslenke får gruppens navn i velkomsten. */}
@@ -278,5 +233,86 @@ export function HjemPage() {
         />
       )}
     </div>
+  )
+}
+
+interface TonightRecipeCardProps {
+  label: string
+  title: string
+  imageUrls: string[]
+  meta: string | null
+  progress: CookingProgress | null
+  onOpen: () => void
+  onResume: (path: string) => void
+}
+
+// Kortet åpner oppskriften (eller dagssiden). Er man i gang i kokemodus, får
+// det i tillegg en «Fortsett»-knapp som går rett til steget.
+function TonightRecipeCard({ label, title, imageUrls, meta, progress, onOpen, onResume }: TonightRecipeCardProps) {
+  const stepText =
+    progress && progress.totalSteps > 0
+      ? `Steg ${Math.min(progress.stepIndex + 1, progress.totalSteps)} av ${progress.totalSteps}`
+      : null
+  // Med flere retter står navnet på retten man er i gang med foran steget.
+  const progressText = stepText && progress && progress.recipe.title !== title ? `${progress.recipe.title} · ${stepText}` : stepText
+  return (
+    <div className="hjem-tonight">
+      <button type="button" className="hjem-tonight-main" onClick={onOpen}>
+        {imageUrls.length >= 2 ? (
+          <span className="hjem-tonight-stack" aria-hidden="true">
+            <img src={imageUrls[0]} alt="" />
+            <img src={imageUrls[1]} alt="" />
+          </span>
+        ) : imageUrls.length === 1 ? (
+          <img className="hjem-tonight-thumb" src={imageUrls[0]} alt="" />
+        ) : (
+          <span className="hjem-tonight-thumb hjem-tonight-thumb-icon" aria-hidden="true">
+            <CookingPot size={26} strokeWidth={1.5} />
+          </span>
+        )}
+        <span className="hjem-tonight-text">
+          <span className="hjem-tonight-label">{label}</span>
+          <span className="hjem-tonight-title">{title}</span>
+          {(progressText ?? meta) && <span className="hjem-tonight-meta">{progressText ?? meta}</span>}
+        </span>
+        {!progress && <ChevronRight className="hjem-tonight-chevron" size={22} aria-hidden="true" />}
+      </button>
+      {progress && (
+        <button type="button" className="hjem-tonight-cta" onClick={() => onResume(progress.resumePath)}>
+          Fortsett
+        </button>
+      )}
+    </div>
+  )
+}
+
+interface CollectionCardProps {
+  label: string
+  countText: string
+  coverUrls: string[]
+  tint: number
+  Icon: LucideIcon
+  onClick: () => void
+}
+
+function CollectionCard({ label, countText, coverUrls, tint, Icon, onClick }: CollectionCardProps) {
+  return (
+    <button type="button" className="hjem-collection-card" onClick={onClick}>
+      {coverUrls.length > 0 ? (
+        <span className={`hjem-collection-cover hjem-collection-mosaic-${coverUrls.length}`} aria-hidden="true">
+          {coverUrls.map((url) => (
+            <img key={url} src={url} alt="" loading="lazy" />
+          ))}
+        </span>
+      ) : (
+        <span className={`hjem-collection-cover hjem-collection-cover-${tint}`} aria-hidden="true">
+          <Icon size={60} strokeWidth={1.3} />
+        </span>
+      )}
+      <span className="hjem-collection-body">
+        <span className="hjem-collection-name">{label}</span>
+        <span className="hjem-collection-count">{countText}</span>
+      </span>
+    </button>
   )
 }

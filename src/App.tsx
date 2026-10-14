@@ -22,6 +22,7 @@ import { pendingLink } from './lib/inviteLinks'
 import { UpdateBanner } from './components/UpdateBanner'
 import { TimerProvider } from './context/TimerContext'
 import { TimerTray } from './components/CookingTimers'
+import { BottomNav } from './components/BottomNav'
 import './App.css'
 import './recipe-components.css'
 
@@ -65,6 +66,7 @@ function App() {
             <Route path="/del/:token" element={<DelingPage />} />
             <Route path="*" element={<Home />} />
           </Routes>
+          <BottomNav />
         </BrowserRouter>
       </TimerProvider>
     </AppProvider>

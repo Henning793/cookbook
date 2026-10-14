@@ -13,6 +13,17 @@ export interface CookingSession {
   weekday?: number
   dishSteps?: Record<string, number>
   doneIds?: string[]
+  // Når økten sist ble lagret (ms siden 1970). Mangler i økter lagret før
+  // feltet fantes.
+  savedAt?: number
+}
+
+// «Fortsett» på forsiden vises bare så lenge økten er fersk, så en oppskrift
+// man aldri lagde ferdig ikke blir liggende der i dagevis.
+export const COOKING_SESSION_MAX_AGE_MS = 12 * 60 * 60 * 1000
+
+export function isRecentCookingSession(session: CookingSession | null, now: number): session is CookingSession {
+  return session?.savedAt != null && now - session.savedAt <= COOKING_SESSION_MAX_AGE_MS
 }
 
 type Store = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
