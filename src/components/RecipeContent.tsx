@@ -45,7 +45,7 @@ export function RecipeContent({ recipe, scaleFactor }: { recipe: Recipe; scaleFa
           <li key={index} className="oppskrift-step-row">
             <span className="oppskrift-step-badge">{index + 1}</span>
             <span className="oppskrift-step-text">
-              <StepText text={step} ingredients={recipe.ingredients} />
+              <StepText text={step} ingredients={recipe.ingredients} recipeId={recipe.id} linkedFrom={recipe.title} />
             </span>
           </li>
         ))}

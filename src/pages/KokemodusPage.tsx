@@ -36,7 +36,7 @@ function Kokemodus() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const location = useLocation()
-  const { allRecipes, cookingSession, setCookingSession, loading } = useApp()
+  const { allRecipes, techniques, cookingSession, setCookingSession, loading } = useApp()
   const { timers, now, start: startTimer, pushState } = useTimers()
 
   const recipe = allRecipes.find((r) => r.id === id)
@@ -127,7 +127,7 @@ function Kokemodus() {
   const isFirstStep = stepIndex === 0
   const isLastStep = stepIndex === totalSteps - 1
 
-  const neededGroups = ingredientsForStep(currentStep, recipe.ingredients)
+  const neededGroups = ingredientsForStep(currentStep, recipe.ingredients, techniques)
   const scaleFactor = servings != null ? servings / (recipe.servings ?? 1) : 1
 
   // Nedtelling: tiden er overstyrt i skjemaet eller gjettet fra stegteksten.
@@ -145,7 +145,7 @@ function Kokemodus() {
       recipeId: recipe.id,
       recipeTitle: recipe.title,
       stepIndex,
-      stepText: stepDisplayText(currentStep, recipe.ingredients),
+      stepText: stepDisplayText(currentStep, recipe.ingredients, techniques),
       ...(weekday !== null ? { weekday, ...(servings != null ? { servings } : {}) } : {}),
       durationMs: seconds * 1000,
     })
@@ -284,7 +284,12 @@ function Kokemodus() {
           Steg {stepIndex + 1} av {totalSteps}
         </p>
         <p className="kokemodus-step-text">
-          <StepText text={currentStep} ingredients={recipe.ingredients} />
+          <StepText
+            text={currentStep}
+            ingredients={recipe.ingredients}
+            recipeId={recipe.id}
+            linkedFrom={recipe.title}
+          />
         </p>
 
         {stepTimers.length > 0 ? (

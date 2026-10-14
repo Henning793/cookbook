@@ -160,7 +160,7 @@ export function RecipeForm({
   const customTagInputRef = useRef<HTMLInputElement>(null)
   const stepRefs = useRef<(HTMLTextAreaElement | null)[]>([])
   const descriptionRef = useRef<HTMLTextAreaElement>(null)
-  const { allRecipes } = useApp()
+  const { allRecipes, techniques } = useApp()
   // Åpen @-autocomplete: hvilket steg (DESCRIPTION for beskrivelsen), hvor "@"
   // står og hva som er skrevet etter.
   const [mention, setMention] = useState<{ step: number; start: number; end: number; query: string } | null>(null)
@@ -235,8 +235,8 @@ export function RecipeForm({
   }
 
   // Ser etter et "@" foran markøren (først i et ord, samme linje) og åpner
-  // autocomplete med det som begynner med det som er skrevet: komponenter i
-  // stegene, oppskrifter i beskrivelsen (først etter første bokstav).
+  // autocomplete med det som begynner med det som er skrevet: komponenter og
+  // teknikker i stegene, oppskrifter i beskrivelsen (først etter første bokstav).
   function detectMention(index: number, text: string, caret: number) {
     const before = text.slice(0, caret)
     const at = before.lastIndexOf('@')
@@ -278,7 +278,7 @@ export function RecipeForm({
       setMentionActive((i) => (i + delta + mentionOptions.length) % mentionOptions.length)
     } else if (e.key === 'Enter' || e.key === 'Tab') {
       e.preventDefault()
-      chooseMention(index, mentionOptions[Math.min(mentionActive, mentionOptions.length - 1)])
+      chooseMention(index, mentionOptions[Math.min(mentionActive, mentionOptions.length - 1)].name)
     } else if (e.key === 'Escape') {
       e.preventDefault()
       setMention(null)
@@ -395,18 +395,25 @@ export function RecipeForm({
     .slice(1)
     .map((group) => ({ name: (group.name ?? '').trim(), ingredients: [] }))
     .filter((component) => component.name !== '')
-  const mentionOptions = !mention
+  // I stegene kommer komponentene først, så teknikkene fra kokeboka.
+  const mentionOptions: { name: string; technique: boolean }[] = !mention
     ? []
     : mention.step === DESCRIPTION
-      ? recipeSuggestions(mention.query, allRecipes, initial?.title)
-      : componentSuggestions(mention.query, { loose: [], components: componentNames }).map((c) => c.name)
+      ? recipeSuggestions(mention.query, allRecipes, initial?.title).map((name) => ({ name, technique: false }))
+      : [
+          ...componentSuggestions(mention.query, { loose: [], components: componentNames }).map((c) => ({
+            name: c.name,
+            technique: false,
+          })),
+          ...recipeSuggestions(mention.query, techniques, initial?.title).map((name) => ({ name, technique: true })),
+        ]
 
   function renderMentionList(index: number, label: string) {
     if (mention?.step !== index || mentionOptions.length === 0) return null
     return (
       <ul className="step-mention-list" role="listbox" aria-label={label}>
-        {mentionOptions.map((name, optionIndex) => (
-          <li key={name} role="option" aria-selected={optionIndex === mentionActive}>
+        {mentionOptions.map(({ name, technique }, optionIndex) => (
+          <li key={(technique ? 't:' : 'c:') + name} role="option" aria-selected={optionIndex === mentionActive}>
             <button
               type="button"
               className={
@@ -419,6 +426,7 @@ export function RecipeForm({
               }}
             >
               {name}
+              {technique && <span className="step-mention-kind">Teknikk</span>}
             </button>
           </li>
         ))}
@@ -652,9 +660,13 @@ export function RecipeForm({
       </div>
 
       <label>Fremgangsmåte</label>
-      {componentNames.length > 0 && (
+      {(componentNames.length > 0 || techniques.length > 0) && (
         <p className="step-mention-hint">
-          Skriv @ for å koble et steg til en komponent. Da hentes ingrediensene bare derfra.
+          {componentNames.length > 0 && techniques.length > 0
+            ? 'Skriv @ for å koble et steg til en komponent eller en teknikk. En komponent styrer hvilke ingredienser som vises, en teknikk blir en lenke i steget.'
+            : componentNames.length > 0
+              ? 'Skriv @ for å koble et steg til en komponent. Da hentes ingrediensene bare derfra.'
+              : 'Skriv @ for å koble et steg til en teknikk. Den blir en lenke i steget.'}
         </p>
       )}
       <div className={'step-rows' + sortZoneClass(stepDrag, 0, steps.length)} data-sort-zone="step">
@@ -679,7 +691,7 @@ export function RecipeForm({
                 onKeyDown={(e) => handleStepKeyDown(index, e)}
                 onBlur={() => setMention(null)}
               />
-              {renderMentionList(index, 'Komponenter')}
+              {renderMentionList(index, 'Komponenter og teknikker')}
               <StepTimerField
                 step={step}
                 open={openTimer === index}
