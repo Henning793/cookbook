@@ -12,10 +12,10 @@ import { draftDishes, menuDayItems } from '../lib/menuDishes'
 import type { MenuDayDishes, PlannedDish } from '../lib/menuDishes'
 import { Login } from '../components/Login'
 import { FROM_MENU_STATE, menuRecipePath } from '../lib/menuServings'
+import { WEEKDAY_NAMES, dayPath } from '../lib/dayCooking'
 import type { MenuDay } from '../types'
 
 const WEEKDAY_LABELS = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn']
-const WEEKDAY_NAMES = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag']
 
 export function UkesmenyPage() {
   const navigate = useNavigate()
@@ -194,12 +194,19 @@ export function UkesmenyPage() {
             const mainDish = main?.dish ?? null
             const customServings =
               day.servings != null && (mainDish ? mainDish.servings !== mainDish.base : true) ? day.servings : null
-            // Åpner oppskriften med antallet retten skal lages til, når det
-            // er et annet enn oppskriftens eget.
+            // Med to eller flere oppskrifter åpner hele dagen dagssiden.
+            const openDay =
+              [main, ...sides].filter((item) => item?.dish).length >= 2
+                ? () => navigate(dayPath(weekday), { state: FROM_MENU_STATE })
+                : undefined
+            // Ellers åpnes oppskriften med antallet retten skal lages til, når
+            // det er et annet enn oppskriftens eget.
             const openDish = (dish: PlannedDish) =>
-              navigate(menuRecipePath(dish.recipe.id, dish.servings !== dish.base ? dish.servings : null), {
-                state: FROM_MENU_STATE,
-              })
+              openDay
+                ? openDay()
+                : navigate(menuRecipePath(dish.recipe.id, dish.servings !== dish.base ? dish.servings : null), {
+                    state: FROM_MENU_STATE,
+                  })
             const servingsChip = customServings !== null && (
               <span className={`ukesmeny-day-servings${sides.length > 0 ? ' ukesmeny-day-servings-multi' : ''}`}>
                 {customServings.toLocaleString('nb-NO')} {customServings === 1 ? 'porsjon' : 'porsjoner'}
@@ -223,7 +230,10 @@ export function UkesmenyPage() {
                       </span>
                     </button>
                   ) : (
-                    <div className="ukesmeny-day-main ukesmeny-day-main-static">
+                    <div
+                      className={`ukesmeny-day-main ukesmeny-day-main-static${openDay ? ' ukesmeny-day-opens-day' : ''}`}
+                      onClick={openDay}
+                    >
                       <span className="ukesmeny-day-abbr">{label}</span>
                       <span className="ukesmeny-day-title">{main?.title ?? 'Slettet oppskrift'}</span>
                       {main && <span className="ukesmeny-day-freetext-tag">fritekst</span>}
@@ -243,7 +253,11 @@ export function UkesmenyPage() {
                         )}
                       </button>
                     ) : (
-                      <span key={index} className="ukesmeny-day-side ukesmeny-day-side-static">
+                      <span
+                        key={index}
+                        className={`ukesmeny-day-side ukesmeny-day-side-static${openDay ? ' ukesmeny-day-opens-day' : ''}`}
+                        onClick={openDay}
+                      >
                         {item.title}
                       </span>
                     )

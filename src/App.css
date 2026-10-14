@@ -3575,3 +3575,164 @@ body.has-timer-button {
 .hjem-tips-link {
   margin-top: 10px;
 }
+
+/* --- Dagssiden: en dag i ukesmenyen med flere oppskrifter --- */
+
+.ukesmeny-day-opens-day {
+  cursor: pointer;
+}
+
+.dag-kicker {
+  margin: 4px 0 2px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--color-accent-700);
+}
+
+.dag-title {
+  font-size: 30px;
+  line-height: 1.1;
+  margin: 0 0 12px;
+}
+
+.dag-tabs {
+  display: flex;
+  gap: 4px;
+  margin: 0 -16px;
+  padding: 0 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--color-line);
+}
+
+.dag-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.dag-tab {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 10px 12px 11px;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1px;
+  font: 600 15px/1.15 var(--font-body);
+  color: var(--color-neutral-700);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.dag-tab-active {
+  color: var(--color-text);
+  border-bottom-color: var(--color-accent);
+}
+
+.dag-tab-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-accent-2-700);
+}
+
+.dag-also {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--color-neutral-700);
+}
+
+.dag-also b {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.dag-recipe-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 18px 0 14px;
+}
+
+.dag-recipe-title {
+  font-size: 26px;
+  line-height: 1.15;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.dag-recipe-servings {
+  flex: none;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-accent-700);
+}
+
+.cta-button.dag-cta-resume {
+  background: var(--color-accent-2);
+  box-shadow: 0 10px 20px -10px color-mix(in srgb, var(--color-accent-2) 80%, transparent);
+}
+
+/* Rettene på dagen øverst i kokemodus. */
+.kokemodus-dishes {
+  display: flex;
+  gap: 6px;
+  padding: 14px 24px 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.kokemodus-dishes::-webkit-scrollbar {
+  display: none;
+}
+
+.kokemodus-dish {
+  flex: 1 0 96px;
+  min-width: 0;
+  max-width: 180px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 14px;
+  background: rgba(245, 234, 216, 0.08);
+  color: rgba(245, 234, 216, 0.75);
+  text-align: left;
+  cursor: pointer;
+}
+
+.kokemodus-dish-active {
+  background: var(--color-accent);
+  color: var(--color-neutral-900);
+  cursor: default;
+}
+
+.kokemodus-dish-title {
+  width: 100%;
+  font: 600 13px/1.15 var(--font-body);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kokemodus-dish-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font: 700 11px/1.1 var(--font-body);
+  opacity: 0.7;
+}
+
+.kokemodus-dish-timer {
+  color: var(--color-accent-400);
+  opacity: 1;
+}

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search, Plus } from 'lucide-react'
 import { useApp } from '../context/AppContext'
+import { WEEKDAY_NAMES, dayKokemodusPath } from '../lib/dayCooking'
 import { UNTAGGED_TAG, UNTAGGED_LABEL } from '../lib/tags'
 import { collectionIcon } from '../lib/collectionIcon'
 import { listMenuDays } from '../lib/menuDays'
@@ -158,12 +159,21 @@ export function HjemPage() {
           <div className="hjem-sist-brukt-text">
             <p className="hjem-sist-brukt-kicker">Sist brukt</p>
             <h2 className="hjem-sist-brukt-title">{cookingRecipe.title}</h2>
-            <p className="hjem-sist-brukt-meta">Du stoppet på steg {cookingSession.stepIndex + 1}</p>
+            <p className="hjem-sist-brukt-meta">
+              {cookingSession.weekday != null && `${WEEKDAY_NAMES[cookingSession.weekday]} · `}
+              Du stoppet på steg {cookingSession.stepIndex + 1}
+            </p>
           </div>
           <button
             type="button"
             className="hjem-sist-brukt-cta"
-            onClick={() => navigate(`/oppskrift/${cookingSession.recipeId}/kok`)}
+            onClick={() =>
+              navigate(
+                cookingSession.weekday != null
+                  ? dayKokemodusPath(cookingSession.recipeId, cookingSession.weekday, null)
+                  : `/oppskrift/${cookingSession.recipeId}/kok`
+              )
+            }
           >
             Fortsett
           </button>
