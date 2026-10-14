@@ -8,6 +8,8 @@ import {
   Check,
   ChevronLeft,
   Link,
+  Minus,
+  Plus,
   Share2,
   ShoppingBasket,
   Timer,
@@ -258,6 +260,208 @@ function MenuScene() {
   )
 }
 
+function DishButton({ title, status, active, pressAt }: { title: string; status: ReactNode; active?: boolean; pressAt?: number }) {
+  const classes = ['kd-dish', active ? 'kd-dish-on' : '', pressAt != null ? 'press' : ''].filter(Boolean).join(' ')
+  return (
+    <span className={k(classes)} style={pressAt != null ? d(pressAt) : undefined}>
+      <b>{title}</b>
+      <small>{status}</small>
+    </span>
+  )
+}
+
+function GuestScene() {
+  const menuDish = (name: string, at?: number) => (
+    <span className={at != null ? k('dish in') : k('dish')} style={at != null ? d(at) : undefined}>
+      {name}
+    </span>
+  )
+  return (
+    <div className={k('scene run s7')}>
+      {/* 1: Flere retter legges på samme dag i ukesmenyen. */}
+      <div className={k('phase out')} style={d(3.3)}>
+        <div className={k('mini menu in')} style={d(0.2)}>
+          <h4>Ukesmeny</h4>
+          <div className={k('day')}>
+            <small>Fre</small>
+            <span className={k('dishes')}>{menuDish('Taco')}</span>
+          </div>
+          <div className={k('day guests')}>
+            <small>Lør</small>
+            <span className={k('dishes')}>
+              {menuDish('Lammestek')}
+              {menuDish('Grateng', 1.3)}
+              {menuDish('Pavlova', 2.3)}
+            </span>
+          </div>
+          <span className={k('add press2')} style={d(0.9)}>
+            <Plus />
+            Legg til rett
+          </span>
+        </div>
+      </div>
+
+      {/* 2: Dagen åpnes med en fane per rett. */}
+      <div className={k('phase out')} style={d(6.1)}>
+        <div className={k('mini daypage in')} style={d(3.5)}>
+          <span className={k('gk')}>Lørdag</span>
+          <h4>Middag for 6</h4>
+          <div className={k('tabs')}>
+            <span className={k('tab-on')}>Lammestek</span>
+            <span>Grateng</span>
+            <span>Pavlova</span>
+          </div>
+          <div className={k('dp-head')}>
+            <b>Lammestek</b>
+            <small>6 porsjoner</small>
+          </div>
+          <span className={k('dp-cta press')} style={d(5.4)}>
+            Start kokemodus
+          </span>
+          <ul>
+            <li>
+              <span>Lammelår</span>
+              <span>2,5 kg</span>
+            </li>
+            <li>
+              <span>Rosmarin</span>
+              <span>3 kvister</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      {/* 3: I kokemodus byttes det mellom rettene, og hver husker sitt steg. */}
+      <div className={k('mini-dark in')} style={d(6.3)}>
+        <KokTop />
+        <div className={k('kd-dishes')}>
+          <div className={k('kd-row out')} style={d(8.4)}>
+            <DishButton title="Lammestek" status="Steg 2 av 5" active />
+            <DishButton title="Grateng" status="Ikke startet" pressAt={8.0} />
+            <DishButton title="Pavlova" status="Ferdig" />
+          </div>
+          <div className={k('kd-row fade')} style={d(8.4)}>
+            <DishButton
+              title="Lammestek"
+              status={
+                <>
+                  <Timer /> 49:12
+                </>
+              }
+            />
+            <DishButton title="Grateng" status="Steg 1 av 4" active />
+            <DishButton title="Pavlova" status="Ferdig" />
+          </div>
+        </div>
+        <div className={k('kd-body')}>
+          <div className={k('kd-layer in')} style={d(8.6)}>
+            <span className={k('kd-k')}>Steg 1 av 4</span>
+            <div className={k('kd-t')}>Skjær potetene i tynne skiver</div>
+            <NeedPanel
+              items={[
+                ['Poteter', '1,5 kg'],
+                ['Fløte', '4 dl'],
+              ]}
+            />
+          </div>
+          <div className={k('kd-layer out')} style={d(8.3)}>
+            <span className={k('kd-k')}>Steg 2 av 5</span>
+            <div className={k('kd-t')}>
+              Stek lammet i <u>50 minutter</u>
+            </div>
+            <span className={k('kd-pill')}>
+              <Timer />
+              Lammestek · 49:58
+            </span>
+          </div>
+        </div>
+        <KokFoot />
+      </div>
+    </div>
+  )
+}
+
+// Et tall som telles opp i to trykk, i takt med vk-press2 på plussknappen.
+function Count({ values, at }: { values: [number, number, number]; at: number }) {
+  return (
+    <span className={k('count')}>
+      <span className={k('tick')} style={d(at)}>
+        {values.map((value) => (
+          <span key={value}>{value}</span>
+        ))}
+      </span>
+    </span>
+  )
+}
+
+function Stepper({ values, at }: { values: [number, number, number]; at: number }) {
+  return (
+    <span className={k('stepper')}>
+      <span className={k('st-btn')}>
+        <Minus />
+      </span>
+      <Count values={values} at={at} />
+      <span className={k('st-btn press2')} style={d(at)}>
+        <Plus />
+      </span>
+    </span>
+  )
+}
+
+function ServingsScene() {
+  const amount = (from: string, to: string, at: number) => (
+    <>
+      <span className={k('old out')} style={d(at)}>
+        {from}
+      </span>
+      <span className={k('new pop')} style={d(at + 0.1)}>
+        {to}
+      </span>
+    </>
+  )
+  return (
+    <div className={k('scene run s8')}>
+      {/* 1: Antall for hele dagen, og for én rett. */}
+      <div className={k('phase out')} style={d(6.2)}>
+        <div className={k('mini picker in')} style={d(0.2)}>
+          <span className={k('gk')}>Lørdag</span>
+          <div className={k('pk-dish')}>Lammestek</div>
+          <div className={k('pk-dish press')} style={d(2.7)}>
+            Pavlova
+            <span className={k('own pop')} style={d(5.0)}>
+              · 8
+            </span>
+          </div>
+          <div className={k('pk-edit in')} style={d(3.0)}>
+            <span>Lag til</span>
+            <Stepper values={[6, 7, 8]} at={3.6} />
+            <span className={k('pk-reset')}>Som resten</span>
+          </div>
+          <div className={k('pk-shared')}>
+            <span>
+              <b>Hvor mange spiser</b>
+              <small>Gjelder alle rettene</small>
+            </span>
+            <Stepper values={[4, 5, 6]} at={0.9} />
+          </div>
+        </div>
+      </div>
+
+      {/* 2: Handlelisten regner om mengdene. */}
+      <div className={k('mini list in')} style={d(6.4)}>
+        <h4>Handleliste</h4>
+        <div className={k('for')}>
+          <span>Lammestek for 6</span>
+          <span>Pavlova for 8</span>
+        </div>
+        <ShoppingRow name="Lammelår" at={6.7} amount={amount('1,6 kg', '2,4 kg', 7.7)} />
+        <ShoppingRow name="Eggehviter" at={6.9} amount={amount('4 stk', '8 stk', 8.1)} />
+        <ShoppingRow name="Sukker" at={7.1} amount={amount('2 dl', '4 dl', 8.5)} />
+      </div>
+    </div>
+  )
+}
+
 function GroupScene({ groupName }: { groupName: string }) {
   const shared: [typeof Check, string, number][] = [
     [CalendarDays, 'Ukesmeny', 4.0],
@@ -358,6 +562,8 @@ interface Page {
   // Hvor lenge scenen står før den spilles på nytt.
   loopMs: number
   scene: ReactNode
+  /** Satt på sider som er nye, se WELCOME_NEWS. */
+  news?: string
 }
 
 interface WelcomeProps {
@@ -365,10 +571,12 @@ interface WelcomeProps {
   groupName: string | null
   /** Kalles når velkomsten lukkes. addRecipe er sann når brukeren vil legge inn en oppskrift. */
   onDone: (addRecipe: boolean) => void
+  /** Vis bare disse nyhetene i stedet for hele velkomsten. */
+  news?: readonly string[]
 }
 
-export function Welcome({ groupName, onDone }: WelcomeProps) {
-  const pages: Page[] = [
+export function Welcome({ groupName, onDone, news }: WelcomeProps) {
+  const allPages: Page[] = [
     {
       title: 'Få oppskriftene inn på sekunder',
       text: 'Ta bilde, lim inn en lenke, eller skriv selv.',
@@ -394,6 +602,20 @@ export function Welcome({ groupName, onDone }: WelcomeProps) {
       scene: <MenuScene />,
     },
     {
+      title: 'Middagsbesøk?',
+      text: 'Legg flere retter på samme dag. I kokemodus bytter du mellom dem, og hver rett husker steget sitt.',
+      loopMs: 12000,
+      scene: <GuestScene />,
+      news: 'flere-retter',
+    },
+    {
+      title: 'Riktig mengde til alle',
+      text: 'Velg hvor mange som spiser, for alle rettene eller én og én. Handlelisten regner om mengdene.',
+      loopMs: 11000,
+      scene: <ServingsScene />,
+      news: 'porsjoner',
+    },
+    {
       title: groupName ? `Du er med i ${groupName}` : 'Lag mat sammen',
       text: groupName
         ? 'Dere har felles ukesmeny, handleliste og oppskrifter. Inviter flere med en lenke.'
@@ -408,6 +630,8 @@ export function Welcome({ groupName, onDone }: WelcomeProps) {
       scene: <ShareScene />,
     },
   ]
+
+  const pages = news ? allPages.filter((p) => p.news && news.includes(p.news)) : allPages
 
   const [index, setIndex] = useState(0)
   // Økes for å montere scenen på nytt, slik at animasjonen starter forfra.
@@ -435,7 +659,7 @@ export function Welcome({ groupName, onDone }: WelcomeProps) {
   }
 
   return (
-    <div className={k('welcome')} role="dialog" aria-modal="true" aria-label="Velkommen til Kokeboka">
+    <div className={k('welcome')} role="dialog" aria-modal="true" aria-label={news ? 'Nytt i Kokeboka' : 'Velkommen til Kokeboka'}>
       <div
         className={k('inner')}
         onTouchStart={(e) => {
@@ -444,7 +668,7 @@ export function Welcome({ groupName, onDone }: WelcomeProps) {
         onTouchEnd={handleTouchEnd}
       >
         <div className={k('w-top')}>
-          <span className={k('w-brand')}>Kokeboka</span>
+          <span className={k('w-brand')}>{news ? 'Nytt i Kokeboka' : 'Kokeboka'}</span>
           {!isLast && (
             <button type="button" className={k('w-skip')} onClick={() => onDone(false)}>
               Hopp over
@@ -463,7 +687,7 @@ export function Welcome({ groupName, onDone }: WelcomeProps) {
         </section>
 
         <div className={k('w-foot')}>
-          <div className={k('dots')}>
+          <div className={k('dots')} style={pages.length > 1 ? undefined : { visibility: 'hidden' }}>
             {pages.map((p, i) => (
               <button
                 type="button"
@@ -475,13 +699,13 @@ export function Welcome({ groupName, onDone }: WelcomeProps) {
               />
             ))}
           </div>
-          <button type="button" className="cta-button" onClick={() => (isLast ? onDone(true) : go(index + 1))}>
-            {isLast ? 'Legg inn første oppskrift' : 'Neste'}
+          <button type="button" className="cta-button" onClick={() => (isLast ? onDone(!news) : go(index + 1))}>
+            {isLast ? (news ? 'Ferdig' : 'Legg inn første oppskrift') : 'Neste'}
           </button>
           <button
             type="button"
             className={k('w-alt')}
-            style={isLast ? undefined : { visibility: 'hidden' }}
+            style={isLast && !news ? undefined : { visibility: 'hidden' }}
             onClick={() => onDone(false)}
           >
             Utforsk selv
