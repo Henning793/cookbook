@@ -38,7 +38,7 @@ export async function listMenuDays(familyId: string | null): Promise<MenuDay[]> 
 async function upsertDay(
   familyId: string | null,
   weekday: number,
-  patch: Partial<Pick<MenuDay, 'entry_type' | 'recipe_id' | 'freetext' | 'servings' | 'extra_dishes'>>
+  patch: Partial<Pick<MenuDay, 'entry_type' | 'recipe_id' | 'freetext' | 'servings' | 'extra_dishes' | 'main_servings'>>
 ): Promise<void> {
   const userId = await currentUserId()
 
@@ -58,6 +58,7 @@ async function upsertDay(
     freetext: null,
     servings: null,
     extra_dishes: [],
+    main_servings: null,
     ...patch,
     updated_at: new Date().toISOString(),
   }

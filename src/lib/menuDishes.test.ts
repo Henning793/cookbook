@@ -149,6 +149,7 @@ test('lagring: dagens antall er null når det er hovedrettens eget', () => {
         // Samme som dagen: følger dagen.
         { recipe_id: 'Potetgrateng', servings: null },
       ],
+      main_servings: null,
     }
   )
   assert.equal(toMenuDayDishes([], 4, recipes), null)
@@ -183,6 +184,7 @@ test('fritekst som hovedrett med oppskrifter i tillegg', () => {
     // 4 er sausens eget antall, så det lagres som null.
     servings: null,
     extra_dishes: [{ recipe_id: 'Rødvinssaus', servings: null }],
+    main_servings: null,
   })
   const d = day({ ...saved!, extra_dishes: saved!.extra_dishes })
   assert.equal(sharedServings(d, recipes), 4)
@@ -192,4 +194,53 @@ test('fritekst som hovedrett med oppskrifter i tillegg', () => {
 
 test('bare fritekst gir ikke noe antall', () => {
   assert.deepEqual(toMenuDayDishes([{ freetext: 'Rester' }], 1, recipes)?.servings, null)
+})
+
+test('hovedretten kan også ha eget antall', () => {
+  const d = day({ servings: 8, main_servings: 4, extra_dishes: [{ recipe_id: 'Rødvinssaus', servings: null }] })
+  assert.deepEqual(
+    plannedDishes(d, recipes).map((dish) => [dish.recipe.id, dish.servings, dish.own]),
+    [
+      ['Indrefilet', 4, true],
+      ['Rødvinssaus', 8, false],
+    ]
+  )
+  assert.equal(sharedServings(d, recipes), 8)
+  assert.deepEqual(draftDishes(d), [
+    { recipeId: 'Indrefilet', servings: 4 },
+    { recipeId: 'Rødvinssaus', servings: null },
+  ])
+})
+
+test('lagring: hovedrettens eget antall', () => {
+  const saved = toMenuDayDishes(
+    [
+      { recipeId: 'Indrefilet', servings: 4 },
+      { recipeId: 'Rødvinssaus', servings: null },
+    ],
+    8,
+    recipes
+  )
+  assert.equal(saved?.main_servings, 4)
+  assert.equal(saved?.servings, 8)
+  // Samme som dagen: følger dagen.
+  const same = toMenuDayDishes(
+    [
+      { recipeId: 'Indrefilet', servings: 8 },
+      { recipeId: 'Rødvinssaus', servings: null },
+    ],
+    8,
+    recipes
+  )
+  assert.equal(same?.main_servings, null)
+})
+
+test('lagring: med bare én oppskrift gjelder dagens antall', () => {
+  const saved = toMenuDayDishes(
+    [{ recipeId: 'Indrefilet', servings: 4 }, { freetext: 'Salat' }],
+    8,
+    recipes
+  )
+  assert.equal(saved?.main_servings, null)
+  assert.equal(saved?.servings, 8)
 })

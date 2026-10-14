@@ -193,7 +193,9 @@ export function UkesmenyPage() {
             // Merkelappen vises bare når antallet er endret fra oppskriftens eget.
             const mainDish = main?.dish ?? null
             const customServings =
-              day.servings != null && (mainDish ? mainDish.servings !== mainDish.base : true) ? day.servings : null
+              day.servings != null && (mainDish && !mainDish.own ? mainDish.servings !== mainDish.base : true)
+                ? day.servings
+                : null
             // Åpner oppskriften med antallet retten skal lages til, når det
             // er et annet enn oppskriftens eget.
             const openDish = (dish: PlannedDish) =>
@@ -219,6 +221,9 @@ export function UkesmenyPage() {
                       <span className="ukesmeny-day-abbr">{label}</span>
                       <span className="ukesmeny-day-title">
                         {main.title}
+                        {mainDish.own && (
+                          <span className="ukesmeny-day-side-own"> · {mainDish.servings.toLocaleString('nb-NO')}</span>
+                        )}
                         {sides.length === 0 && servingsChip}
                       </span>
                     </button>

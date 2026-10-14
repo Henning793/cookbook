@@ -2,7 +2,8 @@
 // freetext), og resten i extra_dishes. En rett er en oppskrift eller
 // fritekst, f.eks. «Salat». Dagen har ett antall for hvor mange som spiser
 // (menu_days.servings), og hver oppskrift regnes om fra sitt eget antall. En
-// ekstra rett kan ha eget antall, f.eks. dobbel saus.
+// rett kan ha eget antall, f.eks. dobbel saus. Hovedrettens eget antall ligger
+// i main_servings, de andres i extra_dishes.
 // Ren logikk uten supabase-import, så den kan testes med node --test.
 import type { MenuDay, MenuEntryType, MenuExtraDish, Recipe } from '../types.ts'
 import { descriptionParts } from './descriptionLinks.ts'
@@ -30,11 +31,15 @@ export function extraDishes(day: Pick<MenuDay, 'extra_dishes'> | undefined): Men
   return result
 }
 
+function positiveOrNull(value: number | null | undefined): number | null {
+  return typeof value === 'number' && value > 0 ? value : null
+}
+
 // Alle rettene på dagen i rekkefølge, hovedretten først.
 function dayEntries(day: MenuDay): MenuExtraDish[] {
   const main: MenuExtraDish[] =
     day.entry_type === 'recipe' && day.recipe_id
-      ? [{ recipe_id: day.recipe_id, servings: null }]
+      ? [{ recipe_id: day.recipe_id, servings: positiveOrNull(day.main_servings) }]
       : day.entry_type === 'freetext' && day.freetext
         ? [{ recipe_id: null, freetext: day.freetext, servings: null }]
         : []
@@ -73,7 +78,7 @@ export function menuDayItems(day: MenuDay, recipes: Recipe[]): MenuDayItem[] {
   const byId = new Map(recipes.map((r) => [r.id, r]))
   const shared = sharedServings(day, recipes)
   const items: MenuDayItem[] = []
-  dayEntries(day).forEach((entry, index) => {
+  dayEntries(day).forEach((entry) => {
     if (!entry.recipe_id) {
       items.push({ title: entry.freetext ?? '', dish: null })
       return
@@ -81,8 +86,7 @@ export function menuDayItems(day: MenuDay, recipes: Recipe[]): MenuDayItem[] {
     const recipe = byId.get(entry.recipe_id)
     if (!recipe) return
     const base = recipeBaseServings(recipe)
-    // Hovedretten følger alltid dagen.
-    const own = index > 0 && entry.servings !== null
+    const own = entry.servings !== null
     items.push({
       title: recipe.title,
       dish: { recipe, servings: (own ? entry.servings : null) ?? shared ?? base, base, own },
@@ -143,17 +147,23 @@ export interface MenuDayDishes {
   freetext: string | null
   servings: number | null
   extra_dishes: MenuExtraDish[]
+  main_servings: number | null
 }
 
 // Gjør om redigeringsarket til det som lagres. Første rett er hovedretten.
 // Dagens antall lagres som null når det er lik antallet til første
-// oppskrift, og en rett som er satt til samme antall som dagen følger dagen.
+// oppskrift, og en rett (også hovedretten) som er satt til samme antall som
+// dagen følger dagen.
 export function toMenuDayDishes(dishes: DraftDish[], shared: number, recipes: Recipe[]): MenuDayDishes | null {
   const [main, ...rest] = dishes
   if (!main) return null
   const firstRecipe = dishes.flatMap((d) => ('recipeId' in d ? [d.recipeId] : []))[0]
   const firstRecipeData = firstRecipe ? recipes.find((r) => r.id === firstRecipe) : undefined
   const firstBase = firstRecipeData ? recipeBaseServings(firstRecipeData) : null
+  // Med bare én oppskrift er dagens antall det eneste som gjelder.
+  const several = dishes.filter((d) => 'recipeId' in d).length > 1
+  const ownServings = (dish: DraftDish) =>
+    several && 'recipeId' in dish && dish.servings !== null && dish.servings !== shared ? dish.servings : null
   return {
     entry_type: 'recipeId' in main ? 'recipe' : 'freetext',
     recipe_id: 'recipeId' in main ? main.recipeId : null,
@@ -163,9 +173,10 @@ export function toMenuDayDishes(dishes: DraftDish[], shared: number, recipes: Re
       'recipeId' in dish
         ? {
             recipe_id: dish.recipeId,
-            servings: dish.servings === null || dish.servings === shared ? null : dish.servings,
+            servings: ownServings(dish),
           }
         : { recipe_id: null, freetext: dish.freetext, servings: null }
     ),
+    main_servings: ownServings(main),
   }
 }

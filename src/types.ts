@@ -90,6 +90,9 @@ export interface MenuDay {
   // Lagt til av migration_ukesmeny_flere_retter.sql: retter i tillegg til
   // hovedretten (recipe_id). Undefined før migreringen er kjørt.
   extra_dishes?: MenuExtraDish[] | null
+  // Lagt til av migration_ukesmeny_hovedrett_porsjoner.sql: eget antall for
+  // hovedretten. NULL (eller undefined før migreringen) = følger dagen.
+  main_servings?: number | null
   updated_at: string
 }
 

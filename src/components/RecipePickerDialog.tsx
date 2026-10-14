@@ -251,9 +251,9 @@ export function RecipePickerDialog({
                   )
                 }
                 const recipe = recipeById(dish.recipeId)
-                // Hovedretten følger alltid «hvor mange spiser». De andre
-                // kan trykkes på for å få eget antall.
-                const fixed = index === 0
+                // Med flere oppskrifter kan hver av dem trykkes på for å få
+                // eget antall. Med bare én gjelder «hvor mange spiser».
+                const fixed = recipeIds.length < 2
                 const isOpen = openDish === index
                 const note = recipe?.servings
                   ? `Oppskriften er for ${formatServings(recipe.servings)}`
