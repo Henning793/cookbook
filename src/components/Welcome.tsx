@@ -480,6 +480,8 @@ interface Page {
   // Hvor lenge scenen står før den spilles på nytt.
   loopMs: number
   scene: ReactNode
+  /** Satt på sider som er nye, se WELCOME_NEWS. */
+  news?: string
 }
 
 interface WelcomeProps {
@@ -487,10 +489,12 @@ interface WelcomeProps {
   groupName: string | null
   /** Kalles når velkomsten lukkes. addRecipe er sann når brukeren vil legge inn en oppskrift. */
   onDone: (addRecipe: boolean) => void
+  /** Vis bare disse nyhetene i stedet for hele velkomsten. */
+  news?: readonly string[]
 }
 
-export function Welcome({ groupName, onDone }: WelcomeProps) {
-  const pages: Page[] = [
+export function Welcome({ groupName, onDone, news }: WelcomeProps) {
+  const allPages: Page[] = [
     {
       title: 'Få oppskriftene inn på sekunder',
       text: 'Ta bilde, lim inn en lenke, eller skriv selv.',
@@ -520,6 +524,7 @@ export function Welcome({ groupName, onDone }: WelcomeProps) {
       text: 'Legg flere retter på samme dag. I kokemodus bytter du mellom dem, og hver rett husker steget sitt.',
       loopMs: 12000,
       scene: <GuestScene />,
+      news: 'flere-retter',
     },
     {
       title: groupName ? `Du er med i ${groupName}` : 'Lag mat sammen',
@@ -536,6 +541,8 @@ export function Welcome({ groupName, onDone }: WelcomeProps) {
       scene: <ShareScene />,
     },
   ]
+
+  const pages = news ? allPages.filter((p) => p.news && news.includes(p.news)) : allPages
 
   const [index, setIndex] = useState(0)
   // Økes for å montere scenen på nytt, slik at animasjonen starter forfra.
@@ -563,7 +570,7 @@ export function Welcome({ groupName, onDone }: WelcomeProps) {
   }
 
   return (
-    <div className={k('welcome')} role="dialog" aria-modal="true" aria-label="Velkommen til Kokeboka">
+    <div className={k('welcome')} role="dialog" aria-modal="true" aria-label={news ? 'Nytt i Kokeboka' : 'Velkommen til Kokeboka'}>
       <div
         className={k('inner')}
         onTouchStart={(e) => {
@@ -572,7 +579,7 @@ export function Welcome({ groupName, onDone }: WelcomeProps) {
         onTouchEnd={handleTouchEnd}
       >
         <div className={k('w-top')}>
-          <span className={k('w-brand')}>Kokeboka</span>
+          <span className={k('w-brand')}>{news ? 'Nytt i Kokeboka' : 'Kokeboka'}</span>
           {!isLast && (
             <button type="button" className={k('w-skip')} onClick={() => onDone(false)}>
               Hopp over
@@ -591,7 +598,7 @@ export function Welcome({ groupName, onDone }: WelcomeProps) {
         </section>
 
         <div className={k('w-foot')}>
-          <div className={k('dots')}>
+          <div className={k('dots')} style={pages.length > 1 ? undefined : { visibility: 'hidden' }}>
             {pages.map((p, i) => (
               <button
                 type="button"
@@ -603,13 +610,13 @@ export function Welcome({ groupName, onDone }: WelcomeProps) {
               />
             ))}
           </div>
-          <button type="button" className="cta-button" onClick={() => (isLast ? onDone(true) : go(index + 1))}>
-            {isLast ? 'Legg inn første oppskrift' : 'Neste'}
+          <button type="button" className="cta-button" onClick={() => (isLast ? onDone(!news) : go(index + 1))}>
+            {isLast ? (news ? 'Ferdig' : 'Legg inn første oppskrift') : 'Neste'}
           </button>
           <button
             type="button"
             className={k('w-alt')}
-            style={isLast ? undefined : { visibility: 'hidden' }}
+            style={isLast && !news ? undefined : { visibility: 'hidden' }}
             onClick={() => onDone(false)}
           >
             Utforsk selv

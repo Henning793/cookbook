@@ -16,7 +16,7 @@ import {
 import { listStandingItems } from '../lib/standingItems'
 import { InstallBanner } from '../components/InstallApp'
 import { Welcome } from '../components/Welcome'
-import { isWelcomeSeen, markWelcomeSeen } from '../lib/welcome'
+import { isWelcomeSeen, markNewsSeen, markWelcomeSeen, unseenNews } from '../lib/welcome'
 import type { MenuDay } from '../types'
 
 // Antall fargevarianter for samlingskort uten bilde (.hjem-collection-cover-N).
@@ -37,6 +37,8 @@ export function HjemPage() {
   const [todayMenu, setTodayMenu] = useState<MenuDay | null>(null)
   const [shoppingItemsLeft, setShoppingItemsLeft] = useState(0)
   const [welcomeSeen, setWelcomeSeen] = useState(() => isWelcomeSeen(localStorage))
+  // Har man sett velkomsten før, vises bare sidene som er nye siden sist.
+  const [news, setNews] = useState(() => unseenNews(localStorage))
 
   useEffect(() => {
     if (familyLoading || !session) return
@@ -262,6 +264,16 @@ export function HjemPage() {
             markWelcomeSeen(localStorage)
             setWelcomeSeen(true)
             if (addRecipe) navigate('/ny')
+          }}
+        />
+      )}
+      {session && welcomeSeen && news.length > 0 && (
+        <Welcome
+          groupName={family?.name ?? null}
+          news={news}
+          onDone={() => {
+            markNewsSeen(localStorage, news)
+            setNews([])
           }}
         />
       )}
