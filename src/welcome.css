@@ -1,4 +1,4 @@
-/* Velkomsten for nye brukere: en fullskjerms flyt med sju sider, hver med en
+/* Velkomsten for nye brukere: en fullskjerms flyt med åtte sider, hver med en
    liten animert scene. Alle klasser har prefikset vk- så de ikke kolliderer
    med resten av appen. */
 .vk-welcome {
@@ -191,7 +191,35 @@
 .vk-kd-dish-on { background: var(--kok-accent); color: #2b1d14; }
 .vk-s7 .vk-kd-t { font-size: 17px; }
 
-@media (prefers-reduced-motion: reduce) { .vk-scene *, .vk-scene.vk-run * { animation: none !important; } .vk-fade { opacity: 1; } }
+/* 8 Porsjoner for dagen og for én rett */
+.vk-s8 .vk-phase { position: absolute; inset: 0; }
+.vk-s8 .vk-picker { position: absolute; left: 0; right: 0; top: 22px; padding: 12px 14px; }
+.vk-s8 .vk-pk-dish { display: flex; align-items: center; padding: 7px 10px; margin-top: 5px; border-radius: 10px; background: var(--color-surface); border: 1px solid var(--color-line); font-weight: 600; }
+.vk-s8 .vk-own { margin-left: 4px; color: var(--color-accent-700); font-weight: 700; }
+.vk-s8 .vk-pk-edit { display: flex; align-items: center; gap: 8px; padding: 6px 10px 0; font-size: 11px; color: var(--color-text-soft); font-weight: 600; }
+.vk-s8 .vk-pk-reset { margin-left: auto; color: var(--color-accent-700); font-weight: 700; }
+.vk-s8 .vk-pk-shared { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--color-line); }
+.vk-s8 .vk-pk-shared b { display: block; font-size: 12px; }
+.vk-s8 .vk-pk-shared small { display: block; font-size: 10px; color: var(--color-text-soft); font-weight: 600; }
+.vk-stepper { display: inline-flex; align-items: center; gap: 6px; }
+.vk-st-btn { width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--color-line); background: var(--color-card); color: var(--color-text); display: grid; place-items: center; font-size: 11px; }
+.vk-count { display: inline-block; height: 1.25em; line-height: 1.25em; overflow: hidden; font-weight: 700; font-size: 13px; color: var(--color-text); min-width: 1.2em; text-align: center; font-variant-numeric: tabular-nums; }
+.vk-tick { display: flex; flex-direction: column; }
+.vk-tick span { height: 1.25em; }
+.vk-scene.vk-run .vk-tick { animation: vk-tick2 1.4s both; animation-delay: var(--d); }
+@keyframes vk-tick2 { 0%, 19% { transform: none; } 20%, 69% { transform: translateY(-1.25em); } 70%, 100% { transform: translateY(-2.5em); } }
+.vk-s8 .vk-list { position: absolute; left: 0; right: 0; top: 50px; padding: 12px 14px; }
+.vk-s8 .vk-for { display: flex; gap: 5px; flex-wrap: wrap; margin: 2px 0 6px; }
+.vk-s8 .vk-for span { font-size: 9.5px; font-weight: 700; color: var(--color-accent-700); background: var(--color-surface); border: 1px solid var(--color-line); border-radius: 999px; padding: 2px 8px; }
+.vk-s8 .vk-it { display: flex; align-items: center; gap: 7px; padding: 5px 0; border-bottom: 1px solid var(--color-line); }
+.vk-s8 .vk-it:last-child { border: 0; }
+.vk-s8 .vk-cb { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--color-neutral-400); flex: none; }
+.vk-s8 .vk-it .vk-nm { flex: 1; }
+.vk-s8 .vk-amt { color: var(--color-text-soft); font-variant-numeric: tabular-nums; position: relative; }
+.vk-s8 .vk-amt .vk-old { position: absolute; right: 0; white-space: nowrap; }
+.vk-s8 .vk-amt .vk-new { font-weight: 700; color: var(--color-accent-700); }
+
+@media (prefers-reduced-motion: reduce) { .vk-scene *, .vk-scene.vk-run * { animation: none !important; } .vk-fade { opacity: 1; } .vk-tick { transform: translateY(-2.5em); } }
 
 
 @media (max-width: 370px), (max-height: 720px) { .vk-scene { transform: scale(1.1); } }

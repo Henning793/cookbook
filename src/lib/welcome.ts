@@ -3,7 +3,7 @@ export const NEWS_SEEN_KEY = 'kokeboka:nyheter-sett'
 
 // Sider i velkomsten som er nye. De som allerede har sett velkomsten, får
 // bare disse sidene én gang etter at appen er oppdatert.
-export const WELCOME_NEWS = ['flere-retter']
+export const WELCOME_NEWS = ['flere-retter', 'porsjoner']
 
 type Store = Pick<Storage, 'getItem' | 'setItem'>
 

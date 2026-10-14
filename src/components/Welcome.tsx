@@ -8,6 +8,7 @@ import {
   Check,
   ChevronLeft,
   Link,
+  Minus,
   Plus,
   Share2,
   ShoppingBasket,
@@ -380,6 +381,87 @@ function GuestScene() {
   )
 }
 
+// Et tall som telles opp i to trykk, i takt med vk-press2 på plussknappen.
+function Count({ values, at }: { values: [number, number, number]; at: number }) {
+  return (
+    <span className={k('count')}>
+      <span className={k('tick')} style={d(at)}>
+        {values.map((value) => (
+          <span key={value}>{value}</span>
+        ))}
+      </span>
+    </span>
+  )
+}
+
+function Stepper({ values, at }: { values: [number, number, number]; at: number }) {
+  return (
+    <span className={k('stepper')}>
+      <span className={k('st-btn')}>
+        <Minus />
+      </span>
+      <Count values={values} at={at} />
+      <span className={k('st-btn press2')} style={d(at)}>
+        <Plus />
+      </span>
+    </span>
+  )
+}
+
+function ServingsScene() {
+  const amount = (from: string, to: string, at: number) => (
+    <>
+      <span className={k('old out')} style={d(at)}>
+        {from}
+      </span>
+      <span className={k('new pop')} style={d(at + 0.1)}>
+        {to}
+      </span>
+    </>
+  )
+  return (
+    <div className={k('scene run s8')}>
+      {/* 1: Antall for hele dagen, og for én rett. */}
+      <div className={k('phase out')} style={d(6.2)}>
+        <div className={k('mini picker in')} style={d(0.2)}>
+          <span className={k('gk')}>Lørdag</span>
+          <div className={k('pk-dish')}>Lammestek</div>
+          <div className={k('pk-dish press')} style={d(2.7)}>
+            Pavlova
+            <span className={k('own pop')} style={d(5.0)}>
+              · 8
+            </span>
+          </div>
+          <div className={k('pk-edit in')} style={d(3.0)}>
+            <span>Lag til</span>
+            <Stepper values={[6, 7, 8]} at={3.6} />
+            <span className={k('pk-reset')}>Som resten</span>
+          </div>
+          <div className={k('pk-shared')}>
+            <span>
+              <b>Hvor mange spiser</b>
+              <small>Gjelder alle rettene</small>
+            </span>
+            <Stepper values={[4, 5, 6]} at={0.9} />
+          </div>
+        </div>
+      </div>
+
+      {/* 2: Handlelisten regner om mengdene. */}
+      <div className={k('mini list in')} style={d(6.4)}>
+        <h4>Handleliste</h4>
+        <div className={k('for')}>
+          <span>Lammestek for 6</span>
+          <span>Pavlova for 8</span>
+        </div>
+        <ShoppingRow name="Lammelår" at={6.7} amount={amount('1,6 kg', '2,4 kg', 7.7)} />
+        <ShoppingRow name="Eggehviter" at={6.9} amount={amount('4 stk', '8 stk', 8.1)} />
+        <ShoppingRow name="Sukker" at={7.1} amount={amount('2 dl', '4 dl', 8.5)} />
+      </div>
+    </div>
+  )
+}
+
 function GroupScene({ groupName }: { groupName: string }) {
   const shared: [typeof Check, string, number][] = [
     [CalendarDays, 'Ukesmeny', 4.0],
@@ -525,6 +607,13 @@ export function Welcome({ groupName, onDone, news }: WelcomeProps) {
       loopMs: 12000,
       scene: <GuestScene />,
       news: 'flere-retter',
+    },
+    {
+      title: 'Riktig mengde til alle',
+      text: 'Velg hvor mange som spiser, for alle rettene eller én og én. Handlelisten regner om mengdene.',
+      loopMs: 11000,
+      scene: <ServingsScene />,
+      news: 'porsjoner',
     },
     {
       title: groupName ? `Du er med i ${groupName}` : 'Lag mat sammen',
