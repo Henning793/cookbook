@@ -8,12 +8,11 @@ import { DelLenkeDialog } from '../components/DelLenkeDialog'
 import { createShareLink } from '../lib/shares'
 import { canEditRecipe, isSharedIn } from '../lib/recipePermissions'
 import { getFamilyName } from '../lib/families'
-import { StepText } from '../components/StepText'
+import { RecipeContent } from '../components/RecipeContent'
 import { FROM_RECIPE_STATE } from '../lib/kokemodusExit'
-import { allIngredients } from '../lib/recipeIngredients'
 import { isFromMenu, parseServingsParam } from '../lib/menuServings'
 import { descriptionParts } from '../lib/descriptionLinks'
-import type { IngredientItem, RecipeKind } from '../types'
+import type { RecipeKind } from '../types'
 
 function formatNumber(value: number) {
   return value.toLocaleString('nb-NO')
@@ -181,19 +180,6 @@ export function OppskriftPage() {
     setTargetServingsInput(String(Math.max(1, Math.round((currentServings + delta) * 10) / 10)))
   }
 
-  // Mengden står først (tom når ingrediensen ikke har mengde), så navnene flukter.
-  const renderIngredient = (ingredient: IngredientItem, index: number) => {
-    return (
-      <li key={index} className="oppskrift-ingredient-row">
-        <span className="oppskrift-ingredient-amount">
-          {ingredient.amount != null &&
-            `${formatNumber(Math.round(ingredient.amount * scaleFactor * 10) / 10)} ${ingredient.unit}`}
-        </span>
-        <span>{ingredient.name}</span>
-      </li>
-    )
-  }
-
   return (
     <div className="page oppskrift-page">
       <div className={`oppskrift-hero${recipe.image_url ? '' : ' oppskrift-hero-empty'}`}>
@@ -326,30 +312,7 @@ export function OppskriftPage() {
           Start kokemodus
         </button>
 
-        {(!isTechnique || allIngredients(recipe.ingredients).length > 0) && (
-          <h2 className="oppskrift-section-heading">{isTechnique ? 'Du trenger' : 'Ingredienser'}</h2>
-        )}
-        {recipe.ingredients.loose.length > 0 && (
-          <ul className="oppskrift-ingredients">{recipe.ingredients.loose.map(renderIngredient)}</ul>
-        )}
-        {recipe.ingredients.components.map((component, componentIndex) => (
-          <div key={componentIndex} className="oppskrift-component">
-            <h3 className="oppskrift-component-name">{component.name}</h3>
-            <ul className="oppskrift-ingredients">{component.ingredients.map(renderIngredient)}</ul>
-          </div>
-        ))}
-
-        <h2 className="oppskrift-section-heading">Fremgangsmåte</h2>
-        <ol className="oppskrift-steps">
-          {recipe.steps.map((step, index) => (
-            <li key={index} className="oppskrift-step-row">
-              <span className="oppskrift-step-badge">{index + 1}</span>
-              <span className="oppskrift-step-text">
-                <StepText text={step} ingredients={recipe.ingredients} />
-              </span>
-            </li>
-          ))}
-        </ol>
+        <RecipeContent recipe={recipe} scaleFactor={scaleFactor} />
       </div>
     </div>
   )

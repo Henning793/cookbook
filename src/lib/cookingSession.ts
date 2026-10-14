@@ -7,6 +7,12 @@ export interface CookingSession {
   // Valgt antall porsjoner fra oppskriftssiden, slik at "Fortsett" på
   // forsiden viser samme skalerte mengder.
   servings?: number
+  // Satt når man koker fra dagssiden i ukesmenyen (se lib/dayCooking).
+  // weekday er dagen (0 = mandag), dishSteps steget man stoppet på i hver
+  // rett, og doneIds rettene man har trykket «Ferdig» på.
+  weekday?: number
+  dishSteps?: Record<string, number>
+  doneIds?: string[]
 }
 
 type Store = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
