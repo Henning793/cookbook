@@ -29,6 +29,10 @@ const TIP_GROUPS: { heading: string; tips: [title: string, text: string][] }[] =
     heading: 'Planlegg',
     tips: [
       ['Ukesmeny', 'Legg en oppskrift på hver dag, eller skriv fritekst som «Rester».'],
+      [
+        'Flere retter på én dag',
+        'Har dere gjester, kan dagen få flere retter. Dagen åpnes med en fane per rett, og i kokemodus bytter du mellom rettene øverst.',
+      ],
       ['Handleliste', 'Ingrediensene fra ukas retter slås sammen. Legg til egne varer nederst.'],
       ['Alltid hjemme', 'Varer du alltid har, som salt og olje, holdes utenfor handlelisten.'],
       ['Faste kjøp', 'Varer du kjøper hver uke legges til når du starter en ny ukesmeny.'],

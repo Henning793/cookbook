@@ -8,6 +8,7 @@ import {
   Check,
   ChevronLeft,
   Link,
+  Plus,
   Share2,
   ShoppingBasket,
   Timer,
@@ -258,6 +259,127 @@ function MenuScene() {
   )
 }
 
+function DishButton({ title, status, active, pressAt }: { title: string; status: ReactNode; active?: boolean; pressAt?: number }) {
+  const classes = ['kd-dish', active ? 'kd-dish-on' : '', pressAt != null ? 'press' : ''].filter(Boolean).join(' ')
+  return (
+    <span className={k(classes)} style={pressAt != null ? d(pressAt) : undefined}>
+      <b>{title}</b>
+      <small>{status}</small>
+    </span>
+  )
+}
+
+function GuestScene() {
+  const menuDish = (name: string, at?: number) => (
+    <span className={at != null ? k('dish in') : k('dish')} style={at != null ? d(at) : undefined}>
+      {name}
+    </span>
+  )
+  return (
+    <div className={k('scene run s7')}>
+      {/* 1: Flere retter legges på samme dag i ukesmenyen. */}
+      <div className={k('phase out')} style={d(3.3)}>
+        <div className={k('mini menu in')} style={d(0.2)}>
+          <h4>Ukesmeny</h4>
+          <div className={k('day')}>
+            <small>Fre</small>
+            <span className={k('dishes')}>{menuDish('Taco')}</span>
+          </div>
+          <div className={k('day guests')}>
+            <small>Lør</small>
+            <span className={k('dishes')}>
+              {menuDish('Lammestek')}
+              {menuDish('Grateng', 1.3)}
+              {menuDish('Pavlova', 2.3)}
+            </span>
+          </div>
+          <span className={k('add press2')} style={d(0.9)}>
+            <Plus />
+            Legg til rett
+          </span>
+        </div>
+      </div>
+
+      {/* 2: Dagen åpnes med en fane per rett. */}
+      <div className={k('phase out')} style={d(6.1)}>
+        <div className={k('mini daypage in')} style={d(3.5)}>
+          <span className={k('gk')}>Lørdag</span>
+          <h4>Middag for 6</h4>
+          <div className={k('tabs')}>
+            <span className={k('tab-on')}>Lammestek</span>
+            <span>Grateng</span>
+            <span>Pavlova</span>
+          </div>
+          <div className={k('dp-head')}>
+            <b>Lammestek</b>
+            <small>6 porsjoner</small>
+          </div>
+          <span className={k('dp-cta press')} style={d(5.4)}>
+            Start kokemodus
+          </span>
+          <ul>
+            <li>
+              <span>Lammelår</span>
+              <span>2,5 kg</span>
+            </li>
+            <li>
+              <span>Rosmarin</span>
+              <span>3 kvister</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      {/* 3: I kokemodus byttes det mellom rettene, og hver husker sitt steg. */}
+      <div className={k('mini-dark in')} style={d(6.3)}>
+        <KokTop />
+        <div className={k('kd-dishes')}>
+          <div className={k('kd-row out')} style={d(8.4)}>
+            <DishButton title="Lammestek" status="Steg 2 av 5" active />
+            <DishButton title="Grateng" status="Ikke startet" pressAt={8.0} />
+            <DishButton title="Pavlova" status="Ferdig" />
+          </div>
+          <div className={k('kd-row fade')} style={d(8.4)}>
+            <DishButton
+              title="Lammestek"
+              status={
+                <>
+                  <Timer /> 49:12
+                </>
+              }
+            />
+            <DishButton title="Grateng" status="Steg 1 av 4" active />
+            <DishButton title="Pavlova" status="Ferdig" />
+          </div>
+        </div>
+        <div className={k('kd-body')}>
+          <div className={k('kd-layer in')} style={d(8.6)}>
+            <span className={k('kd-k')}>Steg 1 av 4</span>
+            <div className={k('kd-t')}>Skjær potetene i tynne skiver</div>
+            <NeedPanel
+              items={[
+                ['Poteter', '1,5 kg'],
+                ['Fløte', '4 dl'],
+              ]}
+            />
+          </div>
+          <div className={k('kd-layer out')} style={d(8.3)}>
+            <span className={k('kd-k')}>Steg 2 av 5</span>
+            <div className={k('kd-t')}>
+              Stek lammet i <u>50 minutter</u>
+            </div>
+            <span className={k('kd-pill')}>
+              <Timer />
+              Lammestek · 49:58
+            </span>
+          </div>
+        </div>
+        <KokFoot />
+      </div>
+    </div>
+  )
+}
+
 function GroupScene({ groupName }: { groupName: string }) {
   const shared: [typeof Check, string, number][] = [
     [CalendarDays, 'Ukesmeny', 4.0],
@@ -392,6 +514,12 @@ export function Welcome({ groupName, onDone }: WelcomeProps) {
       text: 'Legg en rett på en dag, så havner ingrediensene på handlelisten.',
       loopMs: 9500,
       scene: <MenuScene />,
+    },
+    {
+      title: 'Middagsbesøk?',
+      text: 'Legg flere retter på samme dag. I kokemodus bytter du mellom dem, og hver rett husker steget sitt.',
+      loopMs: 12000,
+      scene: <GuestScene />,
     },
     {
       title: groupName ? `Du er med i ${groupName}` : 'Lag mat sammen',

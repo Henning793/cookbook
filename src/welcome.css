@@ -1,4 +1,4 @@
-/* Velkomsten for nye brukere: en fullskjerms flyt med seks sider, hver med en
+/* Velkomsten for nye brukere: en fullskjerms flyt med sju sider, hver med en
    liten animert scene. Alle klasser har prefikset vk- så de ikke kolliderer
    med resten av appen. */
 .vk-welcome {
@@ -157,7 +157,41 @@
 .vk-scene.vk-run .vk-flyx { animation: vk-flyx 1.2s both; animation-delay: var(--d); }
 @keyframes vk-flyx { from { opacity: 0; transform: translateX(0); } 20%, 75% { opacity: 1; } to { opacity: 0; transform: translateX(128px) scale(.85); } }
 
-@media (prefers-reduced-motion: reduce) { .vk-scene *, .vk-scene.vk-run * { animation: none !important; } }
+/* 7 Flere retter på én dag */
+.vk-s7 .vk-phase { position: absolute; inset: 0; }
+.vk-scene.vk-run .vk-fade { animation-name: vk-fade; }
+.vk-fade { opacity: 0; }
+@keyframes vk-fade { from { opacity: 0; } to { opacity: 1; } }
+.vk-s7 .vk-menu { position: absolute; left: 0; right: 0; top: 22px; padding: 10px 12px 12px; }
+.vk-s7 .vk-day { display: flex; gap: 8px; align-items: flex-start; padding: 6px 8px; margin-top: 5px; border-radius: 10px; background: var(--color-surface); border: 1px solid var(--color-line); font-weight: 600; }
+.vk-s7 .vk-day small { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--color-accent-700); width: 22px; padding-top: 1px; }
+.vk-s7 .vk-guests { border-color: var(--color-accent); }
+.vk-s7 .vk-dishes { display: flex; flex-direction: column; gap: 3px; }
+.vk-s7 .vk-dishes .vk-dish + .vk-dish { font-weight: 500; color: var(--color-text-soft); }
+.vk-s7 .vk-add { display: inline-flex; align-items: center; gap: 5px; margin-top: 9px; padding: 6px 11px; border-radius: 999px; border: 1px dashed var(--color-accent); color: var(--color-accent-700); font-weight: 700; font-size: 11px; }
+.vk-scene.vk-run .vk-press2 { animation: vk-press2 1.4s both; animation-delay: var(--d); }
+@keyframes vk-press2 { 0%, 30%, 50%, 100% { transform: none; filter: none; } 15%, 65% { transform: scale(.93); filter: brightness(1.2); } 80% { transform: none; filter: none; } }
+.vk-s7 .vk-daypage { position: absolute; inset: 0; padding: 12px 14px; }
+.vk-s7 .vk-daypage h4 { font-size: 18px; margin: 2px 0 8px; }
+.vk-s7 .vk-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--color-line); margin: 0 -14px; padding: 0 10px; }
+.vk-s7 .vk-tabs span { padding: 5px 6px 6px; font-weight: 600; font-size: 11.5px; color: var(--color-neutral-700); border-bottom: 2.5px solid transparent; margin-bottom: -1px; }
+.vk-s7 .vk-tabs .vk-tab-on { color: var(--color-text); border-bottom-color: var(--color-accent); }
+.vk-s7 .vk-dp-head { display: flex; justify-content: space-between; align-items: baseline; margin: 11px 0 9px; }
+.vk-s7 .vk-dp-head b { font: 600 16px var(--font-heading); }
+.vk-s7 .vk-dp-head small { font-size: 10px; font-weight: 700; color: var(--color-accent-700); }
+.vk-s7 .vk-dp-cta { display: grid; place-items: center; height: 32px; border-radius: 999px; background: var(--color-accent); color: var(--color-on-accent); font-weight: 700; font-size: 12px; }
+.vk-s7 ul { list-style: none; margin: 8px 0 0; padding: 0; color: var(--color-text-soft); }
+.vk-s7 li { padding: 4px 0; border-bottom: 1px solid var(--color-line); display: flex; justify-content: space-between; }
+.vk-s7 li:last-child { border: 0; }
+.vk-kd-dishes { position: relative; height: 34px; margin-top: 9px; }
+.vk-kd-row { position: absolute; inset: 0; display: flex; gap: 4px; }
+.vk-kd-dish { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 1px; padding: 5px 6px; border-radius: 10px; background: rgba(245, 234, 216, .08); color: rgba(245, 234, 216, .75); }
+.vk-kd-dish b { font-size: 10px; line-height: 1.3; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vk-kd-dish small { display: inline-flex; align-items: center; gap: 2px; font-size: 8.5px; font-weight: 700; opacity: .75; white-space: nowrap; }
+.vk-kd-dish-on { background: var(--kok-accent); color: #2b1d14; }
+.vk-s7 .vk-kd-t { font-size: 17px; }
+
+@media (prefers-reduced-motion: reduce) { .vk-scene *, .vk-scene.vk-run * { animation: none !important; } .vk-fade { opacity: 1; } }
 
 
 @media (max-width: 370px), (max-height: 720px) { .vk-scene { transform: scale(1.1); } }
