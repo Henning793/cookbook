@@ -136,3 +136,11 @@ test('cooking mode keeps paused timers in the bell but never as a pill', () => {
   assert.deepEqual(result.soon, [])
   assert.deepEqual(result.inBell.map((t) => t.id), ['paused'])
 })
+
+test('parseStoredTimers keeps the menu day a timer was started from', () => {
+  const timer = startTimer({ id: 'a', recipeId: 'r1', recipeTitle: 'Lasagne', stepIndex: 3, stepText: 'Stek', weekday: 2, servings: 6, durationMs: 60_000 }, 0)
+  assert.deepEqual(parseStoredTimers(JSON.stringify([timer])), [timer])
+  const parsed = parseStoredTimers(JSON.stringify([{ ...timer, weekday: 9, servings: -1 }]))
+  assert.equal(parsed[0].weekday, undefined)
+  assert.equal(parsed[0].servings, undefined)
+})

@@ -12,6 +12,11 @@ export interface CookingTimer {
   stepIndex: number
   // Kort tekst som sier hvilket steg klokka hører til, f.eks. "La hvile i 20–30 min."
   stepText: string
+  // Satt når klokka ble startet fra en dag i ukesmenyen (0 = mandag), med
+  // antallet retten lages til. Da åpner alarmen dagens kokemodus, så man
+  // havner på riktig rett og steget man sto på (se timerPath i lib/dayCooking).
+  weekday?: number
+  servings?: number
   durationMs: number
   endsAt: number | null
   remainingMs: number
@@ -25,6 +30,8 @@ export interface NewTimer {
   recipeTitle: string
   stepIndex: number
   stepText: string
+  weekday?: number
+  servings?: number
   durationMs: number
 }
 
@@ -136,11 +143,13 @@ export function parseStoredTimers(raw: string | null): CookingTimer[] {
         typeof t.durationMs === 'number' &&
         typeof t.remainingMs === 'number' &&
         (t.endsAt === null || typeof t.endsAt === 'number')
-    ).map((t) => ({
+    ).map(({ weekday, servings, ...t }) => ({
       ...t,
       recipeTitle: typeof t.recipeTitle === 'string' ? t.recipeTitle : '',
       stepText: typeof t.stepText === 'string' ? t.stepText : '',
       ringing: t.ringing === true,
+      ...(typeof weekday === 'number' && Number.isInteger(weekday) && weekday >= 0 && weekday <= 6 ? { weekday } : {}),
+      ...(typeof servings === 'number' && servings > 0 ? { servings } : {}),
     }))
   } catch {
     return []

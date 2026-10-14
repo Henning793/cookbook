@@ -18,6 +18,13 @@ export function dayKokemodusPath(recipeId: string, weekday: number, servings: nu
   return `/oppskrift/${recipeId}/kok?dag=${weekday}` + (servings != null ? `&porsjoner=${servings}` : '')
 }
 
+// Kokemodus en klokke hører til. Startet fra en dag i ukesmenyen åpnes dagens
+// kokemodus, som husker steget i hver rett. Ellers den vanlige kokemodusen.
+export function timerPath(timer: Pick<CookingTimer, 'recipeId' | 'weekday' | 'servings'>): string {
+  if (timer.weekday != null) return dayKokemodusPath(timer.recipeId, timer.weekday, timer.servings ?? null)
+  return `/oppskrift/${timer.recipeId}/kok`
+}
+
 // ?dag=N fra adressen. Ugyldig eller manglende verdi gir null (vanlig kokemodus).
 export function parseWeekdayParam(value: string | null): number | null {
   if (value == null || value.trim() === '') return null

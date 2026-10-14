@@ -146,6 +146,7 @@ function Kokemodus() {
       recipeTitle: recipe.title,
       stepIndex,
       stepText: stepDisplayText(currentStep, recipe.ingredients),
+      ...(weekday !== null ? { weekday, ...(servings != null ? { servings } : {}) } : {}),
       durationMs: seconds * 1000,
     })
   }
