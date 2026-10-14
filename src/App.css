@@ -629,6 +629,17 @@
   color: var(--color-neutral-700);
 }
 
+.step-mention-hint summary {
+  width: fit-content;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--color-accent-700);
+}
+
+.step-mention-hint p {
+  margin: 4px 0 0;
+}
+
 .step-mention-list {
   position: absolute;
   top: 100%;
