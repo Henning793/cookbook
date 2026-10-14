@@ -3,9 +3,9 @@
 import type { MenuDay } from '../types'
 import { extraDishes } from './menuDishes.ts'
 
-export type MenuDayContent = Pick<MenuDay, 'entry_type' | 'recipe_id' | 'freetext' | 'servings' | 'extra_dishes'>
+export type MenuDayContent = Pick<MenuDay, 'entry_type' | 'recipe_id' | 'freetext' | 'servings' | 'extra_dishes' | 'main_servings'>
 
-const EMPTY: MenuDayContent = { entry_type: null, recipe_id: null, freetext: null, servings: null, extra_dishes: [] }
+const EMPTY: MenuDayContent = { entry_type: null, recipe_id: null, freetext: null, servings: null, extra_dishes: [], main_servings: null }
 
 export function dayContent(day: MenuDay | undefined): MenuDayContent {
   if (!day || !day.entry_type) return EMPTY
@@ -15,6 +15,7 @@ export function dayContent(day: MenuDay | undefined): MenuDayContent {
     freetext: day.freetext,
     servings: day.servings ?? null,
     extra_dishes: extraDishes(day),
+    main_servings: day.main_servings ?? null,
   }
 }
 
