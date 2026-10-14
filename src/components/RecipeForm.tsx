@@ -660,17 +660,15 @@ export function RecipeForm({
       </div>
 
       <label>Fremgangsmåte</label>
-      {isTechnique ? (
-        componentNames.length > 0 && (
-          <p className="step-mention-hint">
-            Skriv @ for å koble et steg til en komponent. Da hentes ingrediensene bare derfra.
+      {(!isTechnique || componentNames.length > 0) && (
+        <details className="step-mention-hint">
+          <summary>Koble et steg med @</summary>
+          <p>
+            {isTechnique
+              ? 'Skriv @ for å koble et steg til en komponent. Da hentes ingrediensene bare derfra.'
+              : 'Skriv @ for å koble et steg til en komponent eller en teknikk. En komponent styrer hvilke ingredienser som vises, en teknikk blir en lenke i steget.'}
           </p>
-        )
-      ) : (
-        <p className="step-mention-hint">
-          Skriv @ for å koble et steg til en komponent eller en teknikk. En komponent styrer hvilke ingredienser som
-          vises, en teknikk blir en lenke i steget.
-        </p>
+        </details>
       )}
       <div className={'step-rows' + sortZoneClass(stepDrag, 0, steps.length)} data-sort-zone="step">
         {steps.map((step, index) => (
