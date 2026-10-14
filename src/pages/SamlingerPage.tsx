@@ -22,9 +22,9 @@ export function SamlingerPage() {
   return (
     <div className="page samlinger-page">
       <nav className="nav-bar">
-        <button type="button" className="nav-link" onClick={() => navigate('/')}>
+        <button type="button" className="nav-link" onClick={() => navigate('/meg')}>
           <ChevronLeft size={14} strokeWidth={2.75} aria-hidden="true" />
-          Kokeboka
+          Meg
         </button>
       </nav>
 
