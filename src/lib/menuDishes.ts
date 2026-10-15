@@ -7,6 +7,7 @@
 // Ren logikk uten supabase-import, så den kan testes med node --test.
 import type { MenuDay, MenuEntryType, MenuExtraDish, Recipe } from '../types.ts'
 import { descriptionParts } from './descriptionLinks.ts'
+import { menuDayDate } from './menuWeeks.ts'
 
 // Oppskrifter uten antall porsjoner regnes som 1 porsjon, som på
 // oppskriftssiden (se OppskriftPage).
@@ -101,10 +102,12 @@ export function plannedDishes(day: MenuDay, recipes: Recipe[]): PlannedDish[] {
 }
 
 // Fritekst-retter i hele uka, for «Ikke dekket av handlelisten».
-export function freetextEntries(days: MenuDay[]): { weekday: number; text: string }[] {
+export function freetextEntries(days: MenuDay[]): { weekday: number; date: string; text: string }[] {
   return days.flatMap((day) =>
     dayEntries(day).flatMap((entry) =>
-      !entry.recipe_id && entry.freetext ? [{ weekday: day.weekday, text: entry.freetext }] : []
+      !entry.recipe_id && entry.freetext
+        ? [{ weekday: day.weekday, date: menuDayDate(day), text: entry.freetext }]
+        : []
     )
   )
 }

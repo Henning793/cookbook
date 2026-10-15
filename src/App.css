@@ -4330,3 +4330,161 @@ body.has-bottom-nav .ukesmeny-notice {
   line-height: 1.15;
   padding: 0 16px;
 }
+
+/* Periode-raden øverst på handlelisten: valget, og veien til Personaliser. */
+.handleliste-period {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 4px 0 10px;
+  padding: 7px 14px 7px 8px;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  background: var(--color-card);
+  font: inherit;
+  text-align: left;
+  color: var(--color-neutral-700);
+  cursor: pointer;
+}
+
+.handleliste-period-icon {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--color-accent-100);
+  color: var(--color-accent-700);
+}
+
+.handleliste-period-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  line-height: 1.25;
+}
+
+.handleliste-period-text strong {
+  display: block;
+  font: 600 15px/1.15 var(--font-heading);
+  color: var(--color-text);
+}
+
+.handleliste-period-action {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font: 700 13px var(--font-body);
+  color: var(--color-accent-700);
+}
+
+.handleliste-extra {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: var(--color-accent-2-100);
+  color: var(--color-accent-2-700);
+  font: 700 11px/1 var(--font-body);
+  vertical-align: 2px;
+}
+
+/* «Hvor langt frem handler du?» på Personaliser handlelisten. */
+.handleliste-range {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 8px 0 22px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-line);
+  border-radius: 22px;
+  background: var(--color-card);
+}
+
+.handleliste-range-title {
+  margin: 0;
+  font: 700 12px var(--font-body);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-accent-700);
+}
+
+.handleliste-range-option {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 11px 14px;
+  border: 1px solid var(--color-line);
+  border-radius: 18px;
+  background: var(--color-surface);
+}
+
+.handleliste-range-choice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  text-align: left;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.handleliste-range-radio {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid var(--color-neutral-400);
+}
+
+.handleliste-range-option-active .handleliste-range-radio {
+  border: 6px solid var(--color-accent);
+}
+
+.handleliste-range-name {
+  font: 600 16px/1.15 var(--font-heading);
+}
+
+.handleliste-range-name small {
+  display: block;
+  margin-top: 2px;
+  font: 400 12px var(--font-body);
+  color: var(--color-neutral-700);
+}
+
+.handleliste-range-segment {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  background: var(--color-card);
+}
+
+.handleliste-range-segment button {
+  flex: 1;
+  padding: 9px 8px;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  font: 700 13px var(--font-body);
+  color: var(--color-neutral-700);
+  cursor: pointer;
+}
+
+.handleliste-range-segment button.handleliste-range-segment-active {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.handleliste-range-note {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--color-neutral-700);
+}

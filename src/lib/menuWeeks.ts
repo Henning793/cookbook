@@ -6,7 +6,7 @@ const MONTHS = [
   'juli', 'august', 'september', 'oktober', 'november', 'desember',
 ]
 
-function toIsoDate(date: Date): string {
+export function toIsoDate(date: Date): string {
   const m = String(date.getMonth() + 1).padStart(2, '0')
   const d = String(date.getDate()).padStart(2, '0')
   return `${date.getFullYear()}-${m}-${d}`
@@ -84,4 +84,10 @@ export function copyTargetWeeks(from: string, now: Date = new Date(), count = 6)
     if (week !== from) weeks.push(week)
   }
   return weeks
+}
+
+// Datoen til en dag i ukesmenyen, 'YYYY-MM-DD'. Dager uten week_start (før
+// migration_ukesmeny_flere_uker.sql) hører til denne uken.
+export function menuDayDate(day: { week_start?: string; weekday: number }, now: Date = new Date()): string {
+  return toIsoDate(dayDate(day.week_start ?? currentWeekStart(now), day.weekday))
 }

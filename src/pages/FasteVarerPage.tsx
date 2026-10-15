@@ -10,6 +10,8 @@ import {
   type StandingItem,
   type StandingKind,
 } from '../lib/standingItems'
+import { getShoppingRange, setShoppingRange } from '../lib/shoppingPreferences'
+import { DEFAULT_SHOPPING_RANGE, rangeEnd, rangeEndLabel, type ShoppingRange } from '../lib/shoppingRange'
 
 const TABS: { kind: StandingKind; label: string; description: string; addLabel: string }[] = [
   {
@@ -42,6 +44,15 @@ export function FasteVarerPage() {
   const [newName, setNewName] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [range, setRange] = useState<ShoppingRange>(DEFAULT_SHOPPING_RANGE)
+  const [rangeError, setRangeError] = useState('')
+
+  useEffect(() => {
+    if (!session) return
+    getShoppingRange()
+      .then(setRange)
+      .catch((err) => setRangeError(err instanceof Error ? err.message : 'Noe gikk galt'))
+  }, [session])
 
   useEffect(() => {
     if (familyLoading || !session) return
@@ -70,6 +81,21 @@ export function FasteVarerPage() {
   }
 
   const tab = TABS.find((t) => t.kind === activeKind)!
+  const isWeekly = range !== 'month'
+
+  // Lagres med en gang, som resten av handlelisten.
+  async function chooseRange(next: ShoppingRange) {
+    if (next === range) return
+    const previous = range
+    setRange(next)
+    setRangeError('')
+    try {
+      await setShoppingRange(next)
+    } catch (err) {
+      setRange(previous)
+      setRangeError(err instanceof Error ? err.message : 'Noe gikk galt')
+    }
+  }
   const activeItems = items[activeKind]
 
   function switchTab(kind: StandingKind) {
@@ -123,7 +149,69 @@ export function FasteVarerPage() {
         </button>
       </nav>
 
-      <h1 className="oppskrift-title">Faste varer</h1>
+      <h1 className="oppskrift-title">Personaliser handlelisten</h1>
+
+      <section className="handleliste-range" aria-labelledby="handleliste-range-title">
+        <h2 className="handleliste-range-title" id="handleliste-range-title">
+          Hvor langt frem handler du?
+        </h2>
+        <div className={`handleliste-range-option${isWeekly ? ' handleliste-range-option-active' : ''}`}>
+          <button
+            type="button"
+            className="handleliste-range-choice"
+            role="radio"
+            aria-checked={isWeekly}
+            onClick={() => chooseRange('week')}
+          >
+            <span className="handleliste-range-radio" aria-hidden="true" />
+            <span className="handleliste-range-name">Ukeshandling</span>
+          </button>
+          {isWeekly && (
+            <>
+              <div className="handleliste-range-segment" role="radiogroup" aria-label="Ukeshandling">
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={range === 'week'}
+                  className={range === 'week' ? 'handleliste-range-segment-active' : ''}
+                  onClick={() => chooseRange('week')}
+                >
+                  Denne uken
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={range === 'next7'}
+                  className={range === 'next7' ? 'handleliste-range-segment-active' : ''}
+                  onClick={() => chooseRange('next7')}
+                >
+                  Neste 7 dager
+                </button>
+              </div>
+              <p className="handleliste-range-note">Nå {rangeEndLabel(rangeEnd(range))}</p>
+            </>
+          )}
+        </div>
+        <div className={`handleliste-range-option${!isWeekly ? ' handleliste-range-option-active' : ''}`}>
+          <button
+            type="button"
+            className="handleliste-range-choice"
+            role="radio"
+            aria-checked={!isWeekly}
+            onClick={() => chooseRange('month')}
+          >
+            <span className="handleliste-range-radio" aria-hidden="true" />
+            <span className="handleliste-range-name">
+              Månedshandling
+              <small>Denne uken + 4 uker · nå {rangeEndLabel(rangeEnd('month'))}</small>
+            </span>
+          </button>
+        </div>
+        <p className="handleliste-range-note">Gjelder bare for deg. Resten av familien velger selv.</p>
+        {rangeError && <p className="error">{rangeError}</p>}
+      </section>
+
+      <h2 className="section-kicker">Faste varer</h2>
 
       <div className="faste-varer-tabs" role="tablist">
         {TABS.map((t) => (
