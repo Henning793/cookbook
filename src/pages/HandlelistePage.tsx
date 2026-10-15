@@ -325,6 +325,56 @@ export function HandlelistePage() {
     draftTimer.current = window.setTimeout(() => saveDraft(current.key), 600)
   }
 
+  // Den nye linjen legges nederst blant varene som ikke er krysset av,
+  // over de avkryssede (de ligger alltid sist, se sortShoppingItems).
+  const visibleManual = sortedManual.filter((item) => item.id !== draft?.savedId)
+  const firstChecked = visibleManual.findIndex((item) => item.checked)
+  const draftIndex = firstChecked === -1 ? visibleManual.length : firstChecked
+
+  function renderManualRow(item: ManualItem) {
+    return (
+      <div className="handleliste-row-group" key={item.id}>
+        <div className="handleliste-row">
+          <button
+            type="button"
+            className="handleliste-check-button"
+            aria-label={item.checked ? `Fjern hake på ${item.name}` : `Huk av ${item.name}`}
+            aria-pressed={item.checked}
+            onClick={() => handleToggleManual(item)}
+            disabled={busy}
+          >
+            <span className={`handleliste-checkbox${item.checked ? ' handleliste-checkbox-checked' : ''}`} />
+          </button>
+          {editing?.kind === 'manual' && editing.id === item.id ? (
+            <input
+              type="text"
+              className="handleliste-inline-input"
+              aria-label="Vare"
+              placeholder={item.name}
+              autoFocus
+              enterKeyHint="done"
+              value={editName}
+              onChange={(e) => handleEditChange('name', e.target.value)}
+              onBlur={(e) => handleEditBlur(e, { kind: 'manual', id: item.id })}
+              onKeyDown={handleEditKeyDown}
+            />
+          ) : (
+            <button
+              type="button"
+              className="handleliste-row-toggle"
+              aria-label={`Rediger ${item.name}`}
+              onClick={() => startEditManual(item)}
+            >
+              <span className={`handleliste-name${item.checked ? ' handleliste-name-checked' : ''}`}>
+                {item.name}
+              </span>
+            </button>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   if (!session) {
     return (
       <div className="page handleliste-page">
@@ -458,47 +508,7 @@ export function HandlelistePage() {
           <h2 className="section-kicker">Egne varer</h2>
           <p className="handleliste-hint">Blir stående til du trykker «Fjern avkryssede»</p>
           <div className="handleliste-rows">
-            {sortedManual.filter((item) => item.id !== draft?.savedId).map((item) => (
-              <div className="handleliste-row-group" key={item.id}>
-                <div className="handleliste-row">
-                  <button
-                    type="button"
-                    className="handleliste-check-button"
-                    aria-label={item.checked ? `Fjern hake på ${item.name}` : `Huk av ${item.name}`}
-                    aria-pressed={item.checked}
-                    onClick={() => handleToggleManual(item)}
-                    disabled={busy}
-                  >
-                    <span className={`handleliste-checkbox${item.checked ? ' handleliste-checkbox-checked' : ''}`} />
-                  </button>
-                  {editing?.kind === 'manual' && editing.id === item.id ? (
-                    <input
-                      type="text"
-                      className="handleliste-inline-input"
-                      aria-label="Vare"
-                      placeholder={item.name}
-                      autoFocus
-                      enterKeyHint="done"
-                      value={editName}
-                      onChange={(e) => handleEditChange('name', e.target.value)}
-                      onBlur={(e) => handleEditBlur(e, { kind: 'manual', id: item.id })}
-                      onKeyDown={handleEditKeyDown}
-                    />
-                  ) : (
-                    <button
-                      type="button"
-                      className="handleliste-row-toggle"
-                      aria-label={`Rediger ${item.name}`}
-                      onClick={() => startEditManual(item)}
-                    >
-                      <span className={`handleliste-name${item.checked ? ' handleliste-name-checked' : ''}`}>
-                        {item.name}
-                      </span>
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
+            {visibleManual.slice(0, draftIndex).map(renderManualRow)}
             {draft && (
               <div className="handleliste-row-group">
                 <div className="handleliste-row handleliste-draft-row">
@@ -525,6 +535,7 @@ export function HandlelistePage() {
                 </div>
               </div>
             )}
+            {visibleManual.slice(draftIndex).map(renderManualRow)}
           </div>
 
           {freetextDays.length > 0 && (
