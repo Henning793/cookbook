@@ -139,3 +139,39 @@ export function removeCleared(
 ): AggregatedIngredient[] {
   return items.filter((item) => !clearedKeys.has(ingredientKey(item.normalizedName, item.unit)))
 }
+
+// Overstyring av en vare fra ukens retter (se migration_handleliste_redigering.sql).
+// NULL betyr "bruk det utregnede".
+export interface ItemOverride {
+  normalized_name: string
+  unit: string
+  name: string | null
+  amount_text: string | null
+}
+
+export interface ShoppingRow extends AggregatedIngredient {
+  // Navnet slik det står i oppskriften, før eventuell redigering.
+  originalName: string
+  // Mengde skrevet inn for hånd; vises i stedet for amount + unit.
+  amountText: string | null
+  edited: boolean
+}
+
+// Legger redigerte navn/mengder over de utregnede varene. Avkrysning og
+// "Fjern avkryssede" følger fortsatt den opprinnelige nøkkelen, så en
+// redigert vare beholder hake og overstyring når listen regnes om.
+export function applyOverrides(items: AggregatedIngredient[], overrides: ItemOverride[]): ShoppingRow[] {
+  const byKey = new Map(overrides.map((o) => [ingredientKey(o.normalized_name, o.unit), o]))
+  return items.map((item) => {
+    const override = byKey.get(ingredientKey(item.normalizedName, item.unit))
+    const name = override?.name?.trim() || null
+    const amountText = override?.amount_text?.trim() || null
+    return {
+      ...item,
+      originalName: item.displayName,
+      displayName: name ?? item.displayName,
+      amountText,
+      edited: name !== null || amountText !== null,
+    }
+  })
+}

@@ -2,11 +2,19 @@ import { supabase } from './supabaseClient'
 
 export {
   aggregateIngredients,
+  applyOverrides,
   ingredientKey,
   removeAlwaysHome,
   removeCleared,
 } from './shoppingAggregate.ts'
-export type { AggregatedIngredient } from './shoppingAggregate.ts'
+export type { AggregatedIngredient, ItemOverride, ShoppingRow } from './shoppingAggregate.ts'
+import type { ItemOverride } from './shoppingAggregate.ts'
+
+// shopping_item_overrides kommer fra migration_handleliste_redigering.sql.
+// Til den er kjørt skal handlelisten og "Ny ukesmeny" virke som før.
+export function isMissingTable(error: { code?: string }): boolean {
+  return error.code === 'PGRST205' || error.code === '42P01'
+}
 
 async function currentUserId(): Promise<string> {
   const { data } = await supabase.auth.getUser()
@@ -96,6 +104,11 @@ export async function addManualItem(familyId: string | null, name: string): Prom
   if (error) throw error
 }
 
+export async function renameManualItem(id: string, name: string): Promise<void> {
+  const { error } = await supabase.from('manual_shopping_items').update({ name: name.trim() }).eq('id', id)
+  if (error) throw error
+}
+
 export async function setManualChecked(id: string, checked: boolean): Promise<void> {
   const { error } = await supabase.from('manual_shopping_items').update({ checked }).eq('id', id)
   if (error) throw error
@@ -110,5 +123,48 @@ export async function deleteAllManualItems(familyId: string | null): Promise<voi
   const { error } = familyId
     ? await query.eq('family_id', familyId)
     : await query.is('family_id', null).eq('owner_id', await currentUserId())
+  if (error) throw error
+}
+
+export async function listOverrides(familyId: string | null): Promise<ItemOverride[]> {
+  const query = supabase.from('shopping_item_overrides').select('normalized_name, unit, name, amount_text')
+  const { data, error } = familyId
+    ? await query.eq('family_id', familyId)
+    : await query.is('family_id', null).eq('owner_id', await currentUserId())
+  if (error) {
+    if (isMissingTable(error)) return []
+    throw error
+  }
+  return data ?? []
+}
+
+// Erstatter overstyringen for en vare fra ukens retter. Begge felt NULL
+// fjerner den, så varen går tilbake til det utregnede.
+export async function saveOverride(
+  familyId: string | null,
+  normalizedName: string,
+  unit: string,
+  name: string | null,
+  amountText: string | null
+): Promise<void> {
+  const userId = await currentUserId()
+  const del = supabase
+    .from('shopping_item_overrides')
+    .delete()
+    .eq('normalized_name', normalizedName)
+    .eq('unit', unit)
+  const { error: deleteError } = familyId
+    ? await del.eq('family_id', familyId)
+    : await del.is('family_id', null).eq('owner_id', userId)
+  if (deleteError) throw deleteError
+  if (name === null && amountText === null) return
+  const { error } = await supabase.from('shopping_item_overrides').insert({
+    family_id: familyId,
+    owner_id: userId,
+    normalized_name: normalizedName,
+    unit,
+    name,
+    amount_text: amountText,
+  })
   if (error) throw error
 }

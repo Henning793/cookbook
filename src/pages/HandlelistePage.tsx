@@ -6,6 +6,7 @@ import { listMenuDays } from '../lib/menuDays'
 import { freetextEntries } from '../lib/menuDishes'
 import {
   aggregateIngredients,
+  applyOverrides,
   removeAlwaysHome,
   removeCleared,
   ingredientKey,
@@ -16,9 +17,13 @@ import {
   listManualItems,
   addManualItem,
   setManualChecked,
-  type AggregatedIngredient,
+  renameManualItem,
+  listOverrides,
+  saveOverride,
   type CheckedItem,
+  type ItemOverride,
   type ManualItem,
+  type ShoppingRow,
 } from '../lib/shoppingList'
 import { listStandingItems } from '../lib/standingItems'
 import { sortShoppingItems } from '../lib/shoppingSort'
@@ -34,6 +39,10 @@ function formatAmount(amount: number | null, unit: string): string {
 
 const keyFor = ingredientKey
 
+// Raden som er åpen for redigering: en vare fra ukens retter (nøkkel) eller
+// en egen vare (id).
+type Editing = { kind: 'recipe'; key: string } | { kind: 'manual'; id: string }
+
 export function HandlelistePage() {
   const navigate = useNavigate()
   const { session, family, familyLoading, recipes } = useApp()
@@ -42,6 +51,10 @@ export function HandlelistePage() {
   const [menuDays, setMenuDays] = useState<MenuDay[]>([])
   const [checked, setChecked] = useState<CheckedItem[]>([])
   const [manualItems, setManualItems] = useState<ManualItem[]>([])
+  const [overrides, setOverrides] = useState<ItemOverride[]>([])
+  const [editing, setEditing] = useState<Editing | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editAmount, setEditAmount] = useState('')
   const [alwaysHomeNames, setAlwaysHomeNames] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
@@ -57,11 +70,13 @@ export function HandlelistePage() {
       listCheckedItems(familyId),
       listManualItems(familyId),
       listStandingItems(familyId, 'always_home'),
+      listOverrides(familyId),
     ]).then(
-      ([days, checkedRows, manual, alwaysHome]) => {
+      ([days, checkedRows, manual, alwaysHome, overrideRows]) => {
         setMenuDays(days)
         setChecked(checkedRows)
         setManualItems(manual)
+        setOverrides(overrideRows)
         setAlwaysHomeNames(new Set(alwaysHome.map((i) => i.normalized_name)))
         setLoading(false)
       }
@@ -72,11 +87,14 @@ export function HandlelistePage() {
     const clearedKeys = new Set(
       checked.filter((c) => c.cleared).map((c) => keyFor(c.normalized_name, c.unit))
     )
-    return removeCleared(
-      removeAlwaysHome(aggregateIngredients(menuDays, recipes), alwaysHomeNames),
-      clearedKeys
+    return applyOverrides(
+      removeCleared(
+        removeAlwaysHome(aggregateIngredients(menuDays, recipes), alwaysHomeNames),
+        clearedKeys
+      ),
+      overrides
     )
-  }, [menuDays, recipes, alwaysHomeNames, checked])
+  }, [menuDays, recipes, alwaysHomeNames, checked, overrides])
 
   const checkedKeys = useMemo(
     () => new Set(checked.map((c) => keyFor(c.normalized_name, c.unit))),
@@ -103,7 +121,7 @@ export function HandlelistePage() {
   const freetextDays = freetextEntries(menuDays)
   const hasCheckedItems = checked.some((c) => !c.cleared) || manualItems.some((m) => m.checked)
 
-  async function toggleChecked(item: AggregatedIngredient) {
+  async function toggleChecked(item: ShoppingRow) {
     setBusy(true)
     try {
       if (checkedKeys.has(keyFor(item.normalizedName, item.unit))) {
@@ -142,6 +160,56 @@ export function HandlelistePage() {
     try {
       await setManualChecked(item.id, !item.checked)
       setManualItems(await listManualItems(familyId))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  function startEditRecipeItem(item: ShoppingRow) {
+    setEditing({ kind: 'recipe', key: keyFor(item.normalizedName, item.unit) })
+    setEditName(item.displayName)
+    setEditAmount(item.amountText ?? formatAmount(item.amount, item.unit))
+  }
+
+  function startEditManual(item: ManualItem) {
+    setEditing({ kind: 'manual', id: item.id })
+    setEditName(item.name)
+    setEditAmount('')
+  }
+
+  // Lagrer bare det som avviker fra det utregnede, så en vare der man
+  // skriver tilbake det opprinnelige ikke blir stående som redigert.
+  async function handleSaveRecipeItem(event: React.FormEvent, item: ShoppingRow) {
+    event.preventDefault()
+    const name = editName.trim()
+    const amount = editAmount.trim()
+    await saveRecipeOverride(
+      item,
+      name && name !== item.originalName ? name : null,
+      amount && amount !== formatAmount(item.amount, item.unit) ? amount : null
+    )
+  }
+
+  async function saveRecipeOverride(item: ShoppingRow, name: string | null, amountText: string | null) {
+    setBusy(true)
+    try {
+      await saveOverride(familyId, item.normalizedName, item.unit, name, amountText)
+      setOverrides(await listOverrides(familyId))
+      setEditing(null)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleSaveManual(event: React.FormEvent, item: ManualItem) {
+    event.preventDefault()
+    const name = editName.trim()
+    if (!name) return
+    setBusy(true)
+    try {
+      if (name !== item.name) await renameManualItem(item.id, name)
+      setManualItems(await listManualItems(familyId))
+      setEditing(null)
     } finally {
       setBusy(false)
     }
@@ -210,30 +278,77 @@ export function HandlelistePage() {
                 const key = keyFor(item.normalizedName, item.unit)
                 const isChecked = checkedKeys.has(key)
                 const isExpanded = expandedKeys.has(key)
+                const isEditing = editing?.kind === 'recipe' && editing.key === key
                 return (
                   <div className="handleliste-row-group" key={key}>
                     <div className="handleliste-row">
                       <button
                         type="button"
-                        className="handleliste-row-toggle"
+                        className="handleliste-check-button"
+                        aria-label={isChecked ? `Fjern hake på ${item.displayName}` : `Huk av ${item.displayName}`}
+                        aria-pressed={isChecked}
                         onClick={() => toggleChecked(item)}
                         disabled={busy}
                       >
                         <span className={`handleliste-checkbox${isChecked ? ' handleliste-checkbox-checked' : ''}`} />
+                      </button>
+                      <button
+                        type="button"
+                        className="handleliste-row-toggle"
+                        aria-label={`Rediger ${item.displayName}`}
+                        onClick={() => startEditRecipeItem(item)}
+                      >
                         <span className={`handleliste-name${isChecked ? ' handleliste-name-checked' : ''}`}>
                           {item.displayName}
                         </span>
                       </button>
                       <button
                         type="button"
-                        className={`handleliste-amount${item.scaled ? ' handleliste-amount-scaled' : ''}`}
+                        className={`handleliste-amount${item.scaled && !item.amountText ? ' handleliste-amount-scaled' : ''}`}
                         aria-expanded={isExpanded}
                         aria-label={`Vis hvor ${item.displayName.toLowerCase()} kommer fra`}
                         onClick={() => toggleExpanded(key)}
                       >
-                        {formatAmount(item.amount, item.unit)}
+                        {item.amountText ?? formatAmount(item.amount, item.unit)}
                       </button>
                     </div>
+                    {isEditing && (
+                      <form className="handleliste-edit-form" onSubmit={(e) => handleSaveRecipeItem(e, item)}>
+                        <div className="handleliste-edit-fields">
+                          <label className="handleliste-edit-field">
+                            <span>Vare</span>
+                            <input
+                              type="text"
+                              autoFocus
+                              value={editName}
+                              onChange={(e) => setEditName(e.target.value)}
+                            />
+                          </label>
+                          <label className="handleliste-edit-field handleliste-edit-amount">
+                            <span>Mengde</span>
+                            <input type="text" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} />
+                          </label>
+                        </div>
+                        {item.edited && (
+                          <button
+                            type="button"
+                            className="link-button handleliste-edit-reset"
+                            onClick={() => saveRecipeOverride(item, null, null)}
+                            disabled={busy}
+                          >
+                            Tilbakestill til {item.originalName}, {formatAmount(item.amount, item.unit)}
+                          </button>
+                        )}
+                        <div className="handleliste-edit-actions">
+                          <button type="button" className="link-button" onClick={() => setEditing(null)}>
+                            Avbryt
+                          </button>
+                          <button type="submit" className="cta-button" disabled={busy}>
+                            Lagre
+                          </button>
+                        </div>
+                      </form>
+                    )}
                     {isExpanded && (
                       <div className="handleliste-sources">
                         {item.sources.map((source, index) => (
@@ -255,18 +370,46 @@ export function HandlelistePage() {
           <p className="handleliste-hint">Blir stående til du trykker «Fjern avkryssede»</p>
           <div className="handleliste-rows">
             {sortedManual.map((item) => (
-              <button
-                type="button"
-                key={item.id}
-                className="handleliste-row"
-                onClick={() => handleToggleManual(item)}
-                disabled={busy}
-              >
-                <span className={`handleliste-checkbox${item.checked ? ' handleliste-checkbox-checked' : ''}`} />
-                <span className={`handleliste-name${item.checked ? ' handleliste-name-checked' : ''}`}>
-                  {item.name}
-                </span>
-              </button>
+              <div className="handleliste-row-group" key={item.id}>
+                <div className="handleliste-row">
+                  <button
+                    type="button"
+                    className="handleliste-check-button"
+                    aria-label={item.checked ? `Fjern hake på ${item.name}` : `Huk av ${item.name}`}
+                    aria-pressed={item.checked}
+                    onClick={() => handleToggleManual(item)}
+                    disabled={busy}
+                  >
+                    <span className={`handleliste-checkbox${item.checked ? ' handleliste-checkbox-checked' : ''}`} />
+                  </button>
+                  <button
+                    type="button"
+                    className="handleliste-row-toggle"
+                    aria-label={`Rediger ${item.name}`}
+                    onClick={() => startEditManual(item)}
+                  >
+                    <span className={`handleliste-name${item.checked ? ' handleliste-name-checked' : ''}`}>
+                      {item.name}
+                    </span>
+                  </button>
+                </div>
+                {editing?.kind === 'manual' && editing.id === item.id && (
+                  <form className="handleliste-edit-form" onSubmit={(e) => handleSaveManual(e, item)}>
+                    <label className="handleliste-edit-field">
+                      <span>Vare</span>
+                      <input type="text" autoFocus value={editName} onChange={(e) => setEditName(e.target.value)} />
+                    </label>
+                    <div className="handleliste-edit-actions">
+                      <button type="button" className="link-button" onClick={() => setEditing(null)}>
+                        Avbryt
+                      </button>
+                      <button type="submit" className="cta-button" disabled={busy || !editName.trim()}>
+                        Lagre
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
             ))}
           </div>
 
