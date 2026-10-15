@@ -2870,6 +2870,76 @@ button.hjem-tonight {
   cursor: pointer;
 }
 
+.handleliste-check-button {
+  flex: none;
+  display: grid;
+  place-items: center;
+  background: none;
+  border: none;
+  padding: 8px;
+  margin: -8px 0 -8px -8px;
+  cursor: pointer;
+}
+
+.handleliste-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: -4px 0 12px 32px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--color-surface);
+}
+
+.handleliste-edit-fields {
+  display: flex;
+  gap: 8px;
+}
+
+.handleliste-edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--color-neutral-700);
+}
+
+.handleliste-edit-amount {
+  flex: 0 0 34%;
+}
+
+.handleliste-edit-field input {
+  font: inherit;
+  font-size: 15px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-line);
+  border-radius: 10px;
+  padding: 9px 12px;
+  color: var(--color-text);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.handleliste-edit-reset {
+  align-self: flex-start;
+  font-size: 13px;
+  text-align: left;
+}
+
+.handleliste-edit-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.handleliste-edit-actions .cta-button {
+  flex: 1;
+  padding: 11px;
+  font-size: 15px;
+}
+
 .handleliste-sources {
   margin: -4px 0 10px 32px;
   padding: 8px 12px;

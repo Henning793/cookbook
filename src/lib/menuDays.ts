@@ -2,6 +2,7 @@ import { supabase } from './supabaseClient'
 import type { MenuDay } from '../types'
 import { dayContent } from './menuSwap'
 import type { MenuDayDishes } from './menuDishes'
+import { isMissingTable } from './shoppingList'
 
 async function currentUserId(): Promise<string> {
   const { data } = await supabase.auth.getUser()
@@ -109,24 +110,28 @@ export async function swapMenuDays(familyId: string | null, a: number, b: number
   await upsertDay(familyId, b, contentA)
 }
 
-// "Opprett ny ukesmeny" tømmer ukesmenyen OG avkrysningene i "Fra ukens
-// retter" for samme scope — men rører aldri manual_shopping_items ("Egne
+// "Opprett ny ukesmeny" tømmer ukesmenyen OG avkrysningene og redigeringene
+// i "Fra ukens retter" for samme scope — men rører aldri manual_shopping_items ("Egne
 // varer"), som overlever et menyreset (se src/lib/shoppingList.ts).
 export async function resetMenu(familyId: string | null): Promise<void> {
   const userId = await currentUserId()
   if (familyId) {
-    const [a, b] = await Promise.all([
+    const [a, b, c] = await Promise.all([
       supabase.from('menu_days').delete().eq('family_id', familyId),
       supabase.from('shopping_checked_items').delete().eq('family_id', familyId),
+      supabase.from('shopping_item_overrides').delete().eq('family_id', familyId),
     ])
     if (a.error) throw a.error
     if (b.error) throw b.error
+    if (c.error && !isMissingTable(c.error)) throw c.error
     return
   }
-  const [a, b] = await Promise.all([
+  const [a, b, c] = await Promise.all([
     supabase.from('menu_days').delete().is('family_id', null).eq('owner_id', userId),
     supabase.from('shopping_checked_items').delete().is('family_id', null).eq('owner_id', userId),
+    supabase.from('shopping_item_overrides').delete().is('family_id', null).eq('owner_id', userId),
   ])
   if (a.error) throw a.error
   if (b.error) throw b.error
+  if (c.error && !isMissingTable(c.error)) throw c.error
 }
