@@ -2387,7 +2387,7 @@ button.hjem-tonight {
   border: 1px solid var(--color-line);
   text-align: left;
   cursor: pointer;
-  width: 100%;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
 }
 
 .ukesmeny-day-empty {
@@ -2881,65 +2881,6 @@ button.hjem-tonight {
   cursor: pointer;
 }
 
-.handleliste-edit-form {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin: -4px 0 12px 32px;
-  padding: 12px;
-  border-radius: 12px;
-  background: var(--color-surface);
-}
-
-.handleliste-edit-fields {
-  display: flex;
-  gap: 8px;
-}
-
-.handleliste-edit-field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1;
-  min-width: 0;
-  font-size: 12px;
-  color: var(--color-neutral-700);
-}
-
-.handleliste-edit-amount {
-  flex: 0 0 34%;
-}
-
-.handleliste-edit-field input {
-  font: inherit;
-  font-size: 15px;
-  background: var(--color-bg);
-  border: 1px solid var(--color-line);
-  border-radius: 10px;
-  padding: 9px 12px;
-  color: var(--color-text);
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.handleliste-edit-reset {
-  align-self: flex-start;
-  font-size: 13px;
-  text-align: left;
-}
-
-.handleliste-edit-actions {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.handleliste-edit-actions .cta-button {
-  flex: 1;
-  padding: 11px;
-  font-size: 15px;
-}
-
 .handleliste-sources {
   margin: -4px 0 10px 32px;
   padding: 8px 12px;
@@ -2982,8 +2923,19 @@ button.hjem-tonight {
   color: var(--color-text);
 }
 
+/* Festet nederst så «Legg til vare» alltid er synlig, også i lange lister. */
 .handleliste-add-footer {
-  padding: 14px 0 30px;
+  position: sticky;
+  bottom: var(--bottom-nav-space, 0px);
+  z-index: 5;
+  display: flex;
+  justify-content: flex-end;
+  padding: 14px 0;
+  pointer-events: none;
+}
+
+.handleliste-add-footer > * {
+  pointer-events: auto;
 }
 
 .handleliste-add-pill {
@@ -2995,7 +2947,7 @@ button.hjem-tonight {
   padding: 10px 18px;
   border: 1px solid var(--color-line);
   cursor: pointer;
-  width: 100%;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
 }
 
 .handleliste-add-label {
@@ -3030,6 +2982,25 @@ button.hjem-tonight {
   border-radius: 999px;
   padding: 13px 18px;
   color: var(--color-text);
+}
+
+.handleliste-inline-input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: 15px;
+  color: var(--color-text);
+  background: none;
+  border: none;
+  outline: none;
+  padding: 0;
+}
+
+.handleliste-inline-amount {
+  flex: 0 0 30%;
+  text-align: right;
+  font-size: 13px;
+  color: var(--color-neutral-700);
 }
 
 /* --- Faste varer --- */
