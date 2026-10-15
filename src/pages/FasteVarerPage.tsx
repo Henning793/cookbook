@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { X } from 'lucide-react'
 import { useApp } from '../context/AppContext'
@@ -7,27 +7,33 @@ import {
   addStandingItem,
   listStandingItems,
   removeStandingItem,
+  renameStandingItem,
   type StandingItem,
   type StandingKind,
 } from '../lib/standingItems'
 import { getShoppingRange, setShoppingRange } from '../lib/shoppingPreferences'
 import { DEFAULT_SHOPPING_RANGE, rangeEnd, rangeEndLabel, type ShoppingRange } from '../lib/shoppingRange'
 
-const TABS: { kind: StandingKind; label: string; description: string; addLabel: string }[] = [
+const TABS: { kind: StandingKind; label: string; description: string }[] = [
   {
     kind: 'always_home',
     label: 'Alltid hjemme',
     description: 'Legg til varer du alltid har hjemme, så blir handlelisten kortere.',
-    addLabel: 'Legg til vare du alltid har hjemme',
   },
   {
     kind: 'weekly',
     label: 'Faste kjøp',
     description:
       'Legg til varer du kjøper hver uke, så dukker de opp på handlelisten når du oppretter en ny ukesmeny.',
-    addLabel: 'Legg til fast kjøp',
   },
 ]
+
+interface Draft {
+  key: number
+  kind: StandingKind
+  name: string
+  savedId: string | null
+}
 
 export function FasteVarerPage() {
   const navigate = useNavigate()
@@ -40,12 +46,24 @@ export function FasteVarerPage() {
     weekly: [],
   })
   const [loading, setLoading] = useState(true)
-  const [showAdd, setShowAdd] = useState(false)
-  const [newName, setNewName] = useState('')
+  // Ny linje nederst i listen som lagres mens man skriver, som i handlelisten.
+  // `key` gir et nytt felt for hver vare, `savedId` er raden den er lagret som så langt.
+  const [draft, setDraft] = useState<Draft | null>(null)
+  // Holdes i takt med draft overalt den settes, så lagringene ser siste verdi.
+  const draftRef = useRef(draft)
+  const draftCount = useRef(0)
+  const draftTimer = useRef<number | undefined>(undefined)
+  // Lagringene går én og én, så en vare aldri blir opprettet to ganger.
+  const saveChain = useRef<Promise<void>>(Promise.resolve())
+  const draftInput = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [range, setRange] = useState<ShoppingRange>(DEFAULT_SHOPPING_RANGE)
   const [rangeError, setRangeError] = useState('')
+
+  useEffect(() => {
+    draftInput.current?.scrollIntoView({ block: 'center' })
+  }, [draft?.key])
 
   useEffect(() => {
     if (!session) return
@@ -99,31 +117,76 @@ export function FasteVarerPage() {
   const activeItems = items[activeKind]
 
   function switchTab(kind: StandingKind) {
+    finishDraft()
     setActiveKind(kind)
-    setShowAdd(false)
-    setNewName('')
     setError('')
   }
 
-  async function handleAdd(event: React.FormEvent) {
-    event.preventDefault()
-    const name = newName.trim()
-    if (!name) return
-    setBusy(true)
-    setError('')
-    try {
-      await addStandingItem(familyId, activeKind, name)
-      const refreshed = await listStandingItems(familyId, activeKind)
-      setItems((current) => ({ ...current, [activeKind]: refreshed }))
-      setNewName('')
-      setShowAdd(false)
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Noe gikk galt'
-      setError(message.includes('duplicate') ? 'Varen ligger allerede i listen.' : message)
-    } finally {
-      setBusy(false)
-    }
+  function errorMessage(err: unknown) {
+    const message = err instanceof Error ? err.message : 'Noe gikk galt'
+    return message.includes('duplicate') ? 'Varen ligger allerede i listen.' : message
   }
+
+  // Lagrer det som står i den nye linjen nå: oppretter varen første gang,
+  // gir den nytt navn etterpå, og sletter den igjen hvis feltet tømmes.
+  function saveDraft(key: number) {
+    window.clearTimeout(draftTimer.current)
+    saveChain.current = saveChain.current
+      .then(async () => {
+        const current = draftRef.current
+        if (!current || current.key !== key) return
+        const name = current.name.trim()
+        let savedId = current.savedId
+        if (!savedId && name) savedId = await addStandingItem(familyId, current.kind, name)
+        else if (savedId && name) await renameStandingItem(savedId, name)
+        else if (savedId && !name) {
+          await removeStandingItem(savedId)
+          savedId = null
+        }
+        setError('')
+        setDraft((d) => (d && d.key === key ? { ...d, savedId } : d))
+        draftRef.current = draftRef.current?.key === key ? { ...draftRef.current, savedId } : draftRef.current
+      })
+      .catch((err) => setError(errorMessage(err)))
+  }
+
+  // Ferdig med linjen: lagre det siste og la varen gå inn i listen.
+  // Tar nøkkelen til linjen, så en blur fra et gammelt felt aldri lukker en
+  // ny linje man allerede har startet på.
+  function finishDraft(key = draftRef.current?.key) {
+    if (key === undefined || draftRef.current?.key !== key) return
+    const kind = draftRef.current.kind
+    saveDraft(key)
+    saveChain.current = saveChain.current
+      .then(async () => {
+        const refreshed = await listStandingItems(familyId, kind)
+        setItems((current) => ({ ...current, [kind]: refreshed }))
+        if (draftRef.current?.key === key) {
+          draftRef.current = null
+          setDraft(null)
+        }
+      })
+      .catch((err) => setError(errorMessage(err)))
+  }
+
+  function startDraft() {
+    finishDraft()
+    const next = { key: ++draftCount.current, kind: activeKind, name: '', savedId: null }
+    draftRef.current = next
+    setDraft(next)
+  }
+
+  function handleDraftChange(name: string) {
+    const current = draftRef.current
+    if (!current) return
+    const next = { ...current, name }
+    draftRef.current = next
+    setDraft(next)
+    window.clearTimeout(draftTimer.current)
+    draftTimer.current = window.setTimeout(() => saveDraft(current.key), 600)
+  }
+
+  const visibleItems = activeItems.filter((item) => item.id !== draft?.savedId)
 
   async function handleRemove(id: string) {
     setBusy(true)
@@ -236,7 +299,7 @@ export function FasteVarerPage() {
         <p className="status-message">Laster...</p>
       ) : (
         <div className="handleliste-rows faste-varer-list">
-          {activeItems.map((item) => (
+          {visibleItems.map((item) => (
             <div className="handleliste-row faste-varer-row" key={item.id}>
               <span className="handleliste-name">{item.name}</span>
               <button
@@ -250,31 +313,46 @@ export function FasteVarerPage() {
               </button>
             </div>
           ))}
+          {draft && draft.kind === activeKind && (
+            <div className="handleliste-row faste-varer-row faste-varer-draft-row">
+              <input
+                key={draft.key}
+                type="text"
+                className="handleliste-inline-input"
+                aria-label="Ny vare"
+                placeholder="Ny vare"
+                autoFocus
+                enterKeyHint="next"
+                value={draft.name}
+                ref={draftInput}
+                onChange={(e) => handleDraftChange(e.target.value)}
+                onBlur={() => finishDraft(draft.key)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    if (draft.name.trim()) startDraft()
+                  }
+                }}
+              />
+            </div>
+          )}
         </div>
       )}
 
       <div className="handleliste-add-footer">
-        {showAdd ? (
-          <form className="handleliste-add-form" onSubmit={handleAdd}>
-            <input
-              type="text"
-              autoFocus
-              placeholder="Vare"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-            />
-            <button type="submit" className="cta-button" disabled={busy || !newName.trim()}>
-              Legg til
-            </button>
-          </form>
-        ) : (
-          <button type="button" className="handleliste-add-pill" onClick={() => setShowAdd(true)}>
-            <span className="handleliste-add-icon" aria-hidden="true">
-              +
-            </span>
-            <span className="handleliste-add-label">{tab.addLabel}</span>
-          </button>
-        )}
+        {/* pointerdown holder fokus i linjen man skriver på, så tastaturet blir
+            stående og neste linje kan starte med en gang. */}
+        <button
+          type="button"
+          className="handleliste-add-pill"
+          onPointerDown={(e) => e.preventDefault()}
+          onClick={() => startDraft()}
+        >
+          <span className="handleliste-add-icon" aria-hidden="true">
+            +
+          </span>
+          <span className="handleliste-add-label">Legg til vare</span>
+        </button>
       </div>
     </div>
   )

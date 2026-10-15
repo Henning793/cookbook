@@ -37,15 +37,28 @@ export async function addStandingItem(
   familyId: string | null,
   kind: StandingKind,
   name: string
-): Promise<void> {
+): Promise<string> {
   const userId = await currentUserId()
-  const { error } = await supabase.from('standing_items').insert({
-    family_id: familyId,
-    owner_id: userId,
-    kind,
-    name: name.trim(),
-    normalized_name: normalizeItemName(name),
-  })
+  const { data, error } = await supabase
+    .from('standing_items')
+    .insert({
+      family_id: familyId,
+      owner_id: userId,
+      kind,
+      name: name.trim(),
+      normalized_name: normalizeItemName(name),
+    })
+    .select('id')
+    .single()
+  if (error) throw error
+  return data.id
+}
+
+export async function renameStandingItem(id: string, name: string): Promise<void> {
+  const { error } = await supabase
+    .from('standing_items')
+    .update({ name: name.trim(), normalized_name: normalizeItemName(name) })
+    .eq('id', id)
   if (error) throw error
 }
 
