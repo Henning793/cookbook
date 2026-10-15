@@ -1,6 +1,7 @@
 import type { MenuDay, Recipe } from '../types.ts'
 import { allIngredients } from './recipeIngredients.ts'
 import { plannedDishes } from './menuDishes.ts'
+import { menuDayDate } from './menuWeeks.ts'
 
 export { recipeBaseServings } from './menuDishes.ts'
 
@@ -8,6 +9,8 @@ export { recipeBaseServings } from './menuDishes.ts'
 // servings er satt bare når retten er ganget opp eller ned.
 export interface IngredientSource {
   weekday: number
+  // Datoen til dagen, 'YYYY-MM-DD'.
+  date: string
   recipeTitle: string
   amount: number | null
   servings: number | null
@@ -67,6 +70,7 @@ export function aggregateIngredients(menuDays: MenuDay[], recipes: Recipe[]): Ag
         const amount = ingredient.amount !== null ? ingredient.amount * factor : null
         const source: IngredientSource = {
           weekday: day.weekday,
+          date: menuDayDate(day),
           recipeTitle: dish.recipe.title,
           amount: amount !== null && scaled ? roundScaled(amount, unit) : amount,
           servings: scaled ? dish.servings : null,
@@ -160,7 +164,10 @@ export interface ShoppingRow extends AggregatedIngredient {
 // Legger redigerte navn/mengder over de utregnede varene. Avkrysning og
 // "Fjern avkryssede" følger fortsatt den opprinnelige nøkkelen, så en
 // redigert vare beholder hake og overstyring når listen regnes om.
-export function applyOverrides(items: AggregatedIngredient[], overrides: ItemOverride[]): ShoppingRow[] {
+export function applyOverrides<T extends AggregatedIngredient>(
+  items: T[],
+  overrides: ItemOverride[]
+): (T & ShoppingRow)[] {
   const byKey = new Map(overrides.map((o) => [ingredientKey(o.normalized_name, o.unit), o]))
   return items.map((item) => {
     const override = byKey.get(ingredientKey(item.normalizedName, item.unit))
@@ -174,4 +181,60 @@ export function applyOverrides(items: AggregatedIngredient[], overrides: ItemOve
       edited: name !== null || amountText !== null,
     }
   })
+}
+
+// En avkrysning av en vare fra ukesmenyen. covered_through er den siste dagen
+// handlelisten tok med da varen ble krysset av: alt varen trengs til til og
+// med den dagen regnes som kjøpt. NULL (rader fra før
+// migration_handleliste_periode.sql) betyr søndag denne uken.
+export interface CheckState {
+  normalized_name: string
+  unit: string
+  cleared: boolean
+  covered_through: string | null
+}
+
+export interface CheckedIngredient extends AggregatedIngredient {
+  checked: boolean
+  // true når varen er krysset av før, men trengs igjen etter dagen den ble
+  // krysset av til. Mengden er da bare det som trengs etter den dagen.
+  extra: boolean
+}
+
+// Legger avkrysningene over varene i perioden. En avkrysset vare som trengs
+// igjen senere i perioden vises uavkrysset med bare den nye mengden, og en
+// avkrysset vare som er fjernet med «Fjern avkryssede» skjules.
+// days er dagene i perioden (samme som items er regnet ut fra).
+export function applyChecks(
+  items: AggregatedIngredient[],
+  checks: CheckState[],
+  days: MenuDay[],
+  recipes: Recipe[],
+  defaultCoveredThrough: string
+): CheckedIngredient[] {
+  const checkByKey = new Map(checks.map((c) => [ingredientKey(c.normalized_name, c.unit), c]))
+  const laterByDate = new Map<string, Map<string, AggregatedIngredient>>()
+  const neededAfter = (date: string) => {
+    let later = laterByDate.get(date)
+    if (!later) {
+      const rest = aggregateIngredients(days.filter((d) => menuDayDate(d) > date), recipes)
+      later = new Map(rest.map((i) => [ingredientKey(i.normalizedName, i.unit), i]))
+      laterByDate.set(date, later)
+    }
+    return later
+  }
+
+  const result: CheckedIngredient[] = []
+  for (const item of items) {
+    const key = ingredientKey(item.normalizedName, item.unit)
+    const check = checkByKey.get(key)
+    if (!check) {
+      result.push({ ...item, checked: false, extra: false })
+      continue
+    }
+    const rest = neededAfter(check.covered_through ?? defaultCoveredThrough).get(key)
+    if (rest) result.push({ ...rest, checked: false, extra: true })
+    else if (!check.cleared) result.push({ ...item, checked: true, extra: false })
+  }
+  return result
 }

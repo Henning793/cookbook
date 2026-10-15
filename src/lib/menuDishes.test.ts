@@ -1,5 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { menuDayDate } from './menuWeeks.ts'
 import {
   draftDishes,
   extraDishes,
@@ -171,7 +172,7 @@ test('fritekst kan være en av rettene og teller ikke på handlelisten', () => {
       ['Rødvinssaus', 8],
     ]
   )
-  assert.deepEqual(freetextEntries([d]), [{ weekday: 5, text: 'Salat' }])
+  assert.deepEqual(freetextEntries([d]), [{ weekday: 5, date: menuDayDate(d), text: 'Salat' }])
   assert.equal(plannedDishes(d, recipes).length, 2)
 })
 
@@ -189,7 +190,7 @@ test('fritekst som hovedrett med oppskrifter i tillegg', () => {
   const d = day({ ...saved!, extra_dishes: saved!.extra_dishes })
   assert.equal(sharedServings(d, recipes), 4)
   assert.deepEqual(draftDishes(d), [{ freetext: 'Taco' }, { recipeId: 'Rødvinssaus', servings: null }])
-  assert.deepEqual(freetextEntries([d]), [{ weekday: 5, text: 'Taco' }])
+  assert.deepEqual(freetextEntries([d]), [{ weekday: 5, date: menuDayDate(d), text: 'Taco' }])
 })
 
 test('bare fritekst gir ikke noe antall', () => {

@@ -2,12 +2,13 @@ import { supabase } from './supabaseClient'
 
 export {
   aggregateIngredients,
+  applyChecks,
   applyOverrides,
   ingredientKey,
   removeAlwaysHome,
   removeCleared,
 } from './shoppingAggregate.ts'
-export type { AggregatedIngredient, ItemOverride, ShoppingRow } from './shoppingAggregate.ts'
+export type { AggregatedIngredient, CheckedIngredient, ItemOverride, ShoppingRow } from './shoppingAggregate.ts'
 import type { ItemOverride } from './shoppingAggregate.ts'
 
 // shopping_item_overrides kommer fra migration_handleliste_redigering.sql.
@@ -23,14 +24,11 @@ async function currentUserId(): Promise<string> {
   return userId
 }
 
-export interface CheckedItem {
-  normalized_name: string
-  unit: string
-  cleared: boolean
-}
+export type { CheckState as CheckedItem } from './shoppingAggregate.ts'
+import type { CheckState } from './shoppingAggregate.ts'
 
-export async function listCheckedItems(familyId: string | null): Promise<CheckedItem[]> {
-  const query = supabase.from('shopping_checked_items').select('normalized_name, unit, cleared')
+export async function listCheckedItems(familyId: string | null): Promise<CheckState[]> {
+  const query = supabase.from('shopping_checked_items').select('normalized_name, unit, cleared, covered_through')
   const { data, error } = familyId
     ? await query.eq('family_id', familyId)
     : await query.is('family_id', null).eq('owner_id', await currentUserId())
@@ -38,15 +36,33 @@ export async function listCheckedItems(familyId: string | null): Promise<Checked
   return data ?? []
 }
 
+// Krysser av en vare for alt den trengs til til og med coveredThrough
+// ('YYYY-MM-DD', siste dag i perioden personen ser). En eldre avkrysning av
+// samme vare erstattes.
 export async function setItemChecked(
   familyId: string | null,
   normalizedName: string,
-  unit: string
+  unit: string,
+  coveredThrough: string
 ): Promise<void> {
   const userId = await currentUserId()
-  const { error } = await supabase
-    .from('shopping_checked_items')
-    .insert({ family_id: familyId, owner_id: userId, normalized_name: normalizedName, unit })
+  await setItemUnchecked(familyId, normalizedName, unit)
+  const { error } = await supabase.from('shopping_checked_items').insert({
+    family_id: familyId,
+    owner_id: userId,
+    normalized_name: normalizedName,
+    unit,
+    covered_through: coveredThrough,
+  })
+  if (error) throw error
+}
+
+// Avkrysninger som bare gjaldt dager før denne uken betyr ingenting lenger.
+export async function deleteOldChecks(familyId: string | null, before: string): Promise<void> {
+  const query = supabase.from('shopping_checked_items').delete().lt('covered_through', before)
+  const { error } = familyId
+    ? await query.eq('family_id', familyId)
+    : await query.is('family_id', null).eq('owner_id', await currentUserId())
   if (error) throw error
 }
 

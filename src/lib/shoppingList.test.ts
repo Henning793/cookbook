@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { aggregateIngredients } from './shoppingAggregate.ts'
+import { menuDayDate } from './menuWeeks.ts'
 import type { MenuDay, Recipe } from '../types.ts'
 
 function recipe(
@@ -155,7 +156,9 @@ test('scales a day by its servings relative to the recipe servings', () => {
   const result = aggregateIngredients([scaledDay(0, 'r1', 6)], recipes)
   assert.equal(result[0].amount, 600)
   assert.equal(result[0].scaled, true)
-  assert.deepEqual(result[0].sources, [{ weekday: 0, recipeTitle: 'r1', amount: 600, servings: 6 }])
+  assert.deepEqual(result[0].sources, [
+    { weekday: 0, date: menuDayDate({ weekday: 0 }), recipeTitle: 'r1', amount: 600, servings: 6 },
+  ])
 })
 
 test('servings equal to the recipe or null leave amounts unscaled', () => {

@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, SlidersHorizontal } from 'lucide-react'
 import { useApp } from '../context/AppContext'
-import { listMenuDays } from '../lib/menuDays'
+import { currentWeekStart } from '../lib/menuWeeks'
 import { freetextEntries } from '../lib/menuDishes'
 import {
   aggregateIngredients,
+  applyChecks,
   applyOverrides,
   removeAlwaysHome,
-  removeCleared,
   ingredientKey,
   listCheckedItems,
+  deleteOldChecks,
   setItemChecked,
   setItemUnchecked,
   clearCheckedItems,
@@ -21,17 +22,18 @@ import {
   renameManualItem,
   listOverrides,
   saveOverride,
+  type CheckedIngredient,
   type CheckedItem,
   type ItemOverride,
   type ManualItem,
   type ShoppingRow,
 } from '../lib/shoppingList'
 import { listStandingItems } from '../lib/standingItems'
+import { getShoppingRange, listMenuDaysInRange } from '../lib/shoppingPreferences'
+import { rangeEnd, rangeEndLabel, rangeLabel, shortDayLabel, DEFAULT_SHOPPING_RANGE } from '../lib/shoppingRange'
 import { sortShoppingItems } from '../lib/shoppingSort'
 import { Login } from '../components/Login'
 import type { MenuDay } from '../types'
-
-const WEEKDAY_LABELS = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn']
 
 function formatAmount(amount: number | null, unit: string): string {
   if (amount === null) return unit
@@ -50,6 +52,8 @@ export function HandlelistePage() {
   const familyId = family?.id ?? null
 
   const [menuDays, setMenuDays] = useState<MenuDay[]>([])
+  const [range, setRange] = useState(DEFAULT_SHOPPING_RANGE)
+  const [end, setEnd] = useState(() => rangeEnd(DEFAULT_SHOPPING_RANGE))
   const [checked, setChecked] = useState<CheckedItem[]>([])
   const [manualItems, setManualItems] = useState<ManualItem[]>([])
   const [overrides, setOverrides] = useState<ItemOverride[]>([])
@@ -81,15 +85,24 @@ export function HandlelistePage() {
 
   useEffect(() => {
     if (familyLoading || !session) return
+    const loadRange = getShoppingRange().then(async (chosen) => ({
+      chosen,
+      ...(await listMenuDaysInRange(familyId, chosen)),
+    }))
+    const loadChecks = deleteOldChecks(familyId, currentWeekStart())
+      .catch((error) => console.error('Kunne ikke rydde gamle avkrysninger', error))
+      .then(() => listCheckedItems(familyId))
     Promise.all([
-      listMenuDays(familyId),
-      listCheckedItems(familyId),
+      loadRange,
+      loadChecks,
       listManualItems(familyId),
       listStandingItems(familyId, 'always_home'),
       listOverrides(familyId),
     ]).then(
-      ([days, checkedRows, manual, alwaysHome, overrideRows]) => {
-        setMenuDays(days)
+      ([period, checkedRows, manual, alwaysHome, overrideRows]) => {
+        setRange(period.chosen)
+        setEnd(period.end)
+        setMenuDays(period.days)
         setChecked(checkedRows)
         setManualItems(manual)
         setOverrides(overrideRows)
@@ -99,35 +112,17 @@ export function HandlelistePage() {
     )
   }, [familyId, familyLoading])
 
+  // Avkrysninger uten dato (fra før perioder fantes) gjelder ut denne uken.
   const aggregated = useMemo(() => {
-    const clearedKeys = new Set(
-      checked.filter((c) => c.cleared).map((c) => keyFor(c.normalized_name, c.unit))
-    )
-    return applyOverrides(
-      removeCleared(
-        removeAlwaysHome(aggregateIngredients(menuDays, recipes), alwaysHomeNames),
-        clearedKeys
-      ),
-      overrides
-    )
+    const items = removeAlwaysHome(aggregateIngredients(menuDays, recipes), alwaysHomeNames)
+    return applyOverrides(applyChecks(items, checked, menuDays, recipes, rangeEnd('week')), overrides)
   }, [menuDays, recipes, alwaysHomeNames, checked, overrides])
 
-  const checkedKeys = useMemo(
-    () => new Set(checked.map((c) => keyFor(c.normalized_name, c.unit))),
-    [checked]
-  )
-
   const sortedAggregated = useMemo(() => {
-    return sortShoppingItems(
-      aggregated,
-      (item) => item.displayName,
-      (item) => checkedKeys.has(keyFor(item.normalizedName, item.unit))
-    )
-  }, [aggregated, checkedKeys])
+    return sortShoppingItems(aggregated, (item) => item.displayName, (item) => item.checked)
+  }, [aggregated])
 
-  const uncheckedFromRecipesCount = aggregated.filter(
-    (item) => !checkedKeys.has(keyFor(item.normalizedName, item.unit))
-  ).length
+  const uncheckedFromRecipesCount = aggregated.filter((item) => !item.checked).length
   const sortedManual = useMemo(
     () => sortShoppingItems(manualItems, (item) => item.name, (item) => item.checked),
     [manualItems]
@@ -135,15 +130,15 @@ export function HandlelistePage() {
   const itemsLeft = uncheckedFromRecipesCount + manualItems.filter((m) => !m.checked).length
 
   const freetextDays = freetextEntries(menuDays)
-  const hasCheckedItems = checked.some((c) => !c.cleared) || manualItems.some((m) => m.checked)
+  const hasCheckedItems = aggregated.some((item) => item.checked) || manualItems.some((m) => m.checked)
 
-  async function toggleChecked(item: ShoppingRow) {
+  async function toggleChecked(item: CheckedIngredient) {
     setBusy(true)
     try {
-      if (checkedKeys.has(keyFor(item.normalizedName, item.unit))) {
+      if (item.checked) {
         await setItemUnchecked(familyId, item.normalizedName, item.unit)
       } else {
-        await setItemChecked(familyId, item.normalizedName, item.unit)
+        await setItemChecked(familyId, item.normalizedName, item.unit, end)
       }
       setChecked(await listCheckedItems(familyId))
     } finally {
@@ -405,9 +400,18 @@ export function HandlelistePage() {
       </nav>
 
       <h1 className="oppskrift-title">Handleliste</h1>
-      <button type="button" className="nav-link faste-varer-link" onClick={() => navigate('/handleliste/faste')}>
-        Personaliser handlelisten
-        <ChevronRight size={14} strokeWidth={2.75} aria-hidden="true" />
+      <button type="button" className="handleliste-period" onClick={() => navigate('/handleliste/faste')}>
+        <span className="handleliste-period-icon" aria-hidden="true">
+          <SlidersHorizontal size={14} strokeWidth={2.5} />
+        </span>
+        <span className="handleliste-period-text">
+          <strong>{rangeLabel(range)}</strong>
+          {rangeEndLabel(end)}
+        </span>
+        <span className="handleliste-period-action">
+          Personaliser
+          <ChevronRight size={14} strokeWidth={2.75} aria-hidden="true" />
+        </span>
       </button>
       <p className="oppskrift-description">{itemsLeft} varer igjen</p>
 
@@ -415,14 +419,17 @@ export function HandlelistePage() {
         <p className="status-message">Laster handleliste...</p>
       ) : (
         <>
-          <h2 className="section-kicker">Fra ukens retter</h2>
+          <h2 className="section-kicker">Fra ukesmenyen</h2>
           {sortedAggregated.length === 0 ? (
             <p className="status-message">Ingen retter i ukesmenyen enda.</p>
           ) : (
             <div className="handleliste-rows">
               {sortedAggregated.map((item) => {
                 const key = keyFor(item.normalizedName, item.unit)
-                const isChecked = checkedKeys.has(key)
+                const isChecked = item.checked
+                // En vare som trengs igjen viser den nye mengden, ikke en
+                // mengde skrevet inn for hånd til forrige handletur.
+                const amountText = item.extra ? null : item.amountText
                 const isExpanded = expandedKeys.has(key)
                 const isEditing = editing?.kind === 'recipe' && editing.key === key
                 return (
@@ -474,16 +481,19 @@ export function HandlelistePage() {
                           >
                             <span className={`handleliste-name${isChecked ? ' handleliste-name-checked' : ''}`}>
                               {item.displayName}
+                              {item.extra && (
+                                <span className="handleliste-extra">+{formatAmount(item.amount, item.unit)}</span>
+                              )}
                             </span>
                           </button>
                           <button
                             type="button"
-                            className={`handleliste-amount${item.scaled && !item.amountText ? ' handleliste-amount-scaled' : ''}`}
+                            className={`handleliste-amount${item.scaled && !amountText ? ' handleliste-amount-scaled' : ''}`}
                             aria-expanded={isExpanded}
                             aria-label={`Vis hvor ${item.displayName.toLowerCase()} kommer fra`}
                             onClick={() => toggleExpanded(key)}
                           >
-                            {item.amountText ?? formatAmount(item.amount, item.unit)}
+                            {amountText ?? formatAmount(item.amount, item.unit)}
                           </button>
                         </>
                       )}
@@ -492,7 +502,7 @@ export function HandlelistePage() {
                       <div className="handleliste-sources">
                         {item.sources.map((source, index) => (
                           <p className="handleliste-source" key={index}>
-                            <span className="handleliste-source-day">{WEEKDAY_LABELS[source.weekday]}</span>{' '}
+                            <span className="handleliste-source-day">{shortDayLabel(source.date)}</span>{' '}
                             {source.recipeTitle}: {formatAmount(source.amount, item.unit)}
                             {source.servings !== null && ` (${source.servings.toLocaleString('nb-NO')} pors.)`}
                           </p>
@@ -544,7 +554,7 @@ export function HandlelistePage() {
               <div className="handleliste-freetext-list">
                 {freetextDays.map((entry, index) => (
                   <p className="handleliste-freetext-row" key={index}>
-                    <span className="handleliste-freetext-day">{WEEKDAY_LABELS[entry.weekday]}</span> · {entry.text}
+                    <span className="handleliste-freetext-day">{shortDayLabel(entry.date)}</span> · {entry.text}
                   </p>
                 ))}
               </div>
