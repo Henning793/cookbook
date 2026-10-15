@@ -8,7 +8,7 @@ import { deleteAllStandingItems, listStandingItems } from './standingItems'
 
 export async function hasPersonalMenuData(): Promise<boolean> {
   const [days, manual, alwaysHome, weekly] = await Promise.all([
-    listMenuDays(null),
+    listMenuDays(null, null),
     listManualItems(null),
     listStandingItems(null, 'always_home'),
     listStandingItems(null, 'weekly'),
