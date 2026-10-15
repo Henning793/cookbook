@@ -2982,8 +2982,14 @@ button.hjem-tonight {
   color: var(--color-text);
 }
 
+/* Festet nederst så «Legg til vare» alltid er synlig, også i lange lister. */
 .handleliste-add-footer {
-  padding: 14px 0 30px;
+  position: sticky;
+  bottom: var(--bottom-nav-space, 0px);
+  z-index: 5;
+  margin: 0 -16px;
+  padding: 24px 16px 14px;
+  background: linear-gradient(to top, var(--color-bg) 70%, transparent);
 }
 
 .handleliste-add-pill {
