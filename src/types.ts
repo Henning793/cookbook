@@ -80,6 +80,8 @@ export interface MenuDay {
   id: string
   family_id: string | null
   owner_id: string
+  // Lagt til av migration_ukesmeny_flere_uker.sql: mandagen i uken ('YYYY-MM-DD').
+  week_start?: string
   weekday: number
   entry_type: MenuEntryType | null
   recipe_id: string | null

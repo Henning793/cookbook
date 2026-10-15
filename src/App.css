@@ -2550,6 +2550,194 @@ button.hjem-tonight {
   cursor: pointer;
 }
 
+/* --- Ukesmeny: uker --- */
+
+.ukesmeny-weekbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-card);
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  padding: 6px;
+  margin: 4px 0 8px;
+}
+
+.ukesmeny-weekbar-arrow {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: none;
+  background: var(--color-surface);
+  color: var(--color-accent-700);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.ukesmeny-weekbar-label {
+  flex: 1;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+}
+
+.ukesmeny-weekbar-week {
+  font: 600 18px/1.15 var(--font-heading);
+}
+
+.ukesmeny-weekbar-now {
+  display: inline-block;
+  margin-left: 6px;
+  vertical-align: 2px;
+  font: 700 10.5px/1 var(--font-body);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: var(--color-accent-2);
+  color: var(--color-on-accent);
+  border-radius: 999px;
+  padding: 4px 7px;
+}
+
+.ukesmeny-weekbar-dates {
+  font-size: 12.5px;
+  color: var(--color-neutral-700);
+}
+
+.ukesmeny-back-to-now {
+  display: block;
+  margin: 0 auto 4px;
+  background: var(--color-accent-100);
+  color: var(--color-accent-700);
+  border: none;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font: 700 12px var(--font-body);
+  cursor: pointer;
+}
+
+.ukesmeny-day-date {
+  display: block;
+  margin-top: 1px;
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--color-neutral-500);
+}
+
+.ukesmeny-day-past {
+  opacity: 0.55;
+}
+
+.ukesmeny-day.ukesmeny-day-today {
+  border: 1px solid var(--color-accent);
+  box-shadow: 0 0 0 1px var(--color-accent) inset, 0 4px 14px rgba(0, 0, 0, 0.12);
+}
+
+.ukesmeny-more {
+  position: relative;
+}
+
+.ukesmeny-more-button {
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  color: var(--color-neutral-700);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.ukesmeny-more-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+}
+
+.ukesmeny-more-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 16;
+  width: 220px;
+  background: var(--color-card);
+  border: 1px solid var(--color-line);
+  border-radius: 18px;
+  box-shadow: var(--shadow-lg);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+}
+
+.ukesmeny-more-menu button {
+  background: none;
+  border: none;
+  border-radius: 12px;
+  padding: 11px 12px;
+  text-align: left;
+  font: 400 15px var(--font-body);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.ukesmeny-more-menu button:hover {
+  background: var(--color-surface);
+}
+
+.ukesmeny-more-menu .ukesmeny-more-danger {
+  color: var(--color-accent-700);
+}
+
+.copy-week-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.copy-week-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border-radius: 18px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.copy-week-radio {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid var(--color-neutral-400);
+}
+
+.copy-week-option-selected .copy-week-radio {
+  border: 6px solid var(--color-accent);
+}
+
+.copy-week-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.copy-week-title {
+  font: 600 16px/1.15 var(--font-heading);
+}
+
+.copy-week-sub {
+  font-size: 12px;
+  color: var(--color-neutral-700);
+  margin-top: 2px;
+}
+
 .recipe-picker-row-selected {
   background: var(--color-surface);
   border-radius: var(--radius-md);
