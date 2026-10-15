@@ -96,11 +96,19 @@ export async function listManualItems(familyId: string | null): Promise<ManualIt
   return data ?? []
 }
 
-export async function addManualItem(familyId: string | null, name: string): Promise<void> {
+export async function addManualItem(familyId: string | null, name: string): Promise<string> {
   const userId = await currentUserId()
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('manual_shopping_items')
     .insert({ family_id: familyId, owner_id: userId, name: name.trim() })
+    .select('id')
+    .single()
+  if (error) throw error
+  return data.id
+}
+
+export async function deleteManualItem(id: string): Promise<void> {
+  const { error } = await supabase.from('manual_shopping_items').delete().eq('id', id)
   if (error) throw error
 }
 

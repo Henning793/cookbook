@@ -2997,17 +2997,6 @@ button.hjem-tonight {
   pointer-events: auto;
 }
 
-/* Når feltet er åpent, får det hele bredden og en toning bak seg. */
-.handleliste-add-footer:has(form) {
-  margin: 0 -16px;
-  padding: 24px 16px 14px;
-  background: linear-gradient(to top, var(--color-bg) 70%, transparent);
-}
-
-.handleliste-add-footer:has(form) .handleliste-add-form {
-  flex: 1;
-}
-
 .handleliste-add-pill {
   display: flex;
   gap: 10px;
@@ -3052,6 +3041,18 @@ button.hjem-tonight {
   border-radius: 999px;
   padding: 13px 18px;
   color: var(--color-text);
+}
+
+.handleliste-draft-input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: 15px;
+  color: var(--color-text);
+  background: none;
+  border: none;
+  outline: none;
+  padding: 0;
 }
 
 /* --- Faste varer --- */

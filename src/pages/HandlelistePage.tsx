@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useApp } from '../context/AppContext'
@@ -16,6 +16,7 @@ import {
   clearCheckedItems,
   listManualItems,
   addManualItem,
+  deleteManualItem,
   setManualChecked,
   renameManualItem,
   listOverrides,
@@ -57,8 +58,19 @@ export function HandlelistePage() {
   const [editAmount, setEditAmount] = useState('')
   const [alwaysHomeNames, setAlwaysHomeNames] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
-  const [showAdd, setShowAdd] = useState(false)
-  const [newItemName, setNewItemName] = useState('')
+  // Ny linje nederst i Egne varer som lagres mens man skriver. `key` gir et
+  // nytt felt for hver vare, `savedId` er raden den er lagret som så langt.
+  const [draft, setDraft] = useState<{ key: number; name: string; savedId: string | null } | null>(null)
+  const draftRef = useRef(draft)
+  draftRef.current = draft
+  const draftTimer = useRef<number | undefined>(undefined)
+  // Lagringene går én og én, så en vare aldri blir opprettet to ganger.
+  const saveChain = useRef<Promise<void>>(Promise.resolve())
+  const draftInput = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    draftInput.current?.scrollIntoView({ block: 'center' })
+  }, [draft?.key])
   const [busy, setBusy] = useState(false)
   // Varer der man har trykket på mengden for å se hvilke dager den kommer fra.
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set())
@@ -215,18 +227,58 @@ export function HandlelistePage() {
     }
   }
 
-  async function handleAddManual(event: React.FormEvent) {
-    event.preventDefault()
-    if (!newItemName.trim()) return
-    setBusy(true)
-    try {
-      await addManualItem(familyId, newItemName.trim())
+  // Lagrer det som står i den nye linjen nå: oppretter varen første gang,
+  // gir den nytt navn etterpå, og sletter den igjen hvis feltet tømmes.
+  function saveDraft(key: number) {
+    window.clearTimeout(draftTimer.current)
+    saveChain.current = saveChain.current
+      .then(async () => {
+        const current = draftRef.current
+        if (!current || current.key !== key) return
+        const name = current.name.trim()
+        let savedId = current.savedId
+        if (!savedId && name) savedId = await addManualItem(familyId, name)
+        else if (savedId && name) await renameManualItem(savedId, name)
+        else if (savedId && !name) {
+          await deleteManualItem(savedId)
+          savedId = null
+        }
+        setDraft((d) => (d && d.key === key ? { ...d, savedId } : d))
+        draftRef.current = draftRef.current?.key === key ? { ...draftRef.current, savedId } : draftRef.current
+      })
+      .catch((error) => console.error('Kunne ikke lagre vare', error))
+  }
+
+  // Ferdig med linjen: lagre det siste og la varen gå inn i listen.
+  // Tar nøkkelen til linjen, så en blur fra et gammelt felt aldri lukker en
+  // ny linje man allerede har startet på.
+  function finishDraft(key = draftRef.current?.key) {
+    if (key === undefined || draftRef.current?.key !== key) return
+    saveDraft(key)
+    saveChain.current = saveChain.current.then(async () => {
       setManualItems(await listManualItems(familyId))
-      setNewItemName('')
-      setShowAdd(false)
-    } finally {
-      setBusy(false)
-    }
+      if (draftRef.current?.key === key) {
+        draftRef.current = null
+        setDraft(null)
+      }
+    })
+  }
+
+  function startDraft() {
+    finishDraft()
+    const next = { key: Date.now(), name: '', savedId: null }
+    draftRef.current = next
+    setDraft(next)
+  }
+
+  function handleDraftChange(name: string) {
+    const current = draftRef.current
+    if (!current) return
+    const next = { ...current, name }
+    draftRef.current = next
+    setDraft(next)
+    window.clearTimeout(draftTimer.current)
+    draftTimer.current = window.setTimeout(() => saveDraft(current.key), 600)
   }
 
   if (!session) {
@@ -369,7 +421,7 @@ export function HandlelistePage() {
           <h2 className="section-kicker">Egne varer</h2>
           <p className="handleliste-hint">Blir stående til du trykker «Fjern avkryssede»</p>
           <div className="handleliste-rows">
-            {sortedManual.map((item) => (
+            {sortedManual.filter((item) => item.id !== draft?.savedId).map((item) => (
               <div className="handleliste-row-group" key={item.id}>
                 <div className="handleliste-row">
                   <button
@@ -411,6 +463,32 @@ export function HandlelistePage() {
                 )}
               </div>
             ))}
+            {draft && (
+              <div className="handleliste-row-group">
+                <div className="handleliste-row handleliste-draft-row">
+                  <span className="handleliste-checkbox" aria-hidden="true" />
+                  <input
+                    key={draft.key}
+                    type="text"
+                    className="handleliste-draft-input"
+                    aria-label="Ny vare"
+                    placeholder="Ny vare"
+                    autoFocus
+                    enterKeyHint="next"
+                    value={draft.name}
+                    ref={draftInput}
+                    onChange={(e) => handleDraftChange(e.target.value)}
+                    onBlur={() => finishDraft(draft.key)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        if (draft.name.trim()) startDraft()
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {freetextDays.length > 0 && (
@@ -429,27 +507,19 @@ export function HandlelistePage() {
       )}
 
       <div className="handleliste-add-footer">
-        {showAdd ? (
-          <form className="handleliste-add-form" onSubmit={handleAddManual}>
-            <input
-              type="text"
-              autoFocus
-              placeholder="Vare"
-              value={newItemName}
-              onChange={(e) => setNewItemName(e.target.value)}
-            />
-            <button type="submit" className="cta-button" disabled={busy || !newItemName.trim()}>
-              Legg til
-            </button>
-          </form>
-        ) : (
-          <button type="button" className="handleliste-add-pill" onClick={() => setShowAdd(true)}>
-            <span className="handleliste-add-icon" aria-hidden="true">
-              +
-            </span>
-            <span className="handleliste-add-label">Legg til vare</span>
-          </button>
-        )}
+        {/* pointerdown holder fokus i linjen man skriver på, så tastaturet blir
+            stående og neste linje kan starte med en gang. */}
+        <button
+          type="button"
+          className="handleliste-add-pill"
+          onPointerDown={(e) => e.preventDefault()}
+          onClick={() => startDraft()}
+        >
+          <span className="handleliste-add-icon" aria-hidden="true">
+            +
+          </span>
+          <span className="handleliste-add-label">Legg til vare</span>
+        </button>
       </div>
     </div>
   )
