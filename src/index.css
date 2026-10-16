@@ -13,8 +13,19 @@
   min-height: 100svh;
 }
 
+/* Siden skal aldri kunne dras sidelengs. Blir noe bredere enn skjermen,
+   gjør iPhone hele siden bredere enn skjermen i stedet for å klippe det. Da
+   følger bunnmenyen (position: fixed) den brede siden: den glir til siden og
+   havner under skjermkanten når man blar. Android klipper selv, så der har
+   det ikke vist seg. hidden er reserve for eldre Safari uten clip. */
+html {
+  overflow-x: hidden;
+  overflow-x: clip;
+}
+
 body {
   margin: 0;
+  overflow-x: clip;
 }
 
 h1,
