@@ -1835,7 +1835,9 @@
 
 .hjem-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  /* minmax(0, …): kolonnene blir aldri bredere enn halve siden, selv om et
+     omslagsbilde er bredt. Med bare 1fr kan Safari gjøre siden for bred. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
 }
 
@@ -1874,7 +1876,7 @@
 /* Bildemosaikk: ett stort bilde til venstre og opptil to små til høyre. */
 .hjem-collection-mosaic-2,
 .hjem-collection-mosaic-3 {
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
   gap: 3px;
   place-items: stretch;
 }
@@ -4043,7 +4045,7 @@ body.has-bottom-nav .ukesmeny-notice {
   bottom: 0;
   z-index: 12;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   align-items: center;
   height: calc(64px + env(safe-area-inset-bottom, 0px));
   padding: 0 max(8px, calc((100% - 640px) / 2)) env(safe-area-inset-bottom, 0px);
