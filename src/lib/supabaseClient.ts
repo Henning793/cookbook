@@ -11,4 +11,20 @@ if (!supabaseUrl || !supabaseAnonKey) {
   )
 }
 
+// Lenken i e-posten fra «Glemt passord?» åpner appen med type=recovery i
+// adressen. Supabase fjerner den når innloggingen fra lenken er lest, så
+// den må fanges opp her, før klienten opprettes. Da kan appen sende
+// brukeren til siden for nytt passord også når Supabase har sendt lenken
+// til forsiden (Site URL) i stedet for til /nytt-passord.
+let recoveryLinkPending =
+  typeof window !== 'undefined' && window.location.hash.includes('type=recovery')
+
+export function isRecoveryLinkPending(): boolean {
+  return recoveryLinkPending
+}
+
+export function clearRecoveryLink() {
+  recoveryLinkPending = false
+}
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)

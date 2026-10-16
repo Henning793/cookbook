@@ -20,6 +20,7 @@ import { BliMedPage } from './pages/BliMedPage'
 import { DelingPage } from './pages/DelingPage'
 import { NyttPassordPage } from './pages/NyttPassordPage'
 import { pendingLink } from './lib/inviteLinks'
+import { isRecoveryLinkPending } from './lib/supabaseClient'
 import { UpdateBanner } from './components/UpdateBanner'
 import { TimerProvider } from './context/TimerContext'
 import { TimerTray } from './components/CookingTimers'
@@ -30,11 +31,13 @@ import './recipe-components.css'
 // Forsiden er en landingsside med innlogging for den som ikke er logget inn.
 // En innlogget bruker sendes videre til en invitasjons- eller delingslenke
 // som ble åpnet før innlogging, f.eks. når e-postbekreftelsen etter
-// registrering åpner appen på nytt uten lenken i adressen.
+// registrering åpner appen på nytt uten lenken i adressen. Lenken fra
+// «Glemt passord?» går alltid til siden for nytt passord.
 function Home() {
   const { session, sessionLoading } = useApp()
   if (sessionLoading) return null
   if (!session) return <LandingPage />
+  if (isRecoveryLinkPending()) return <Navigate to="/nytt-passord" replace />
   const pending = pendingLink()
   return pending ? <Navigate to={pending} replace /> : <HjemPage />
 }

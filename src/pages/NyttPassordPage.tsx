@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
-import { supabase } from '../lib/supabaseClient'
+import { clearRecoveryLink, supabase } from '../lib/supabaseClient'
 import { PasswordField } from '../components/PasswordField'
 
 /**
@@ -42,6 +42,7 @@ export function NyttPassordPage() {
       return
     }
 
+    clearRecoveryLink()
     navigate('/', { replace: true })
   }
 
