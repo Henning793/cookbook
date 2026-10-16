@@ -8,11 +8,12 @@ type Tab = 'oppskrifter' | 'ukesmeny' | 'handleliste' | 'meg'
 
 // Sider uten bunnmeny: kokemodus trenger hele skjermen, skjemaet for ny
 // oppskrift har egen lagreknapp nederst, og invitasjons- og delingslenker er
-// egne flyter.
+// egne flyter, det samme er siden for nytt passord.
 function hidesNav(pathname: string): boolean {
   return (
     /^\/oppskrift\/[^/]+\/kok$/.test(pathname) ||
     pathname === '/ny' ||
+    pathname === '/nytt-passord' ||
     pathname.startsWith('/bli-med/') ||
     pathname.startsWith('/del/')
   )

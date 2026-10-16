@@ -3799,6 +3799,27 @@ body.has-timer-button {
   box-shadow: none;
 }
 
+/* «Glemt passord?» er en liten tekstlenke under passordfeltet, ikke en knapp. */
+.login-form .forgot-link {
+  align-self: flex-end;
+  width: auto;
+  margin: 2px 4px 0;
+  padding: 4px 0;
+  background: none;
+  border: none;
+  box-shadow: none;
+  color: var(--color-accent-700);
+  font: 600 13px var(--font-body);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.login-hint {
+  font-size: 14px;
+  color: var(--color-neutral-700);
+  margin: 0 0 6px;
+}
+
 /* Tips og triks */
 .tips-kicker {
   margin-top: 24px;

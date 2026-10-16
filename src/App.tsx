@@ -18,6 +18,7 @@ import { HandlelistePage } from './pages/HandlelistePage'
 import { FasteVarerPage } from './pages/FasteVarerPage'
 import { BliMedPage } from './pages/BliMedPage'
 import { DelingPage } from './pages/DelingPage'
+import { NyttPassordPage } from './pages/NyttPassordPage'
 import { pendingLink } from './lib/inviteLinks'
 import { UpdateBanner } from './components/UpdateBanner'
 import { TimerProvider } from './context/TimerContext'
@@ -64,6 +65,7 @@ function App() {
             <Route path="/handleliste/faste" element={<FasteVarerPage />} />
             <Route path="/bli-med/:token" element={<BliMedPage />} />
             <Route path="/del/:token" element={<DelingPage />} />
+            <Route path="/nytt-passord" element={<NyttPassordPage />} />
             <Route path="*" element={<Home />} />
           </Routes>
           <BottomNav />
