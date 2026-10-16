@@ -3,7 +3,11 @@ import { supabase } from '../lib/supabaseClient'
 import { PasswordField } from './PasswordField'
 import { TurnstileWidget } from './TurnstileWidget'
 
-type Mode = 'login' | 'signup'
+type Mode = 'login' | 'signup' | 'forgot'
+
+// Lenken i e-posten for nytt passord åpner denne siden. Adressen må stå i
+// Supabase under Authentication -> URL Configuration -> Redirect URLs (se README).
+const RESET_PASSWORD_PATH = '/nytt-passord'
 
 export function Login() {
   const [mode, setMode] = useState<Mode>('login')
@@ -13,7 +17,7 @@ export function Login() {
   const [passwordConfirm, setPasswordConfirm] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [captchaToken, setCaptchaToken] = useState<string | null>(null)
-  const [status, setStatus] = useState<'idle' | 'sending' | 'error'>('idle')
+  const [status, setStatus] = useState<'idle' | 'sending' | 'error' | 'sent'>('idle')
   const [errorMessage, setErrorMessage] = useState('')
 
   function switchMode(next: Mode) {
@@ -58,6 +62,34 @@ export function Login() {
     }
 
     setStatus('idle')
+  }
+
+  async function handleForgot(e: FormEvent) {
+    e.preventDefault()
+    setErrorMessage('')
+
+    if (!captchaToken) {
+      setStatus('error')
+      setErrorMessage('Bekreft at du ikke er en robot.')
+      return
+    }
+
+    setStatus('sending')
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + RESET_PASSWORD_PATH,
+      captchaToken,
+    })
+
+    if (error) {
+      setStatus('error')
+      setErrorMessage('Kunne ikke sende e-posten. Prøv igjen om litt.')
+      return
+    }
+
+    // Supabase svarer likt enten det finnes en konto for e-posten eller ikke,
+    // så meldingen kan ikke love at en e-post faktisk er sendt.
+    setStatus('sent')
   }
 
   async function handleSignup(e: FormEvent) {
@@ -113,6 +145,48 @@ export function Login() {
     }
 
     setStatus('idle')
+  }
+
+  if (mode === 'forgot') {
+    if (status === 'sent') {
+      return (
+        <div key="forgot-sent" className="login-form">
+          <p className="login-message">
+            Hvis det finnes en konto for <strong>{email}</strong>, har vi sendt en e-post med en
+            lenke for å lage nytt passord. Sjekk søppelpost-mappen hvis du ikke finner den.
+          </p>
+          <button type="button" className="nav-link" onClick={() => switchMode('login')}>
+            Tilbake til innlogging
+          </button>
+        </div>
+      )
+    }
+
+    return (
+      <form key="forgot" className="login-form" onSubmit={handleForgot}>
+        <label htmlFor="forgot-email">Glemt passord</label>
+        <p className="login-hint">
+          Skriv inn e-posten du logger inn med, så sender vi deg en lenke for å lage nytt passord.
+        </p>
+        <input
+          id="forgot-email"
+          type="email"
+          required
+          autoComplete="email"
+          placeholder="din@epost.no"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <TurnstileWidget onVerify={setCaptchaToken} onExpire={() => setCaptchaToken(null)} />
+        <button type="submit" disabled={status === 'sending'}>
+          {status === 'sending' ? 'Sender...' : 'Send lenke'}
+        </button>
+        {status === 'error' && <p className="error">{errorMessage}</p>}
+        <button type="button" className="nav-link" onClick={() => switchMode('login')}>
+          Tilbake til innlogging
+        </button>
+      </form>
+    )
   }
 
   if (mode === 'signup') {
@@ -188,6 +262,9 @@ export function Login() {
         value={password}
         onChange={(e) => setPassword(e.target.value)}
       />
+      <button type="button" className="forgot-link" onClick={() => switchMode('forgot')}>
+        Glemt passord?
+      </button>
       <TurnstileWidget onVerify={setCaptchaToken} onExpire={() => setCaptchaToken(null)} />
       <button type="submit" disabled={status === 'sending'}>
         {status === 'sending' ? 'Logger inn...' : 'Logg inn'}

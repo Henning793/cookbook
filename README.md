@@ -88,6 +88,24 @@ Uten en gyldig `VITE_TURNSTILE_SITE_KEY` viser registreringsskjemaet en
 tydelig feilmelding i stedet for CAPTCHA-widgeten, og registrering vil
 feile mot Supabase (siden CAPTCHA-beskyttelsen er skrudd på server-side).
 
+### Glemt passord
+
+Innloggingen har en «Glemt passord?»-lenke. Den sender en e-post fra Supabase
+med en lenke til `/nytt-passord`, der brukeren lager et nytt passord.
+Supabase sender bare brukeren tilbake til adresser den kjenner til, så legg
+inn appens adresse i Supabase Dashboard under **Authentication -> URL
+Configuration**:
+
+- **Site URL**: appens adresse, f.eks. `https://din-app.netlify.app`
+- **Redirect URLs**: `https://din-app.netlify.app/nytt-passord` (og
+  `http://localhost:5173/nytt-passord` hvis du vil teste lokalt)
+
+Uten dette havner lenken i e-posten på Site URL (eller `localhost:3000`)
+i stedet for på siden for nytt passord. Teksten i e-posten kan endres under
+**Authentication -> Emails -> Reset Password**. Supabase sin innebygde
+e-posttjeneste sender bare noen få e-poster i timen; trengs flere, sett opp
+egen SMTP under **Authentication -> Emails -> SMTP Settings**.
+
 ### Opprett en bruker manuelt i stedet (alternativ til selvregistrering)
 
 Du kan fortsatt opprette brukere manuelt i Supabase Dashboard i stedet for
