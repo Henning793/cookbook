@@ -7,7 +7,12 @@ import { listRecipeIdsInCollection, getCollection } from '../lib/collections'
 import { DelLenkeDialog } from '../components/DelLenkeDialog'
 import { createShareLink } from '../lib/shares'
 import { isSharedIn } from '../lib/recipePermissions'
-import type { Collection } from '../types'
+import type { Collection, Recipe } from '../types'
+
+// Oppskrifter i en samling vises alfabetisk på tittel, med norsk sortering
+// (æ, ø, å til slutt) og uten å skille store/små bokstaver.
+const byTitle = (a: Recipe, b: Recipe) =>
+  a.title.localeCompare(b.title, 'nb-NO', { sensitivity: 'base', numeric: true })
 
 const TAG_TINTS = [
   { bg: 'var(--color-accent-100)', text: 'var(--color-accent-700)' },
@@ -35,7 +40,7 @@ export function SamlingPage() {
 
   if (isCollectionRoute) {
     const collectionRecipes = collectionRecipeIds
-      ? recipes.filter((r) => collectionRecipeIds.includes(r.id))
+      ? recipes.filter((r) => collectionRecipeIds.includes(r.id)).sort(byTitle)
       : []
     // Deling krever at samlingen tilhører ens egen familie - en personlig
     // samling (collection.family_id null) kan aldri deles, siden man må
@@ -120,8 +125,8 @@ export function SamlingPage() {
   const tagRecipes = useMemo(
     () =>
       isUntagged
-        ? recipes.filter((recipe) => recipe.tags.length === 0)
-        : recipes.filter((recipe) => recipe.tags.includes(tag)),
+        ? recipes.filter((recipe) => recipe.tags.length === 0).sort(byTitle)
+        : recipes.filter((recipe) => recipe.tags.includes(tag)).sort(byTitle),
     [recipes, tag, isUntagged]
   )
 
