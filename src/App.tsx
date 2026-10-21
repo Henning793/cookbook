@@ -25,6 +25,7 @@ import { UpdateBanner } from './components/UpdateBanner'
 import { TimerProvider } from './context/TimerContext'
 import { TimerTray } from './components/CookingTimers'
 import { BottomNav } from './components/BottomNav'
+import { ScrollManager } from './components/ScrollManager'
 import './App.css'
 import './recipe-components.css'
 
@@ -48,6 +49,7 @@ function App() {
       <TimerProvider>
         <UpdateBanner />
         <BrowserRouter>
+          <ScrollManager />
           <TimerTray />
           <Routes>
             <Route path="/" element={<Home />} />
