@@ -1,7 +1,7 @@
 // Hver persons valg av hvor langt frem handlelisten går (se shoppingRange.ts).
 // Lagres i shopping_preferences (migration_handleliste_periode.sql). Før
 // migreringen er kjørt brukes standardvalget.
-import { supabase } from './supabaseClient'
+import { signedInUserId, supabase } from './supabaseClient'
 import { isMissingTable } from './shoppingList'
 import { listMenuDaysBetween } from './menuDays'
 import {
@@ -15,8 +15,7 @@ import {
 import type { MenuDay } from '../types'
 
 export async function getShoppingRange(): Promise<ShoppingRange> {
-  const { data: auth } = await supabase.auth.getUser()
-  const userId = auth.user?.id
+  const userId = await signedInUserId()
   if (!userId) return DEFAULT_SHOPPING_RANGE
   const { data, error } = await supabase
     .from('shopping_preferences')
@@ -31,8 +30,7 @@ export async function getShoppingRange(): Promise<ShoppingRange> {
 }
 
 export async function setShoppingRange(range: ShoppingRange): Promise<void> {
-  const { data: auth } = await supabase.auth.getUser()
-  const userId = auth.user?.id
+  const userId = await signedInUserId()
   if (!userId) throw new Error('Ikke innlogget.')
   const { error } = await supabase
     .from('shopping_preferences')

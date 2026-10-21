@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient'
+import { signedInUserId, supabase } from './supabaseClient'
 import type { Collection } from '../types'
 
 export async function getCollection(id: string): Promise<Collection | null> {
@@ -20,8 +20,7 @@ export async function listCollections(familyId: string | null): Promise<Collecti
     return data ?? []
   }
 
-  const { data: userData } = await supabase.auth.getUser()
-  const userId = userData.user?.id
+  const userId = await signedInUserId()
   if (!userId) return []
 
   const { data, error } = await supabase

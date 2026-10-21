@@ -44,13 +44,36 @@ export default defineConfig({
         // Push-varsel når en nedtelling i kokemodus er ferdig (public/timer-push-sw.js).
         importScripts: ['timer-push-sw.js'],
         // Cache the app shell + any recipe data/images fetched from Supabase,
-        // so previously viewed recipes are available offline.
+        // so previously viewed recipes are available offline. Navnene må
+        // stemme med src/lib/offlineCache.ts, som tømmer API-lageret ved
+        // utlogging.
         runtimeCaching: [
           {
-            urlPattern: ({ url }) => url.hostname.endsWith('supabase.co'),
+            // Data fra databasen: nettet først, men gir opp etter 3 sekunder
+            // og bruker sist lagrede svar, så dårlig dekning ikke låser appen.
+            // Bare /rest/v1, ikke innlogging (/auth/v1).
+            urlPattern: ({ url }) => url.hostname.endsWith('supabase.co') && url.pathname.startsWith('/rest/v1/'),
             handler: 'NetworkFirst',
             options: {
-              cacheName: 'supabase-cache',
+              cacheName: 'supabase-api',
+              networkTimeoutSeconds: 3,
+              expiration: {
+                maxEntries: 200,
+                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+          {
+            // Oppskriftsbilder endres aldri (nytt bilde får nytt filnavn), så
+            // de hentes fra lageret uten å spørre nettet.
+            urlPattern: ({ url }) =>
+              url.hostname.endsWith('supabase.co') && url.pathname.startsWith('/storage/v1/object/public/'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'supabase-images',
               expiration: {
                 maxEntries: 200,
                 maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
