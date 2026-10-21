@@ -3,6 +3,9 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { BookOpen, CalendarDays, Plus, ShoppingCart, User, type LucideIcon } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { countShoppingItemsLeft } from '../lib/shoppingCount'
+import { cachedShopping } from '../lib/shoppingCache'
+import { loadShoppingData } from '../lib/shoppingLoad'
+import { currentWeekStart } from '../lib/menuWeeks'
 
 type Tab = 'oppskrifter' | 'ukesmeny' | 'handleliste' | 'meg'
 
@@ -36,7 +39,8 @@ const TABS: { tab: Tab; label: string; path: string; Icon: LucideIcon }[] = [
 export function BottomNav() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
-  const { session, recipes, family, familyLoading } = useApp()
+  const { session, recipes, loading: recipesLoading, family, familyLoading } = useApp()
+  const userId = session?.user.id ?? null
   const [itemsLeft, setItemsLeft] = useState(0)
   const visible = !!session && !hidesNav(pathname)
 
@@ -47,13 +51,20 @@ export function BottomNav() {
   }, [visible])
 
   // Telles på nytt ved hvert sidebytte, så merket stemmer når man kommer
-  // tilbake fra handlelisten eller ukesmenyen.
+  // tilbake fra handlelisten eller ukesmenyen. Den sist hentede listen gir
+  // et tall med en gang, og hentingen deles med handlelisten.
   useEffect(() => {
-    if (!visible || familyLoading) return
+    if (!visible || !userId) return
+    const familyId = familyLoading ? undefined : (family?.id ?? null)
+    const cached = cachedShopping(localStorage, userId, familyId, currentWeekStart())
+    if (cached) setItemsLeft(countShoppingItemsLeft(cached, recipesLoading ? cached.recipes : recipes))
+    if (familyId === undefined) return
     let cancelled = false
-    countShoppingItemsLeft(family?.id ?? null, recipes)
-      .then((count) => {
-        if (!cancelled) setItemsLeft(count)
+    loadShoppingData(userId, familyId, recipesLoading ? null : recipes)
+      .then((data) => {
+        if (cancelled) return
+        const known = recipesLoading ? cachedShopping(localStorage, userId, familyId, currentWeekStart())?.recipes ?? [] : recipes
+        setItemsLeft(countShoppingItemsLeft(data, known))
       })
       .catch(() => {
         // Merket er bare en hjelp. Uten svar vises det ikke.
@@ -62,7 +73,7 @@ export function BottomNav() {
     return () => {
       cancelled = true
     }
-  }, [visible, family, familyLoading, recipes, pathname])
+  }, [visible, userId, family, familyLoading, recipes, recipesLoading, pathname])
 
   if (!visible) return null
 

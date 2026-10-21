@@ -17,6 +17,7 @@ import { listIncomingShares, listOutgoingShares } from '../lib/shares'
 import { readCookingSession, writeCookingSession, type CookingSession } from '../lib/cookingSession'
 import { clearMenuCache } from '../lib/menuCache'
 import { clearSupabaseCache, removeLegacyCache } from '../lib/offlineCache'
+import { clearShoppingCache } from '../lib/shoppingCache'
 import type { Family, FamilyMember, FamilyRole, FamilyShare, Profile, Recipe } from '../types'
 
 interface Filters {
@@ -69,7 +70,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     removeLegacyCache()
 
     const { data: listener } = supabase.auth.onAuthStateChange((event, newSession) => {
-      if (event === 'SIGNED_OUT') clearSupabaseCache()
+      if (event === 'SIGNED_OUT') {
+        clearSupabaseCache()
+        clearShoppingCache(localStorage)
+      }
       setSession(newSession)
       setSessionLoading(false)
     })
