@@ -1,9 +1,8 @@
-import { supabase } from './supabaseClient'
+import { signedInUserId, supabase } from './supabaseClient'
 import type { Family, FamilyInvitePreview, FamilyMember } from '../types'
 
 export async function getMyMembership(): Promise<FamilyMember | null> {
-  const { data: userData } = await supabase.auth.getUser()
-  const userId = userData.user?.id
+  const userId = await signedInUserId()
   if (!userId) return null
   const { data, error } = await supabase
     .from('family_members')

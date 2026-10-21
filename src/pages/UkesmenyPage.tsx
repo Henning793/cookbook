@@ -12,6 +12,7 @@ import {
 } from '../lib/menuDays'
 import { currentWeekStart, addWeeks, parseWeekParam, weekNumber, weekRangeLabel, dayDate, isPastDay, isoWeekday } from '../lib/menuWeeks'
 import { CopyWeekDialog } from '../components/CopyWeekDialog'
+import { cachedMenuDays } from '../lib/menuCache'
 import { isEmptyDay, swapDaysLocal, swapMessage } from '../lib/menuSwap'
 import { useLongPressSwap } from '../components/useLongPressSwap'
 import { errorMessage } from '../lib/errorMessage'
@@ -35,11 +36,13 @@ export function UkesmenyPage() {
   // havner i samme uke. Uten ?uke vises denne uken.
   const week = parseWeekParam(searchParams.get('uke')) ?? thisWeek
   const isThisWeek = week === thisWeek
-  const [days, setDays] = useState<MenuDay[]>([])
+  // Starter med uken fra mellomlageret når familien alt er kjent, så første
+  // tegning ikke viser «Laster».
+  const initial = familyLoading ? undefined : cachedMenuDays(family?.id ?? null, week)
+  const [days, setDays] = useState<MenuDay[]>(initial ?? [])
   // Uken dagene i days hører til; null før første lasting.
-  const [loadedWeek, setLoadedWeek] = useState<string | null>(null)
+  const [loadedWeek, setLoadedWeek] = useState<string | null>(initial ? week : null)
   const loading = loadedWeek !== week
-  const weekCache = useRef(new Map<string, MenuDay[]>())
   const shownWeek = useRef(week)
   useEffect(() => {
     shownWeek.current = week
@@ -62,15 +65,14 @@ export function UkesmenyPage() {
   useEffect(() => {
     if (familyLoading || !session) return
     let cancelled = false
-    // Viser sist hentede dager for uken med en gang, så det ikke blinker
-    // når man blar frem og tilbake.
-    const cached = weekCache.current.get(`${familyId}:${week}`)
+    // Viser sist hentede dager for uken med en gang (også det forsiden
+    // hentet), så siden åpner uten «Laster» og ikke blinker når man blar.
+    const cached = cachedMenuDays(familyId, week)
     if (cached) {
       setDays(cached)
       setLoadedWeek(week)
     }
     listMenuDays(familyId, week).then((rows) => {
-      weekCache.current.set(`${familyId}:${week}`, rows)
       if (cancelled) return
       setDays(rows)
       setLoadedWeek(week)
@@ -93,7 +95,6 @@ export function UkesmenyPage() {
   async function reload() {
     // Uken kan ha blitt byttet mens et bytte ble lagret i bakgrunnen.
     const rows = await listMenuDays(familyId, week)
-    weekCache.current.set(`${familyId}:${week}`, rows)
     if (shownWeek.current === week) setDays(rows)
   }
 

@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient'
+import { signedInUserId, supabase } from './supabaseClient'
 
 export {
   aggregateIngredients,
@@ -18,8 +18,7 @@ export function isMissingTable(error: { code?: string }): boolean {
 }
 
 async function currentUserId(): Promise<string> {
-  const { data } = await supabase.auth.getUser()
-  const userId = data.user?.id
+  const userId = await signedInUserId()
   if (!userId) throw new Error('Ikke innlogget.')
   return userId
 }

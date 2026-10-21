@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient'
+import { signedInUserId, supabase } from './supabaseClient'
 import { listManualItems } from './shoppingList'
 import { normalizeItemName, planWeeklyAdds } from './shoppingAggregate.ts'
 
@@ -11,8 +11,7 @@ export interface StandingItem {
 }
 
 async function currentUserId(): Promise<string> {
-  const { data } = await supabase.auth.getUser()
-  const userId = data.user?.id
+  const userId = await signedInUserId()
   if (!userId) throw new Error('Ikke innlogget.')
   return userId
 }

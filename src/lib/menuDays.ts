@@ -1,13 +1,13 @@
-import { supabase } from './supabaseClient'
+import { signedInUserId, supabase } from './supabaseClient'
 import type { MenuDay } from '../types'
 import { dayContent } from './menuSwap'
 import type { MenuDayDishes } from './menuDishes'
 import { isMissingTable } from './shoppingList'
 import { currentWeekStart } from './menuWeeks'
+import { rememberMenuDays } from './menuCache'
 
 async function currentUserId(): Promise<string> {
-  const { data } = await supabase.auth.getUser()
-  const userId = data.user?.id
+  const userId = await signedInUserId()
   if (!userId) throw new Error('Ikke innlogget.')
   return userId
 }
@@ -15,7 +15,8 @@ async function currentUserId(): Promise<string> {
 // Familiens ukesmeny når familyId er satt, ellers den innloggede brukerens
 // egen personlige ukesmeny (family_id NULL, scopet på owner_id) — speiler
 // listCollections i src/lib/collections.ts. week er mandagen i uken
-// (standard: denne uken); null gir alle uker.
+// (standard: denne uken); null gir alle uker. En hentet uke huskes i
+// menuCache, så den kan vises med en gang neste gang.
 export async function listMenuDays(
   familyId: string | null,
   week: string | null = currentWeekStart()
@@ -24,7 +25,9 @@ export async function listMenuDays(
   const all = owner(supabase.from('menu_days').select('*'))
   const { data, error } = await (week ? all.eq('week_start', week) : all).order('weekday', { ascending: true })
   if (error) throw error
-  return data ?? []
+  const days = data ?? []
+  if (week) rememberMenuDays(familyId, week, days)
+  return days
 }
 
 // Dagene i ukene fra og med from til og med to (mandager).

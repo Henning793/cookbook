@@ -15,6 +15,8 @@ import { capitalizeFirst, capitalizeIngredients, normalizeIngredients } from '..
 import { getMyMembership, getMyFamily, listMembers } from '../lib/families'
 import { listIncomingShares, listOutgoingShares } from '../lib/shares'
 import { readCookingSession, writeCookingSession, type CookingSession } from '../lib/cookingSession'
+import { clearMenuCache } from '../lib/menuCache'
+import { clearSupabaseCache, removeLegacyCache } from '../lib/offlineCache'
 import type { Family, FamilyMember, FamilyRole, FamilyShare, Profile, Recipe } from '../types'
 
 interface Filters {
@@ -64,7 +66,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .then(({ data }) => setSession(data.session))
       .finally(() => setSessionLoading(false))
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    removeLegacyCache()
+
+    const { data: listener } = supabase.auth.onAuthStateChange((event, newSession) => {
+      if (event === 'SIGNED_OUT') clearSupabaseCache()
       setSession(newSession)
       setSessionLoading(false)
     })
@@ -160,8 +165,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  // Familien lastes på nytt bare når en annen bruker logger inn, ikke hver
+  // gang innloggingen fornyes (f.eks. når appen kommer tilbake fra bakgrunnen).
+  const sessionUserId = session?.user.id ?? null
   useEffect(() => {
-    if (session) {
+    clearMenuCache()
+    if (sessionUserId) {
       loadFamily()
     } else {
       familyLoadGeneration.current += 1
@@ -172,7 +181,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setOutgoingShares([])
       setFamilyLoading(false)
     }
-  }, [session, loadFamily])
+  }, [sessionUserId, loadFamily])
 
   const availableTags = useMemo(
     () => [...new Set([...TAGS, ...recipes.flatMap((recipe) => recipe.tags)])],

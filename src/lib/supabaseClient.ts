@@ -28,3 +28,13 @@ export function clearRecoveryLink() {
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+
+// Den innloggede brukerens id, lest fra innloggingen som er lagret i appen.
+// getUser() ville spurt innloggingsserveren på nytt hver gang og lagt et
+// ekstra nettverkskall foran spørringen. Det er trygt å bruke den lagrede:
+// tilgangsreglene i databasen sjekker uansett auth.uid() fra billetten, så
+// id-en her er bare et filter.
+export async function signedInUserId(): Promise<string | null> {
+  const { data } = await supabase.auth.getSession()
+  return data.session?.user.id ?? null
+}
