@@ -77,12 +77,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => listener.subscription.unsubscribe()
   }, [])
 
+  const recipeLoadGeneration = useRef(0)
+
   const loadRecipes = useCallback(async () => {
+    const generation = ++recipeLoadGeneration.current
     setLoading(true)
     const { data, error } = await supabase
       .from('recipes')
       .select('*')
       .order('created_at', { ascending: false })
+    // Et svar som kom etter at en annen bruker logget inn (eller ut) er utdatert.
+    if (generation !== recipeLoadGeneration.current) return
 
     if (!error && data) {
       // Fallback til [] hvis databasen ikke har fått tags-kolonnen ennå
@@ -105,18 +110,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setLoading(false)
   }, [])
 
+  // Oppskriftene og profilene hentes på nytt når en annen bruker logger inn
+  // eller ut. Tilgangsreglene gir bare oppskrifter til innloggede, så en
+  // henting gjort før innloggingen ga en tom liste som ble stående til
+  // siden ble lastet på nytt.
+  const recipesUserId = session?.user.id ?? null
   useEffect(() => {
+    if (sessionLoading) return
+    if (!recipesUserId) {
+      recipeLoadGeneration.current += 1
+      setAllRecipes([])
+      setProfiles([])
+      setLoading(false)
+      return
+    }
+
     loadRecipes()
 
+    let cancelled = false
     supabase
       .from('profiles')
       .select('*')
       .then(({ data, error }) => {
-        if (!error && data) {
+        if (!cancelled && !error && data) {
           setProfiles(data)
         }
       })
-  }, [loadRecipes])
+    return () => {
+      cancelled = true
+    }
+  }, [sessionLoading, recipesUserId, loadRecipes])
 
   const recipes = useMemo(() => allRecipes.filter((recipe) => recipe.kind === 'recipe'), [allRecipes])
   const techniques = useMemo(() => allRecipes.filter((recipe) => recipe.kind === 'technique'), [allRecipes])
