@@ -3,16 +3,7 @@
 // migreringen er kjørt brukes standardvalget.
 import { signedInUserId, supabase } from './supabaseClient'
 import { isMissingTable } from './shoppingList'
-import { listMenuDaysBetween } from './menuDays'
-import {
-  DEFAULT_SHOPPING_RANGE,
-  daysInRange,
-  isShoppingRange,
-  rangeEnd,
-  rangeWeeks,
-  type ShoppingRange,
-} from './shoppingRange'
-import type { MenuDay } from '../types'
+import { DEFAULT_SHOPPING_RANGE, isShoppingRange, type ShoppingRange } from './shoppingRange'
 
 export async function getShoppingRange(): Promise<ShoppingRange> {
   const userId = await signedInUserId()
@@ -36,15 +27,4 @@ export async function setShoppingRange(range: ShoppingRange): Promise<void> {
     .from('shopping_preferences')
     .upsert({ user_id: userId, range, updated_at: new Date().toISOString() })
   if (error) throw error
-}
-
-// Dagene i ukesmenyen som handlelisten tar med for valget range.
-export async function listMenuDaysInRange(
-  familyId: string | null,
-  range: ShoppingRange
-): Promise<{ end: string; days: MenuDay[] }> {
-  const { from, to } = rangeWeeks(range)
-  const end = rangeEnd(range)
-  const days = await listMenuDaysBetween(familyId, from, to)
-  return { end, days: daysInRange(days, end) }
 }

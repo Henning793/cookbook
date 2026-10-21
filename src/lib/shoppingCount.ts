@@ -2,32 +2,16 @@
 // Samme utregning som handlelisten selv: ukesmenyens ingredienser i perioden
 // personen har valgt, uten «har alltid hjemme» og det som er krysset av,
 // pluss egne varer som ikke er krysset av.
-import {
-  aggregateIngredients,
-  applyChecks,
-  listCheckedItems,
-  listManualItems,
-  removeAlwaysHome,
-} from './shoppingList'
-import { getShoppingRange, listMenuDaysInRange } from './shoppingPreferences'
-import { rangeEnd } from './shoppingRange'
-import { listStandingItems } from './standingItems'
-import type { Recipe } from '../types'
+// Ren logikk uten supabase-import, så den kan testes med node --test.
+import { aggregateIngredients, applyChecks, removeAlwaysHome } from './shoppingAggregate.ts'
+import { rangeEnd } from './shoppingRange.ts'
+import type { ShoppingData } from './shoppingCache.ts'
+import type { Recipe } from '../types.ts'
 
-export async function countShoppingItemsLeft(familyId: string | null, recipes: Recipe[]): Promise<number> {
-  const range = await getShoppingRange()
-  const [{ days }, checkedRows, manualItems, alwaysHome] = await Promise.all([
-    listMenuDaysInRange(familyId, range),
-    listCheckedItems(familyId),
-    listManualItems(familyId),
-    listStandingItems(familyId, 'always_home'),
-  ])
-  const aggregated = removeAlwaysHome(
-    aggregateIngredients(days, recipes),
-    new Set(alwaysHome.map((i) => i.normalized_name))
-  )
-  const uncheckedCount = applyChecks(aggregated, checkedRows, days, recipes, rangeEnd('week')).filter(
+export function countShoppingItemsLeft(data: ShoppingData, recipes: Recipe[]): number {
+  const aggregated = removeAlwaysHome(aggregateIngredients(data.days, recipes), new Set(data.alwaysHome))
+  const uncheckedCount = applyChecks(aggregated, data.checked, data.days, recipes, rangeEnd('week')).filter(
     (item) => !item.checked
   ).length
-  return uncheckedCount + manualItems.filter((m) => !m.checked).length
+  return uncheckedCount + data.manualItems.filter((m) => !m.checked).length
 }

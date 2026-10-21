@@ -11,7 +11,6 @@ import {
   removeAlwaysHome,
   ingredientKey,
   listCheckedItems,
-  deleteOldChecks,
   setItemChecked,
   setItemUnchecked,
   clearCheckedItems,
@@ -28,12 +27,12 @@ import {
   type ManualItem,
   type ShoppingRow,
 } from '../lib/shoppingList'
-import { listStandingItems } from '../lib/standingItems'
-import { getShoppingRange, listMenuDaysInRange } from '../lib/shoppingPreferences'
+import { cachedShopping, type ShoppingData } from '../lib/shoppingCache'
+import { loadShoppingData, rememberShoppingData } from '../lib/shoppingLoad'
 import { rangeEnd, rangeEndLabel, rangeLabel, shortDayLabel, DEFAULT_SHOPPING_RANGE } from '../lib/shoppingRange'
 import { sortShoppingItems } from '../lib/shoppingSort'
 import { Login } from '../components/Login'
-import type { MenuDay } from '../types'
+import type { MenuDay, Recipe } from '../types'
 
 function formatAmount(amount: number | null, unit: string): string {
   if (amount === null) return unit
@@ -48,23 +47,35 @@ type Editing = { kind: 'recipe'; key: string } | { kind: 'manual'; id: string }
 
 export function HandlelistePage() {
   const navigate = useNavigate()
-  const { session, family, familyLoading, recipes } = useApp()
+  const { session, family, familyLoading, recipes, loading: recipesLoading } = useApp()
   const familyId = family?.id ?? null
+  const userId = session?.user.id ?? null
+  // Listen sist den ble hentet, så den kan vises med en gang (se
+  // shoppingCache.ts). Før familien er lastet brukes den siste brukeren så.
+  const [cached] = useState(() =>
+    userId ? cachedShopping(localStorage, userId, familyLoading ? undefined : familyId, currentWeekStart()) : undefined
+  )
 
-  const [menuDays, setMenuDays] = useState<MenuDay[]>([])
-  const [range, setRange] = useState(DEFAULT_SHOPPING_RANGE)
-  const [end, setEnd] = useState(() => rangeEnd(DEFAULT_SHOPPING_RANGE))
-  const [checked, setChecked] = useState<CheckedItem[]>([])
-  const [manualItems, setManualItems] = useState<ManualItem[]>([])
-  const [overrides, setOverrides] = useState<ItemOverride[]>([])
+  const [menuDays, setMenuDays] = useState<MenuDay[]>(cached?.days ?? [])
+  const [range, setRange] = useState(cached?.range ?? DEFAULT_SHOPPING_RANGE)
+  const [end, setEnd] = useState(() => cached?.end ?? rangeEnd(DEFAULT_SHOPPING_RANGE))
+  const [checked, setChecked] = useState<CheckedItem[]>(cached?.checked ?? [])
+  const [manualItems, setManualItems] = useState<ManualItem[]>(cached?.manualItems ?? [])
+  const [overrides, setOverrides] = useState<ItemOverride[]>(cached?.overrides ?? [])
+  // Oppskriftene fra forrige gang, til listen kan regnes ut før alle
+  // oppskriftene er hentet når appen starter.
+  const [cachedRecipes, setCachedRecipes] = useState<Recipe[]>(cached?.recipes ?? [])
+  // Hvilken bruker og familie listen som vises nå er hentet for. Bare den
+  // huskes når den endres her, ikke en liste vist før familien var lastet.
+  const shownFor = useRef<string | null>(null)
   const [editing, setEditing] = useState<Editing | null>(null)
   const [editName, setEditName] = useState('')
   const [editAmount, setEditAmount] = useState('')
   const editingRef = useRef<Editing | null>(null)
   const editValues = useRef({ name: '', amount: '' })
   const editTimer = useRef<number | undefined>(undefined)
-  const [alwaysHomeNames, setAlwaysHomeNames] = useState<Set<string>>(new Set())
-  const [loading, setLoading] = useState(true)
+  const [alwaysHomeNames, setAlwaysHomeNames] = useState<Set<string>>(() => new Set(cached?.alwaysHome))
+  const [loading, setLoading] = useState(!cached)
   // Ny linje nederst i Egne varer som lagres mens man skriver. `key` gir et
   // nytt felt for hver vare, `savedId` er raden den er lagret som så langt.
   const [draft, setDraft] = useState<{ key: number; name: string; savedId: string | null } | null>(null)
@@ -83,40 +94,66 @@ export function HandlelistePage() {
   // Varer der man har trykket på mengden for å se hvilke dager den kommer fra.
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set())
 
+  function showData(data: ShoppingData) {
+    setRange(data.range)
+    setEnd(data.end)
+    setMenuDays(data.days)
+    setChecked(data.checked)
+    setManualItems(data.manualItems)
+    setOverrides(data.overrides)
+    setAlwaysHomeNames(new Set(data.alwaysHome))
+    setLoading(false)
+  }
+
+  // Viser listen fra forrige gang med en gang, og henter den på nytt i
+  // bakgrunnen.
   useEffect(() => {
-    if (familyLoading || !session) return
-    const loadRange = getShoppingRange().then(async (chosen) => ({
-      chosen,
-      ...(await listMenuDaysInRange(familyId, chosen)),
-    }))
-    const loadChecks = deleteOldChecks(familyId, currentWeekStart())
-      .catch((error) => console.error('Kunne ikke rydde gamle avkrysninger', error))
-      .then(() => listCheckedItems(familyId))
-    Promise.all([
-      loadRange,
-      loadChecks,
-      listManualItems(familyId),
-      listStandingItems(familyId, 'always_home'),
-      listOverrides(familyId),
-    ]).then(
-      ([period, checkedRows, manual, alwaysHome, overrideRows]) => {
-        setRange(period.chosen)
-        setEnd(period.end)
-        setMenuDays(period.days)
-        setChecked(checkedRows)
-        setManualItems(manual)
-        setOverrides(overrideRows)
-        setAlwaysHomeNames(new Set(alwaysHome.map((i) => i.normalized_name)))
-        setLoading(false)
-      }
+    if (familyLoading || !userId) return
+    const key = `${userId}:${familyId ?? 'meg'}`
+    const fromCache = cachedShopping(localStorage, userId, familyId, currentWeekStart())
+    if (fromCache && shownFor.current !== key) {
+      showData(fromCache)
+      setCachedRecipes(fromCache.recipes)
+      shownFor.current = key
+    } else if (!fromCache && shownFor.current !== key) {
+      setLoading(true)
+    }
+    let cancelled = false
+    loadShoppingData(userId, familyId, null)
+      .then((data) => {
+        if (cancelled) return
+        showData(data)
+        shownFor.current = key
+      })
+      .catch((error) => {
+        console.error('Kunne ikke laste handlelisten', error)
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [userId, familyId, familyLoading])
+
+  // Endringer gjort her (avkrysninger, egne varer) huskes til neste gang.
+  useEffect(() => {
+    if (loading || familyLoading || !userId || shownFor.current !== `${userId}:${familyId ?? 'meg'}`) return
+    rememberShoppingData(
+      userId,
+      familyId,
+      { range, end, days: menuDays, checked, manualItems, overrides, alwaysHome: [...alwaysHomeNames] },
+      recipesLoading ? null : recipes
     )
-  }, [familyId, familyLoading])
+  }, [loading, familyLoading, userId, familyId, range, end, menuDays, checked, manualItems, overrides, alwaysHomeNames, recipes, recipesLoading])
+
+  // Mens oppskriftene hentes regnes listen ut fra dem som ble husket.
+  const listRecipes = recipesLoading ? cachedRecipes : recipes
+  const waitingForRecipes = recipesLoading && cachedRecipes.length === 0 && menuDays.length > 0
 
   // Avkrysninger uten dato (fra før perioder fantes) gjelder ut denne uken.
   const aggregated = useMemo(() => {
-    const items = removeAlwaysHome(aggregateIngredients(menuDays, recipes), alwaysHomeNames)
-    return applyOverrides(applyChecks(items, checked, menuDays, recipes, rangeEnd('week')), overrides)
-  }, [menuDays, recipes, alwaysHomeNames, checked, overrides])
+    const items = removeAlwaysHome(aggregateIngredients(menuDays, listRecipes), alwaysHomeNames)
+    return applyOverrides(applyChecks(items, checked, menuDays, listRecipes, rangeEnd('week')), overrides)
+  }, [menuDays, listRecipes, alwaysHomeNames, checked, overrides])
 
   const sortedAggregated = useMemo(() => {
     return sortShoppingItems(aggregated, (item) => item.displayName, (item) => item.checked)
@@ -415,7 +452,7 @@ export function HandlelistePage() {
       </button>
       <p className="oppskrift-description">{itemsLeft} varer igjen</p>
 
-      {loading ? (
+      {loading || waitingForRecipes ? (
         <p className="status-message">Laster handleliste...</p>
       ) : (
         <>
