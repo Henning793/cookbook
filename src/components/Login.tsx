@@ -17,6 +17,8 @@ export function Login() {
   const [passwordConfirm, setPasswordConfirm] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [captchaToken, setCaptchaToken] = useState<string | null>(null)
+  // Øker for å be robotsjekken om et nytt svar (se newCaptcha).
+  const [captchaRound, setCaptchaRound] = useState(0)
   const [status, setStatus] = useState<'idle' | 'sending' | 'error' | 'sent'>('idle')
   const [errorMessage, setErrorMessage] = useState('')
 
@@ -31,6 +33,19 @@ export function Login() {
     setStatus('idle')
     setErrorMessage('')
     setCaptchaToken(null)
+  }
+
+  // Et svar fra robotsjekken kan bare brukes én gang. Etter hvert forsøk,
+  // også et med feil passord, må sjekken kjøres på nytt; ellers avviser
+  // Supabase neste forsøk selv om passordet er riktig.
+  function newCaptcha() {
+    setCaptchaToken(null)
+    setCaptchaRound((round) => round + 1)
+  }
+
+  // Sant når Supabase avviste robotsjekken, så meldingen ikke sier feil passord.
+  function captchaFailed(error: { code?: string }): boolean {
+    return error.code === 'captcha_failed'
   }
 
   async function handleLogin(e: FormEvent) {
@@ -56,8 +71,9 @@ export function Login() {
     })
 
     if (error) {
+      newCaptcha()
       setStatus('error')
-      setErrorMessage('Feil e-post eller passord')
+      setErrorMessage(captchaFailed(error) ? 'Robotsjekken gikk ut. Prøv igjen.' : 'Feil e-post eller passord')
       return
     }
 
@@ -80,6 +96,7 @@ export function Login() {
       redirectTo: window.location.origin + RESET_PASSWORD_PATH,
       captchaToken,
     })
+    newCaptcha()
 
     if (error) {
       setStatus('error')
@@ -115,6 +132,7 @@ export function Login() {
       password,
       options: { captchaToken },
     })
+    newCaptcha()
 
     if (error) {
       setStatus('error')
@@ -177,7 +195,7 @@ export function Login() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
-        <TurnstileWidget onVerify={setCaptchaToken} onExpire={() => setCaptchaToken(null)} />
+        <TurnstileWidget round={captchaRound} onVerify={setCaptchaToken} onExpire={() => setCaptchaToken(null)} />
         <button type="submit" disabled={status === 'sending'}>
           {status === 'sending' ? 'Sender...' : 'Send lenke'}
         </button>
@@ -230,7 +248,7 @@ export function Login() {
           value={passwordConfirm}
           onChange={(e) => setPasswordConfirm(e.target.value)}
         />
-        <TurnstileWidget onVerify={setCaptchaToken} onExpire={() => setCaptchaToken(null)} />
+        <TurnstileWidget round={captchaRound} onVerify={setCaptchaToken} onExpire={() => setCaptchaToken(null)} />
         <button type="submit" disabled={status === 'sending'}>
           {status === 'sending' ? 'Oppretter konto...' : 'Opprett konto'}
         </button>
@@ -265,7 +283,7 @@ export function Login() {
       <button type="button" className="forgot-link" onClick={() => switchMode('forgot')}>
         Glemt passord?
       </button>
-      <TurnstileWidget onVerify={setCaptchaToken} onExpire={() => setCaptchaToken(null)} />
+      <TurnstileWidget round={captchaRound} onVerify={setCaptchaToken} onExpire={() => setCaptchaToken(null)} />
       <button type="submit" disabled={status === 'sending'}>
         {status === 'sending' ? 'Logger inn...' : 'Logg inn'}
       </button>

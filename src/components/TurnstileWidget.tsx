@@ -42,13 +42,15 @@ function loadTurnstileScript(): Promise<void> {
 }
 
 interface TurnstileWidgetProps {
+  // Når tallet endres, nullstilles sjekken og gir et nytt svar.
+  round?: number
   onVerify: (token: string) => void
   onExpire?: () => void
 }
 
 // Cloudflare Turnstile - menneske-verifikasjon ved registrering (se README
 // for hvordan man oppretter en gratis widget og henter site key/secret key).
-export function TurnstileWidget({ onVerify, onExpire }: TurnstileWidgetProps) {
+export function TurnstileWidget({ round = 0, onVerify, onExpire }: TurnstileWidgetProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const widgetIdRef = useRef<string | null>(null)
   const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined
@@ -74,6 +76,12 @@ export function TurnstileWidget({ onVerify, onExpire }: TurnstileWidgetProps) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [siteKey])
+
+  useEffect(() => {
+    if (round > 0 && widgetIdRef.current && window.turnstile) {
+      window.turnstile.reset(widgetIdRef.current)
+    }
+  }, [round])
 
   if (!siteKey) {
     return (
