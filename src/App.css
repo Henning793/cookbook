@@ -1758,6 +1758,13 @@
   box-shadow: none;
 }
 
+.profil-row-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .profil-row-value {
   color: var(--color-neutral-700);
 }

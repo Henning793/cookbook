@@ -10,7 +10,7 @@ const OFFLINE_CACHE_NAME = 'supabase-cache'
 
 export function ProfilPage() {
   const navigate = useNavigate()
-  const { session, recipes, profiles, availableTags, members } = useApp()
+  const { session, recipes, profiles, availableTags, members, family, familyLoading } = useApp()
 
   const [offlineCount, setOfflineCount] = useState(0)
   // Raden «Installer appen» vises bare når appen kjører i en nettleser som
@@ -68,6 +68,11 @@ export function ProfilPage() {
   const name = profile?.display_name ?? session.user.email ?? 'Du'
   const initial = name.charAt(0).toUpperCase()
 
+  // Raden viser navnet på gruppen man er med i, eller «Opprett gruppe» uten
+  // gruppe (gruppesiden viser da skjemaet for å opprette en). Mens gruppen
+  // lastes står det «Gruppe», så raden ikke blinker «Opprett gruppe».
+  const groupRowLabel = family ? family.name : familyLoading ? 'Gruppe' : 'Opprett gruppe'
+
   const usedTags = new Set(recipes.flatMap((recipe) => recipe.tags))
   const collectionCount = availableTags.filter((tag) => usedTags.has(tag)).length
 
@@ -121,7 +126,7 @@ export function ProfilPage() {
           </span>
         </button>
         <button type="button" className="profil-row profil-row-button" onClick={() => navigate('/familie')}>
-          <span>Gruppe</span>
+          <span className="profil-row-label">{groupRowLabel}</span>
           <span className="profil-row-chevron" aria-hidden="true">
             <ChevronRight size={14} strokeWidth={2.75} />
           </span>
