@@ -100,10 +100,6 @@ export function ProfilPage() {
             <ChevronRight size={14} strokeWidth={2.75} />
           </span>
         </button>
-        <div className="profil-row">
-          <span>Behold skjermen på i kokemodus</span>
-          <span className="profil-row-value profil-row-value-on">På</span>
-        </div>
         {installMethod !== 'none' && (
           <button type="button" className="profil-row profil-row-button" onClick={install}>
             <span>Installer appen</span>
