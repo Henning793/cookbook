@@ -83,6 +83,14 @@ export function HandlelistePage() {
   const draftRef = useRef(draft)
   const draftCount = useRef(0)
   const draftTimer = useRef<number | undefined>(undefined)
+  // Raden hver linje er lagret som, så lagringen av en linje man har gått
+  // videre fra ikke trenger draftRef.
+  const draftSavedIds = useRef(new Map<number, string>())
+  // Linjer man har gått videre fra, vist til de er lagret og ligger i listen.
+  const [finishing, setFinishing] = useState<{ key: number; name: string }[]>([])
+  // Telles opp for hver lagring av en ny linje, så en henting som startet før
+  // ikke viser en liste uten varen.
+  const manualWrites = useRef(0)
   // Lagringene går én og én, så en vare aldri blir opprettet to ganger.
   const saveChain = useRef<Promise<void>>(Promise.resolve())
   const draftInput = useRef<HTMLInputElement>(null)
@@ -119,11 +127,19 @@ export function HandlelistePage() {
       setLoading(true)
     }
     let cancelled = false
+    const writesAtStart = manualWrites.current
     loadShoppingData(userId, familyId, null)
       .then((data) => {
         if (cancelled) return
         showData(data)
         shownFor.current = key
+        // Varer lagt til mens listen ble hentet mangler i svaret: hent dem på
+        // nytt etter lagringene.
+        if (manualWrites.current !== writesAtStart) {
+          saveChain.current = saveChain.current.then(async () => {
+            if (!cancelled) setManualItems(await listManualItems(familyId))
+          })
+        }
       })
       .catch((error) => {
         console.error('Kunne ikke laste handlelisten', error)
@@ -305,20 +321,25 @@ export function HandlelistePage() {
 
   // Lagrer det som står i den nye linjen nå: oppretter varen første gang,
   // gir den nytt navn etterpå, og sletter den igjen hvis feltet tømmes.
+  // Teksten tas med en gang, så den lagres selv om man har startet en ny
+  // linje før lagringen kommer til.
   function saveDraft(key: number) {
     window.clearTimeout(draftTimer.current)
+    const current = draftRef.current
+    if (!current || current.key !== key) return
+    const name = current.name.trim()
+    manualWrites.current++
     saveChain.current = saveChain.current
       .then(async () => {
-        const current = draftRef.current
-        if (!current || current.key !== key) return
-        const name = current.name.trim()
-        let savedId = current.savedId
+        let savedId = draftSavedIds.current.get(key) ?? null
         if (!savedId && name) savedId = await addManualItem(familyId, name)
         else if (savedId && name) await renameManualItem(savedId, name)
         else if (savedId && !name) {
           await deleteManualItem(savedId)
           savedId = null
         }
+        if (savedId) draftSavedIds.current.set(key, savedId)
+        else draftSavedIds.current.delete(key)
         setDraft((d) => (d && d.key === key ? { ...d, savedId } : d))
         draftRef.current = draftRef.current?.key === key ? { ...draftRef.current, savedId } : draftRef.current
       })
@@ -330,14 +351,22 @@ export function HandlelistePage() {
   // ny linje man allerede har startet på.
   function finishDraft(key = draftRef.current?.key) {
     if (key === undefined || draftRef.current?.key !== key) return
+    const name = draftRef.current.name.trim()
     saveDraft(key)
-    saveChain.current = saveChain.current.then(async () => {
-      setManualItems(await listManualItems(familyId))
-      if (draftRef.current?.key === key) {
-        draftRef.current = null
-        setDraft(null)
-      }
-    })
+    if (name) setFinishing((list) => [...list, { key, name }])
+    saveChain.current = saveChain.current
+      .then(async () => {
+        setManualItems(await listManualItems(familyId))
+      })
+      .catch((error) => console.error('Kunne ikke hente egne varer', error))
+      .finally(() => {
+        setFinishing((list) => list.filter((line) => line.key !== key))
+        draftSavedIds.current.delete(key)
+        if (draftRef.current?.key === key) {
+          draftRef.current = null
+          setDraft(null)
+        }
+      })
   }
 
   function startDraft() {
@@ -345,6 +374,15 @@ export function HandlelistePage() {
     const next = { key: ++draftCount.current, name: '', savedId: null }
     draftRef.current = next
     setDraft(next)
+  }
+
+  // Enter starter en ny linje. Tastaturknappen er en vanlig Enter: med
+  // enterKeyHint="next" flytter Chrome på Android fokus i stedet for å sende
+  // Enter, og da kom det ingen ny linje.
+  function handleDraftKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key !== 'Enter') return
+    event.preventDefault()
+    if (draftRef.current?.name.trim()) startDraft()
   }
 
   function handleDraftChange(name: string) {
@@ -359,7 +397,9 @@ export function HandlelistePage() {
 
   // Den nye linjen legges nederst blant varene som ikke er krysset av,
   // over de avkryssede (de ligger alltid sist, se sortShoppingItems).
-  const visibleManual = sortedManual.filter((item) => item.id !== draft?.savedId)
+  const hiddenIds = new Set(finishing.map((line) => draftSavedIds.current.get(line.key)))
+  if (draft?.savedId) hiddenIds.add(draft.savedId)
+  const visibleManual = sortedManual.filter((item) => !hiddenIds.has(item.id))
   const firstChecked = visibleManual.findIndex((item) => item.checked)
   const draftIndex = firstChecked === -1 ? visibleManual.length : firstChecked
 
@@ -556,6 +596,14 @@ export function HandlelistePage() {
           <p className="handleliste-hint">Blir stående til du trykker «Fjern avkryssede»</p>
           <div className="handleliste-rows">
             {visibleManual.slice(0, draftIndex).map(renderManualRow)}
+            {finishing.map((line) => (
+              <div className="handleliste-row-group" key={`ny-${line.key}`}>
+                <div className="handleliste-row">
+                  <span className="handleliste-checkbox" aria-hidden="true" />
+                  <span className="handleliste-name">{line.name}</span>
+                </div>
+              </div>
+            ))}
             {draft && (
               <div className="handleliste-row-group">
                 <div className="handleliste-row handleliste-draft-row">
@@ -567,17 +615,12 @@ export function HandlelistePage() {
                     aria-label="Ny vare"
                     placeholder="Ny vare"
                     autoFocus
-                    enterKeyHint="next"
+                    enterKeyHint="enter"
                     value={draft.name}
                     ref={draftInput}
                     onChange={(e) => handleDraftChange(e.target.value)}
                     onBlur={() => finishDraft(draft.key)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault()
-                        if (draft.name.trim()) startDraft()
-                      }
-                    }}
+                    onKeyDown={handleDraftKeyDown}
                   />
                 </div>
               </div>

@@ -53,6 +53,11 @@ export function FasteVarerPage() {
   const draftRef = useRef(draft)
   const draftCount = useRef(0)
   const draftTimer = useRef<number | undefined>(undefined)
+  // Raden hver linje er lagret som, så lagringen av en linje man har gått
+  // videre fra ikke trenger draftRef.
+  const draftSavedIds = useRef(new Map<number, string>())
+  // Linjer man har gått videre fra, vist til de er lagret og ligger i listen.
+  const [finishing, setFinishing] = useState<{ key: number; kind: StandingKind; name: string }[]>([])
   // Lagringene går én og én, så en vare aldri blir opprettet to ganger.
   const saveChain = useRef<Promise<void>>(Promise.resolve())
   const draftInput = useRef<HTMLInputElement>(null)
@@ -129,20 +134,25 @@ export function FasteVarerPage() {
 
   // Lagrer det som står i den nye linjen nå: oppretter varen første gang,
   // gir den nytt navn etterpå, og sletter den igjen hvis feltet tømmes.
+  // Teksten tas med en gang, så den lagres selv om man har startet en ny
+  // linje før lagringen kommer til.
   function saveDraft(key: number) {
     window.clearTimeout(draftTimer.current)
+    const current = draftRef.current
+    if (!current || current.key !== key) return
+    const { kind } = current
+    const name = current.name.trim()
     saveChain.current = saveChain.current
       .then(async () => {
-        const current = draftRef.current
-        if (!current || current.key !== key) return
-        const name = current.name.trim()
-        let savedId = current.savedId
-        if (!savedId && name) savedId = await addStandingItem(familyId, current.kind, name)
+        let savedId = draftSavedIds.current.get(key) ?? null
+        if (!savedId && name) savedId = await addStandingItem(familyId, kind, name)
         else if (savedId && name) await renameStandingItem(savedId, name)
         else if (savedId && !name) {
           await removeStandingItem(savedId)
           savedId = null
         }
+        if (savedId) draftSavedIds.current.set(key, savedId)
+        else draftSavedIds.current.delete(key)
         setError('')
         setDraft((d) => (d && d.key === key ? { ...d, savedId } : d))
         draftRef.current = draftRef.current?.key === key ? { ...draftRef.current, savedId } : draftRef.current
@@ -155,18 +165,33 @@ export function FasteVarerPage() {
   // ny linje man allerede har startet på.
   function finishDraft(key = draftRef.current?.key) {
     if (key === undefined || draftRef.current?.key !== key) return
-    const kind = draftRef.current.kind
+    const { kind } = draftRef.current
+    const name = draftRef.current.name.trim()
     saveDraft(key)
+    if (name) setFinishing((list) => [...list, { key, kind, name }])
     saveChain.current = saveChain.current
       .then(async () => {
         const refreshed = await listStandingItems(familyId, kind)
         setItems((current) => ({ ...current, [kind]: refreshed }))
+      })
+      .catch((err) => setError(errorMessage(err)))
+      .finally(() => {
+        setFinishing((list) => list.filter((line) => line.key !== key))
+        draftSavedIds.current.delete(key)
         if (draftRef.current?.key === key) {
           draftRef.current = null
           setDraft(null)
         }
       })
-      .catch((err) => setError(errorMessage(err)))
+  }
+
+  // Enter starter en ny linje. Tastaturknappen er en vanlig Enter: med
+  // enterKeyHint="next" flytter Chrome på Android fokus i stedet for å sende
+  // Enter, og da kom det ingen ny linje.
+  function handleDraftKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key !== 'Enter') return
+    event.preventDefault()
+    if (draftRef.current?.name.trim()) startDraft()
   }
 
   function startDraft() {
@@ -186,7 +211,10 @@ export function FasteVarerPage() {
     draftTimer.current = window.setTimeout(() => saveDraft(current.key), 600)
   }
 
-  const visibleItems = activeItems.filter((item) => item.id !== draft?.savedId)
+  const activeFinishing = finishing.filter((line) => line.kind === activeKind)
+  const hiddenIds = new Set(finishing.map((line) => draftSavedIds.current.get(line.key)))
+  if (draft?.savedId) hiddenIds.add(draft.savedId)
+  const visibleItems = activeItems.filter((item) => !hiddenIds.has(item.id))
 
   async function handleRemove(id: string) {
     setBusy(true)
@@ -313,6 +341,11 @@ export function FasteVarerPage() {
               </button>
             </div>
           ))}
+          {activeFinishing.map((line) => (
+            <div className="handleliste-row faste-varer-row" key={`ny-${line.key}`}>
+              <span className="handleliste-name">{line.name}</span>
+            </div>
+          ))}
           {draft && draft.kind === activeKind && (
             <div className="handleliste-row faste-varer-row faste-varer-draft-row">
               <input
@@ -322,17 +355,12 @@ export function FasteVarerPage() {
                 aria-label="Ny vare"
                 placeholder="Ny vare"
                 autoFocus
-                enterKeyHint="next"
+                enterKeyHint="enter"
                 value={draft.name}
                 ref={draftInput}
                 onChange={(e) => handleDraftChange(e.target.value)}
                 onBlur={() => finishDraft(draft.key)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    if (draft.name.trim()) startDraft()
-                  }
-                }}
+                onKeyDown={handleDraftKeyDown}
               />
             </div>
           )}
