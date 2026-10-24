@@ -87,7 +87,7 @@ export function HandlelistePage() {
   // videre fra ikke trenger draftRef.
   const draftSavedIds = useRef(new Map<number, string>())
   // Linjer man har gått videre fra, vist til de er lagret og ligger i listen.
-  const [finishing, setFinishing] = useState<{ key: number; name: string }[]>([])
+  const [finishing, setFinishing] = useState<{ key: number; name: string; savedId: string | null }[]>([])
   // Telles opp for hver lagring av en ny linje, så en henting som startet før
   // ikke viser en liste uten varen.
   const manualWrites = useRef(0)
@@ -340,6 +340,7 @@ export function HandlelistePage() {
         }
         if (savedId) draftSavedIds.current.set(key, savedId)
         else draftSavedIds.current.delete(key)
+        setFinishing((list) => list.map((line) => (line.key === key ? { ...line, savedId } : line)))
         setDraft((d) => (d && d.key === key ? { ...d, savedId } : d))
         draftRef.current = draftRef.current?.key === key ? { ...draftRef.current, savedId } : draftRef.current
       })
@@ -353,7 +354,7 @@ export function HandlelistePage() {
     if (key === undefined || draftRef.current?.key !== key) return
     const name = draftRef.current.name.trim()
     saveDraft(key)
-    if (name) setFinishing((list) => [...list, { key, name }])
+    if (name) setFinishing((list) => [...list, { key, name, savedId: draftSavedIds.current.get(key) ?? null }])
     saveChain.current = saveChain.current
       .then(async () => {
         setManualItems(await listManualItems(familyId))
@@ -397,7 +398,7 @@ export function HandlelistePage() {
 
   // Den nye linjen legges nederst blant varene som ikke er krysset av,
   // over de avkryssede (de ligger alltid sist, se sortShoppingItems).
-  const hiddenIds = new Set(finishing.map((line) => draftSavedIds.current.get(line.key)))
+  const hiddenIds = new Set(finishing.map((line) => line.savedId))
   if (draft?.savedId) hiddenIds.add(draft.savedId)
   const visibleManual = sortedManual.filter((item) => !hiddenIds.has(item.id))
   const firstChecked = visibleManual.findIndex((item) => item.checked)

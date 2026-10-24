@@ -57,7 +57,7 @@ export function FasteVarerPage() {
   // videre fra ikke trenger draftRef.
   const draftSavedIds = useRef(new Map<number, string>())
   // Linjer man har gått videre fra, vist til de er lagret og ligger i listen.
-  const [finishing, setFinishing] = useState<{ key: number; kind: StandingKind; name: string }[]>([])
+  const [finishing, setFinishing] = useState<{ key: number; kind: StandingKind; name: string; savedId: string | null }[]>([])
   // Lagringene går én og én, så en vare aldri blir opprettet to ganger.
   const saveChain = useRef<Promise<void>>(Promise.resolve())
   const draftInput = useRef<HTMLInputElement>(null)
@@ -153,6 +153,7 @@ export function FasteVarerPage() {
         }
         if (savedId) draftSavedIds.current.set(key, savedId)
         else draftSavedIds.current.delete(key)
+        setFinishing((list) => list.map((line) => (line.key === key ? { ...line, savedId } : line)))
         setError('')
         setDraft((d) => (d && d.key === key ? { ...d, savedId } : d))
         draftRef.current = draftRef.current?.key === key ? { ...draftRef.current, savedId } : draftRef.current
@@ -168,7 +169,7 @@ export function FasteVarerPage() {
     const { kind } = draftRef.current
     const name = draftRef.current.name.trim()
     saveDraft(key)
-    if (name) setFinishing((list) => [...list, { key, kind, name }])
+    if (name) setFinishing((list) => [...list, { key, kind, name, savedId: draftSavedIds.current.get(key) ?? null }])
     saveChain.current = saveChain.current
       .then(async () => {
         const refreshed = await listStandingItems(familyId, kind)
@@ -212,7 +213,7 @@ export function FasteVarerPage() {
   }
 
   const activeFinishing = finishing.filter((line) => line.kind === activeKind)
-  const hiddenIds = new Set(finishing.map((line) => draftSavedIds.current.get(line.key)))
+  const hiddenIds = new Set(finishing.map((line) => line.savedId))
   if (draft?.savedId) hiddenIds.add(draft.savedId)
   const visibleItems = activeItems.filter((item) => !hiddenIds.has(item.id))
 
