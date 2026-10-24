@@ -1765,15 +1765,6 @@
   white-space: nowrap;
 }
 
-.profil-row-value {
-  color: var(--color-neutral-700);
-}
-
-.profil-row-value-on {
-  color: var(--color-accent-2-700);
-  font-weight: 600;
-}
-
 .profil-row-chevron {
   color: var(--color-neutral-500);
   font-size: 16px;

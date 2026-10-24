@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useApp } from '../context/AppContext'
@@ -6,44 +5,14 @@ import { supabase } from '../lib/supabaseClient'
 import { Login } from '../components/Login'
 import { useInstallApp } from '../components/InstallApp'
 
-const OFFLINE_CACHE_NAME = 'supabase-cache'
-
 export function ProfilPage() {
   const navigate = useNavigate()
   const { session, recipes, profiles, availableTags, members, family, familyLoading } = useApp()
 
-  const [offlineCount, setOfflineCount] = useState(0)
   // Raden «Installer appen» vises bare når appen kjører i en nettleser som
   // kan installere den (se lib/installApp.ts), også etter at banneret på
   // forsiden er lukket.
   const { method: installMethod, install, guide: installGuide } = useInstallApp()
-
-  // Best-effort count of recipe images already cached for offline use. Falls
-  // back to 0 rather than crashing if the Cache API is unavailable or the
-  // cache hasn't been created yet (e.g. first load, nothing browsed yet).
-  useEffect(() => {
-    let cancelled = false
-
-    async function countCachedRecipeImages() {
-      try {
-        const cache = await caches.open(OFFLINE_CACHE_NAME)
-        const requests = await cache.keys()
-        const cachedUrls = requests.map((request) => request.url)
-        const count = recipes.filter(
-          (recipe) => recipe.image_url && cachedUrls.some((url) => url.includes(recipe.image_url as string))
-        ).length
-        if (!cancelled) setOfflineCount(count)
-      } catch {
-        if (!cancelled) setOfflineCount(0)
-      }
-    }
-
-    countCachedRecipeImages()
-
-    return () => {
-      cancelled = true
-    }
-  }, [recipes])
 
   async function handleLogout() {
     await supabase.auth.signOut()
@@ -131,16 +100,6 @@ export function ProfilPage() {
             <ChevronRight size={14} strokeWidth={2.75} />
           </span>
         </button>
-        <div className="profil-row">
-          <span>Behold skjermen på i kokemodus</span>
-          <span className="profil-row-value profil-row-value-on">På</span>
-        </div>
-        <div className="profil-row">
-          <span>Offline-lagring</span>
-          <span className="profil-row-value">
-            {offlineCount} av {recipes.length}
-          </span>
-        </div>
         {installMethod !== 'none' && (
           <button type="button" className="profil-row profil-row-button" onClick={install}>
             <span>Installer appen</span>
