@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { BookOpen, CalendarDays, Plus, ShoppingCart, User, type LucideIcon } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { countShoppingItemsLeft } from '../lib/shoppingCount'
-import { cachedShopping } from '../lib/shoppingCache'
+import { cachedShopping, onShoppingRemembered } from '../lib/shoppingCache'
 import { loadShoppingData } from '../lib/shoppingLoad'
 import { currentWeekStart } from '../lib/menuWeeks'
 
@@ -74,6 +74,18 @@ export function BottomNav() {
       cancelled = true
     }
   }, [visible, userId, family, familyLoading, recipes, recipesLoading, pathname])
+
+  // Endringer på handlelisten (avkrysning, nye varer, «Fjern avkryssede»)
+  // huskes i shoppingCache. Merket teller på nytt fra den med en gang, uten å
+  // vente på neste sidebytte.
+  useEffect(() => {
+    if (!visible || !userId) return
+    return onShoppingRemembered(() => {
+      const familyId = familyLoading ? undefined : (family?.id ?? null)
+      const cached = cachedShopping(localStorage, userId, familyId, currentWeekStart())
+      if (cached) setItemsLeft(countShoppingItemsLeft(cached, recipesLoading ? cached.recipes : recipes))
+    })
+  }, [visible, userId, family, familyLoading, recipes, recipesLoading])
 
   if (!visible) return null
 

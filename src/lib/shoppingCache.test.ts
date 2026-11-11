@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { cachedShopping, clearShoppingCache, recipesForDays, rememberShopping, SHOPPING_CACHE_KEY, type ShoppingSnapshot } from './shoppingCache.ts'
+import { cachedShopping, clearShoppingCache, onShoppingRemembered, recipesForDays, rememberShopping, SHOPPING_CACHE_KEY, type ShoppingSnapshot } from './shoppingCache.ts'
 import type { MenuDay, Recipe } from '../types.ts'
 
 function memoryStore() {
@@ -72,4 +72,18 @@ test('husker bare oppskriftene som er i menyen', () => {
   const day = { weekday: 0, week_start: '2026-10-19', entry_type: 'recipe', recipe_id: 'a', extra_dishes: [{ recipe_id: 'b', servings: null }] } as unknown as MenuDay
   const ids = recipesForDays([day], [recipe('a'), recipe('b'), recipe('c')]).map((r) => r.id)
   assert.deepEqual(ids.sort(), ['a', 'b'])
+})
+
+test('onShoppingRemembered is called each time the list is remembered, until unsubscribed', () => {
+  const store = memoryStore()
+  let calls = 0
+  const stop = onShoppingRemembered(() => {
+    calls++
+  })
+  rememberShopping(store, 'u1', null, '2026-11-09', snapshot)
+  rememberShopping(store, 'u1', null, '2026-11-09', { ...snapshot, manualItems: [] })
+  assert.equal(calls, 2)
+  stop()
+  rememberShopping(store, 'u1', null, '2026-11-09', snapshot)
+  assert.equal(calls, 2)
 })

@@ -41,6 +41,17 @@ type Store = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
 
 let memory: Entry | null = null
 
+// Varsles hver gang listen huskes, så merket i bunnmenyen kan telle på nytt
+// med en gang en vare krysses av, legges til eller fjernes.
+const listeners = new Set<() => void>()
+
+export function onShoppingRemembered(listener: () => void): () => void {
+  listeners.add(listener)
+  return () => {
+    listeners.delete(listener)
+  }
+}
+
 function readStored(store: Store): Entry | null {
   try {
     const parsed = JSON.parse(store.getItem(SHOPPING_CACHE_KEY) ?? 'null')
@@ -77,6 +88,7 @@ export function rememberShopping(
   } catch {
     // Full eller blokkert lagring: listen huskes da bare i minnet.
   }
+  for (const listener of listeners) listener()
 }
 
 export function clearShoppingCache(store: Store): void {
