@@ -559,9 +559,6 @@ export function HandlelistePage() {
                           >
                             <span className={`handleliste-name${isChecked ? ' handleliste-name-checked' : ''}`}>
                               {item.displayName}
-                              {item.extra && (
-                                <span className="handleliste-extra">+{formatAmount(item.amount, item.unit)}</span>
-                              )}
                             </span>
                           </button>
                           <button
