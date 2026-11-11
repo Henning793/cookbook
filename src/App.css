@@ -4407,17 +4407,6 @@ body.has-bottom-nav .ukesmeny-notice {
   color: var(--color-accent-700);
 }
 
-.handleliste-extra {
-  display: inline-block;
-  margin-left: 6px;
-  padding: 3px 7px;
-  border-radius: 999px;
-  background: var(--color-accent-2-100);
-  color: var(--color-accent-2-700);
-  font: 700 11px/1 var(--font-body);
-  vertical-align: 2px;
-}
-
 /* «Hvor langt frem handler du?» på Personaliser handlelisten. */
 .handleliste-range {
   display: flex;
