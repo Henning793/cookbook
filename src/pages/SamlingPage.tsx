@@ -5,6 +5,8 @@ import { useApp } from '../context/AppContext'
 import { UNTAGGED_TAG, UNTAGGED_LABEL } from '../lib/tags'
 import { listRecipeIdsInCollection, getCollection } from '../lib/collections'
 import { DelLenkeDialog } from '../components/DelLenkeDialog'
+import { SwipeToMenuRow } from '../components/SwipeToMenuRow'
+import { AddToMenuSheet } from '../components/AddToMenuSheet'
 import { createShareLink } from '../lib/shares'
 import { isSharedIn } from '../lib/recipePermissions'
 import type { Collection, Recipe } from '../types'
@@ -28,6 +30,8 @@ export function SamlingPage() {
   const [collectionRecipeIds, setCollectionRecipeIds] = useState<string[] | null>(null)
   const [showFamilyShareDialog, setShowFamilyShareDialog] = useState(false)
   const [collection, setCollection] = useState<Collection | null>(null)
+  // Oppskriften som skal legges i ukesmenyen (dra raden mot venstre eller hold inne).
+  const [menuRecipe, setMenuRecipe] = useState<Recipe | null>(null)
 
   const isCollectionRoute = location.pathname.startsWith('/samlinger/')
   const collectionId = params.id
@@ -73,11 +77,11 @@ export function SamlingPage() {
             {collectionRecipes.map((recipe) => {
               const sharedIn = isSharedIn(recipe, session?.user.id ?? '', family?.id ?? null)
               return (
-                <button
-                  type="button"
+                <SwipeToMenuRow
                   key={recipe.id}
-                  className="samling-recipe-row"
+                  title={recipe.title}
                   onClick={() => navigate(`/oppskrift/${recipe.id}`)}
+                  onAddToMenu={() => setMenuRecipe(recipe)}
                 >
                   <span className="samling-recipe-title">{recipe.title}</span>
                   {sharedIn && (
@@ -91,7 +95,7 @@ export function SamlingPage() {
                       Delt
                     </span>
                   )}
-                </button>
+                </SwipeToMenuRow>
               )
             })}
           </div>
@@ -107,6 +111,8 @@ export function SamlingPage() {
             onClose={() => setShowFamilyShareDialog(false)}
           />
         )}
+
+        <AddToMenuSheet recipe={menuRecipe} onClose={() => setMenuRecipe(null)} />
       </div>
     )
   }
@@ -152,11 +158,11 @@ export function SamlingPage() {
             const otherTagIndex = otherTag ? tagsWithRecipes.indexOf(otherTag) : -1
             const tint = TAG_TINTS[(otherTagIndex < 0 ? 0 : otherTagIndex) % TAG_TINTS.length]
             return (
-              <button
-                type="button"
+              <SwipeToMenuRow
                 key={recipe.id}
-                className="samling-recipe-row"
+                title={recipe.title}
                 onClick={() => navigate(`/oppskrift/${recipe.id}`, { state: { fromTag: tag } })}
+                onAddToMenu={() => setMenuRecipe(recipe)}
               >
                 <span className="samling-recipe-info">
                   <span className="samling-recipe-title">{recipe.title}</span>
@@ -172,11 +178,13 @@ export function SamlingPage() {
                     {otherTag}
                   </span>
                 )}
-              </button>
+              </SwipeToMenuRow>
             )
           })}
         </div>
       )}
+
+      <AddToMenuSheet recipe={menuRecipe} onClose={() => setMenuRecipe(null)} />
     </div>
   )
 }

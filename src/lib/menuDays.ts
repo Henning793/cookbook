@@ -1,6 +1,7 @@
 import { signedInUserId, supabase } from './supabaseClient'
 import type { MenuDay } from '../types'
 import { dayContent } from './menuSwap'
+import type { MenuDayContent } from './menuSwap'
 import type { MenuDayDishes } from './menuDishes'
 import { isMissingTable } from './shoppingList'
 import { currentWeekStart } from './menuWeeks'
@@ -100,6 +101,17 @@ export async function setMenuDayDishes(
   dishes: MenuDayDishes
 ): Promise<void> {
   await upsertDay(familyId, week, weekday, dishes)
+}
+
+// Setter dagen tilbake til slik den var, f.eks. når man angrer. Tomt
+// innhold tømmer dagen.
+export async function restoreMenuDay(
+  familyId: string | null,
+  week: string,
+  weekday: number,
+  content: MenuDayContent
+): Promise<void> {
+  await upsertDay(familyId, week, weekday, content)
 }
 
 export async function setMenuDayFreetext(
