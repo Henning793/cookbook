@@ -12,7 +12,7 @@ import {
 } from '../lib/menuDays'
 import { currentWeekStart, addWeeks, parseWeekParam, weekNumber, weekRangeLabel, dayDate, isPastDay, isoWeekday } from '../lib/menuWeeks'
 import { CopyWeekDialog } from '../components/CopyWeekDialog'
-import { cachedMenuDays } from '../lib/menuCache'
+import { cachedMenuDays, rememberShownWeek } from '../lib/menuCache'
 import { isEmptyDay, swapDaysLocal, swapMessage } from '../lib/menuSwap'
 import { useLongPressSwap } from '../components/useLongPressSwap'
 import { errorMessage } from '../lib/errorMessage'
@@ -46,6 +46,7 @@ export function UkesmenyPage() {
   const shownWeek = useRef(week)
   useEffect(() => {
     shownWeek.current = week
+    rememberShownWeek(week)
   }, [week])
   const [editingWeekday, setEditingWeekday] = useState<number | null>(null)
   const [showConfirm, setShowConfirm] = useState(false)
