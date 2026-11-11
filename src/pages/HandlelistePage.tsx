@@ -30,7 +30,7 @@ import {
 import { cachedShopping, type ShoppingData } from '../lib/shoppingCache'
 import { loadShoppingData, rememberShoppingData } from '../lib/shoppingLoad'
 import { rangeEnd, rangeEndLabel, rangeLabel, shortDayLabel, DEFAULT_SHOPPING_RANGE } from '../lib/shoppingRange'
-import { sortShoppingItems } from '../lib/shoppingSort'
+import { countUnchecked, freetextByDay, mergeShoppingRows } from '../lib/shoppingMerge'
 import { Login } from '../components/Login'
 import type { MenuDay, Recipe } from '../types'
 
@@ -171,21 +171,24 @@ export function HandlelistePage() {
     return applyOverrides(applyChecks(items, checked, menuDays, listRecipes, rangeEnd('week')), overrides)
   }, [menuDays, listRecipes, alwaysHomeNames, checked, overrides])
 
-  const sortedAggregated = useMemo(() => {
-    return sortShoppingItems(aggregated, (item) => item.displayName, (item) => item.checked)
-  }, [aggregated])
+  // Varene fra ukesmenyen og egne varer i én alfabetisk liste, med det som
+  // er krysset av nederst. Linjer som skrives på nå vises for seg selv.
+  const draftSavedId = draft?.savedId ?? null
+  const rows = useMemo(() => {
+    const hidden = new Set(finishing.map((line) => line.savedId))
+    if (draftSavedId) hidden.add(draftSavedId)
+    return mergeShoppingRows(aggregated, manualItems.filter((item) => !hidden.has(item.id)))
+  }, [aggregated, manualItems, finishing, draftSavedId])
+  const openRows = rows.filter((row) => !row.item.checked)
+  const checkedRows = rows.filter((row) => row.item.checked)
 
-  const uncheckedFromRecipesCount = aggregated.filter((item) => !item.checked).length
-  const sortedManual = useMemo(
-    () => sortShoppingItems(manualItems, (item) => item.name, (item) => item.checked),
-    [manualItems]
-  )
-  const itemsLeft = uncheckedFromRecipesCount + manualItems.filter((m) => !m.checked).length
+  const itemsLeft = countUnchecked(mergeShoppingRows(aggregated, manualItems))
 
-  const freetextDays = freetextEntries(menuDays)
+  const freetextDays = freetextByDay(freetextEntries(menuDays))
   const hasCheckedItems = aggregated.some((item) => item.checked) || manualItems.some((m) => m.checked)
 
-  async function toggleChecked(item: CheckedIngredient) {
+  // En egen vare med samme navn som menyvaren krysses av og på sammen med den.
+  async function toggleChecked(item: CheckedIngredient, manual: ManualItem[] = []) {
     setBusy(true)
     try {
       if (item.checked) {
@@ -193,7 +196,11 @@ export function HandlelistePage() {
       } else {
         await setItemChecked(familyId, item.normalizedName, item.unit, end)
       }
+      const nowChecked = !item.checked
+      const changed = manual.filter((m) => m.checked !== nowChecked)
+      await Promise.all(changed.map((m) => setManualChecked(m.id, nowChecked)))
       setChecked(await listCheckedItems(familyId))
+      if (changed.length > 0) setManualItems(await listManualItems(familyId))
     } finally {
       setBusy(false)
     }
@@ -396,13 +403,92 @@ export function HandlelistePage() {
     draftTimer.current = window.setTimeout(() => saveDraft(current.key), 600)
   }
 
-  // Den nye linjen legges nederst blant varene som ikke er krysset av,
-  // over de avkryssede (de ligger alltid sist, se sortShoppingItems).
-  const hiddenIds = new Set(finishing.map((line) => line.savedId))
-  if (draft?.savedId) hiddenIds.add(draft.savedId)
-  const visibleManual = sortedManual.filter((item) => !hiddenIds.has(item.id))
-  const firstChecked = visibleManual.findIndex((item) => item.checked)
-  const draftIndex = firstChecked === -1 ? visibleManual.length : firstChecked
+  function renderRecipeRow(item: ShoppingRow & CheckedIngredient, manual: ManualItem[]) {
+    const key = keyFor(item.normalizedName, item.unit)
+    const isChecked = item.checked
+    // En vare som trengs igjen viser den nye mengden, ikke en
+    // mengde skrevet inn for hånd til forrige handletur.
+    const amountText = item.extra ? null : item.amountText
+    const isExpanded = expandedKeys.has(key)
+    const isEditing = editing?.kind === 'recipe' && editing.key === key
+    return (
+      <div className="handleliste-row-group" key={key}>
+        <div className="handleliste-row">
+          <button
+            type="button"
+            className="handleliste-check-button"
+            aria-label={isChecked ? `Fjern hake på ${item.displayName}` : `Huk av ${item.displayName}`}
+            aria-pressed={isChecked}
+            onClick={() => toggleChecked(item, manual)}
+            disabled={busy}
+          >
+            <span className={`handleliste-checkbox${isChecked ? ' handleliste-checkbox-checked' : ''}`} />
+          </button>
+          {isEditing ? (
+            <>
+              <input
+                type="text"
+                className="handleliste-inline-input"
+                aria-label="Vare"
+                placeholder={item.originalName}
+                autoFocus
+                enterKeyHint="done"
+                value={editName}
+                onChange={(e) => handleEditChange('name', e.target.value)}
+                onBlur={(e) => handleEditBlur(e, { kind: 'recipe', key })}
+                onKeyDown={handleEditKeyDown}
+              />
+              <input
+                type="text"
+                className="handleliste-inline-input handleliste-inline-amount"
+                aria-label="Mengde"
+                placeholder={formatAmount(item.amount, item.unit)}
+                enterKeyHint="done"
+                value={editAmount}
+                onChange={(e) => handleEditChange('amount', e.target.value)}
+                onBlur={(e) => handleEditBlur(e, { kind: 'recipe', key })}
+                onKeyDown={handleEditKeyDown}
+              />
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="handleliste-row-toggle"
+                aria-label={`Rediger ${item.displayName}`}
+                onClick={() => startEditRecipeItem(item)}
+              >
+                <span className={`handleliste-name${isChecked ? ' handleliste-name-checked' : ''}`}>
+                  {item.displayName}
+                </span>
+              </button>
+              <button
+                type="button"
+                className={`handleliste-amount${item.scaled && !amountText ? ' handleliste-amount-scaled' : ''}`}
+                aria-expanded={isExpanded}
+                aria-label={`Vis hvor ${item.displayName.toLowerCase()} kommer fra`}
+                onClick={() => toggleExpanded(key)}
+              >
+                {amountText ?? formatAmount(item.amount, item.unit)}
+              </button>
+            </>
+          )}
+        </div>
+        {isExpanded && (
+          <div className="handleliste-sources">
+            {item.sources.map((source, index) => (
+              <p className="handleliste-source" key={index}>
+                <span className="handleliste-source-day">{shortDayLabel(source.date)}</span>{' '}
+                {source.recipeTitle}: {formatAmount(source.amount, item.unit)}
+                {source.servings !== null && ` (${source.servings.toLocaleString('nb-NO')} pors.)`}
+              </p>
+            ))}
+            {manual.length > 0 && <p className="handleliste-source">Egen vare</p>}
+          </div>
+        )}
+      </div>
+    )
+  }
 
   function renderManualRow(item: ManualItem) {
     return (
@@ -446,6 +532,10 @@ export function HandlelistePage() {
         </div>
       </div>
     )
+  }
+
+  function renderRow(row: (typeof rows)[number]) {
+    return row.kind === 'recipe' ? renderRecipeRow(row.item, row.manual) : renderManualRow(row.item)
   }
 
   if (!session) {
@@ -497,103 +587,8 @@ export function HandlelistePage() {
         <p className="status-message">Laster handleliste...</p>
       ) : (
         <>
-          <h2 className="section-kicker">Fra ukesmenyen</h2>
-          {sortedAggregated.length === 0 ? (
-            <p className="status-message">Ingen retter i ukesmenyen enda.</p>
-          ) : (
-            <div className="handleliste-rows">
-              {sortedAggregated.map((item) => {
-                const key = keyFor(item.normalizedName, item.unit)
-                const isChecked = item.checked
-                // En vare som trengs igjen viser den nye mengden, ikke en
-                // mengde skrevet inn for hånd til forrige handletur.
-                const amountText = item.extra ? null : item.amountText
-                const isExpanded = expandedKeys.has(key)
-                const isEditing = editing?.kind === 'recipe' && editing.key === key
-                return (
-                  <div className="handleliste-row-group" key={key}>
-                    <div className="handleliste-row">
-                      <button
-                        type="button"
-                        className="handleliste-check-button"
-                        aria-label={isChecked ? `Fjern hake på ${item.displayName}` : `Huk av ${item.displayName}`}
-                        aria-pressed={isChecked}
-                        onClick={() => toggleChecked(item)}
-                        disabled={busy}
-                      >
-                        <span className={`handleliste-checkbox${isChecked ? ' handleliste-checkbox-checked' : ''}`} />
-                      </button>
-                      {isEditing ? (
-                        <>
-                          <input
-                            type="text"
-                            className="handleliste-inline-input"
-                            aria-label="Vare"
-                            placeholder={item.originalName}
-                            autoFocus
-                            enterKeyHint="done"
-                            value={editName}
-                            onChange={(e) => handleEditChange('name', e.target.value)}
-                            onBlur={(e) => handleEditBlur(e, { kind: 'recipe', key })}
-                            onKeyDown={handleEditKeyDown}
-                          />
-                          <input
-                            type="text"
-                            className="handleliste-inline-input handleliste-inline-amount"
-                            aria-label="Mengde"
-                            placeholder={formatAmount(item.amount, item.unit)}
-                            enterKeyHint="done"
-                            value={editAmount}
-                            onChange={(e) => handleEditChange('amount', e.target.value)}
-                            onBlur={(e) => handleEditBlur(e, { kind: 'recipe', key })}
-                            onKeyDown={handleEditKeyDown}
-                          />
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            type="button"
-                            className="handleliste-row-toggle"
-                            aria-label={`Rediger ${item.displayName}`}
-                            onClick={() => startEditRecipeItem(item)}
-                          >
-                            <span className={`handleliste-name${isChecked ? ' handleliste-name-checked' : ''}`}>
-                              {item.displayName}
-                            </span>
-                          </button>
-                          <button
-                            type="button"
-                            className={`handleliste-amount${item.scaled && !amountText ? ' handleliste-amount-scaled' : ''}`}
-                            aria-expanded={isExpanded}
-                            aria-label={`Vis hvor ${item.displayName.toLowerCase()} kommer fra`}
-                            onClick={() => toggleExpanded(key)}
-                          >
-                            {amountText ?? formatAmount(item.amount, item.unit)}
-                          </button>
-                        </>
-                      )}
-                    </div>
-                    {isExpanded && (
-                      <div className="handleliste-sources">
-                        {item.sources.map((source, index) => (
-                          <p className="handleliste-source" key={index}>
-                            <span className="handleliste-source-day">{shortDayLabel(source.date)}</span>{' '}
-                            {source.recipeTitle}: {formatAmount(source.amount, item.unit)}
-                            {source.servings !== null && ` (${source.servings.toLocaleString('nb-NO')} pors.)`}
-                          </p>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          )}
-
-          <h2 className="section-kicker">Egne varer</h2>
-          <p className="handleliste-hint">Blir stående til du trykker «Fjern avkryssede»</p>
           <div className="handleliste-rows">
-            {visibleManual.slice(0, draftIndex).map(renderManualRow)}
+            {openRows.map(renderRow)}
             {finishing.map((line) => (
               <div className="handleliste-row-group" key={`ny-${line.key}`}>
                 <div className="handleliste-row">
@@ -623,19 +618,27 @@ export function HandlelistePage() {
                 </div>
               </div>
             )}
-            {visibleManual.slice(draftIndex).map(renderManualRow)}
           </div>
+          {rows.length === 0 && !draft && finishing.length === 0 && (
+            <p className="status-message">Ingen varer på listen enda.</p>
+          )}
 
           {freetextDays.length > 0 && (
+            <div className="handleliste-freetext">
+              <h2 className="handleliste-freetext-title">Uten oppskrift</h2>
+              {freetextDays.map((day) => (
+                <p className="handleliste-freetext-row" key={day.date}>
+                  <span className="handleliste-freetext-day">{shortDayLabel(day.date)}</span>
+                  <span>{day.texts.join(', ')}</span>
+                </p>
+              ))}
+            </div>
+          )}
+
+          {checkedRows.length > 0 && (
             <>
-              <h2 className="section-kicker">Ikke dekket av handlelisten</h2>
-              <div className="handleliste-freetext-list">
-                {freetextDays.map((entry, index) => (
-                  <p className="handleliste-freetext-row" key={index}>
-                    <span className="handleliste-freetext-day">{shortDayLabel(entry.date)}</span> · {entry.text}
-                  </p>
-                ))}
-              </div>
+              <h2 className="handleliste-basket-title">I kurven</h2>
+              <div className="handleliste-rows">{checkedRows.map(renderRow)}</div>
             </>
           )}
         </>

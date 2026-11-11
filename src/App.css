@@ -3094,21 +3094,52 @@ button.hjem-tonight {
   margin: 0 0 10px;
 }
 
-.handleliste-freetext-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 12px;
+/* Retter uten oppskrift: én stille linje per dag, under varene. */
+.handleliste-freetext {
+  margin: -8px 0 22px;
+}
+
+.handleliste-freetext-title,
+.handleliste-basket-title {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-neutral-600);
+  margin: 0 0 4px;
 }
 
 .handleliste-freetext-row {
+  display: flex;
+  gap: 8px;
   font-size: 13px;
-  color: var(--color-neutral-700);
+  line-height: 1.5;
+  color: var(--color-neutral-600);
   margin: 0;
+  padding: 2px 0;
 }
 
 .handleliste-freetext-day {
+  flex: none;
+  min-width: 56px;
+  white-space: nowrap;
+  font-weight: 700;
   color: var(--color-text);
+}
+
+/* Avkryssede varer samles nederst under «I kurven». */
+.handleliste-basket-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 0;
+}
+
+.handleliste-basket-title::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid var(--color-divider);
 }
 
 /* Festet nederst så «Legg til vare» alltid er synlig, også i lange lister. */
