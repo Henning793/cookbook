@@ -28,6 +28,25 @@ body {
   overflow-x: clip;
 }
 
+/* iPhone zoomer inn på et tekstfelt med mindre skrift enn 16px når man
+   trykker i det, og zoomer ikke ut igjen etterpå. Med siden zoomet inn
+   følger bunnmenyen (position: fixed) ikke lenger skjermen: den glir bort og
+   forsvinner når man blar. Det skjedde i handlelisten, der varene skrives
+   inn i felt på 15px. Bare iPhone og iPad får 16px; -webkit-touch-callout
+   finnes bare i Safari på iOS, så Android og PC ser ut som før. */
+@supports (-webkit-touch-callout: none) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+
+  /* Porsjonstallet er større enn 16px fra før og skal beholde det. */
+  .servings-stepper input {
+    font-size: 20px !important;
+  }
+}
+
 h1,
 h2,
 h3 {
