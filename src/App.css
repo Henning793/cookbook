@@ -3156,7 +3156,9 @@ button.hjem-tonight {
 
 .handleliste-name {
   flex: 1;
+  min-width: 0;
   font-size: 15px;
+  overflow-wrap: anywhere;
 }
 
 .handleliste-name-checked {
